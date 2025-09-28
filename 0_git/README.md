@@ -4,11 +4,11 @@
 ### What is a Version Control System?
 
 A version control system (VCS) is software that records changes to files.
-It lets individuals or teams to track history of modifications; allowing
-comparison, merging or reverting.
+It lets individuals or teams to track history of modifications, allowing
+them to compare, merge or revert changes.
 
-Although many version control systems exists today (SVN, Mercurial), by far the 
-most popular one is Git.
+Although many version control systems exist today (SVN, Mercurial), the most
+popular by far the is Git.
 
 ### What is Git
 Git is a distributed version‑control system designed to track changes in
@@ -17,9 +17,8 @@ contains the full history, so developers can work offline,
 experiment freely, and later synchronize their work with others.
 
 Git was born out of necessity. It was developed by Linus Torvalds, creator
-of Linux to maintain the project. It was released under an open source license.
+of Linux to maintain the project. Git was released under an open source license.
 
-## 
 Git’s internal model is a directed acyclic graph of commit objects where each
 commit points to one or more parent commits. 
 
@@ -44,5 +43,4 @@ garbage collected.
 - `git reset [option] <commit>` Moves the branch reference to selected commit.
 - `git revert <commit>` Adds a new commit that inverts the recent commit.
 
-- In Git every commit is immutable.
-- Branches are just pointers.
+In Git, every commit is immutable, and branches are merely pointers to commits.

@@ -2,8 +2,5 @@
 
 ID: 2024719168 Umut Can Sevdi
 
-## Table of Contents
-
-- [Assignment Description](./Assignment-Description.pdf)
-- [Git Notes](./0_git/README.md)
-- [Wiki Data](./1_wikidata/README.md)
+> [!NOTE]
+> Wiki Page has been moved to [umutsevdi/swe573/wiki](https://github.com/umutsevdi/swe573/wiki).

@@ -11,16 +11,7 @@
 	export let type: 'Offer' | 'Need' = 'Offer';
 	export let eventId: string;
 
-	const badgeColors = [
-		'badge-primary',
-		'badge-secondary',
-		'badge-accent',
-		'badge-info',
-		'badge-success',
-		'badge-warning',
-		'badge-error'
-	];
-	let badgeColor = (i: number) => badgeColors[i % badgeColors.length];
+	let badgeColor = (cond: boolean) => (cond ? 'badge-primary' : 'badge-accent');
 
 	function handleCardClick() {
 		goto(`/event/${eventId}`);
@@ -35,7 +26,7 @@
 </script>
 
 <div
-	class="card cursor-pointer bg-base-100 shadow-md transition-shadow hover:shadow-lg"
+	class="card cursor-pointer bg-base-100 shadow-md hover:shadow-lg"
 	onclick={handleCardClick}
 	onkeydown={handleKeydown}
 	role="button"
@@ -43,20 +34,10 @@
 	aria-label="View event details for {title}"
 >
 	<div class="card-body p-4">
-		<!-- Header with location -->
-		<div class="mb-3 flex items-center justify-between">
-			<div class="flex items-center gap-1 text-sm opacity-70">
-				<MapPin class="h-4 w-4" />
-				<span>{location}</span>
-			</div>
-		</div>
-
 		<!-- Title with type badge -->
-		<div class="mb-3 flex items-center gap-2">
-			<h2 class="card-title flex-1 text-lg">{title}</h2>
-			<div
-				class={`badge font-semibold uppercase ${badgeColor(type === 'Offer' ? 1 : 0)} shrink-0 gap-1`}
-			>
+		<div class="flex items-center">
+			<h2 class="card-title flex-1">{title}</h2>
+			<div class={`badge font-semibold uppercase ${badgeColor(type === 'Offer')} shrink-0 `}>
 				{#if type === 'Offer'}
 					<HeartHandshake class="h-3 w-3" />
 				{:else}
@@ -67,10 +48,28 @@
 		</div>
 
 		<!-- Description row with participants/owner on right -->
-		<div class="mb-3 flex items-start gap-3">
+		<div class="flex items-start gap-3">
 			<div class="flex-1">
 				<p class="line-clamp-2 text-sm text-base-content/70">{description}</p>
 			</div>
+			<!-- Header with location -->
+			<div class="mb-3 flex items-center justify-between">
+				<div class="flex items-center gap-1 text-sm opacity-70">
+					<MapPin class="h-4 w-4" />
+					<span>{location}</span>
+				</div>
+			</div>
+		</div>
+
+		<div class="flex">
+			<!-- Tags -->
+			{#if tags.length > 0}
+				<div class="flex flex-1 flex-wrap gap-1">
+					{#each tags as tag (tag)}
+						<span class="badge badge-outline badge-secondary">{tag}</span>
+					{/each}
+				</div>
+			{/if}
 			<div class="flex shrink-0 items-center gap-2">
 				<div class="flex items-center gap-1">
 					<Users class="h-4 w-4 opacity-60" />
@@ -85,15 +84,6 @@
 				{/if}
 			</div>
 		</div>
-
-		<!-- Tags -->
-		{#if tags.length > 0}
-			<div class="flex flex-wrap gap-1">
-				{#each tags as tag (tag)}
-					<span class="badge badge-xs badge-primary">{tag}</span>
-				{/each}
-			</div>
-		{/if}
 	</div>
 </div>
 

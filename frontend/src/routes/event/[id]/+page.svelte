@@ -211,7 +211,7 @@
 						</a>
 						<div class="mb-2 flex items-center gap-3">
 							<div
-								class="badge badge-lg {event.type === 'Offer' ? 'badge-secondary' : 'badge-accent'}"
+								class="badge badge-lg {event.type === 'Offer' ? 'badge-primary' : 'badge-accent'}"
 							>
 								{#if event.type === 'Offer'}
 									<HeartHandshake class="h-4 w-4" />
@@ -226,7 +226,7 @@
 						</h1>
 						<div class="flex flex-wrap gap-2">
 							{#each event.tags as tag (tag)}
-								<span class="badge badge-outline badge-lg">{tag}</span>
+								<span class="badge badge-outline badge-lg badge-secondary">{tag}</span>
 							{/each}
 						</div>
 					</div>
@@ -376,35 +376,46 @@
 							</h3>
 
 							<!-- Chat Messages -->
-							<div
-								bind:this={chatContainer}
-								class="mb-4 h-96 overflow-y-auto rounded-lg bg-base-200 p-2"
-							>
+							<div bind:this={chatContainer} class="mb-4 h-96 overflow-y-auto p-2">
 								{#each chatMessages as message (message.id)}
-									<div class="chat {message.author === 'You' ? 'chat-end' : 'chat-start'}">
-										<UserAvatar
-											avatarClass="chat-image"
-											avatar={message.avatar}
-											name={message.author}
-											showName={false}
-											userId={message.author === 'You' ? '0' : '2'}
-											userData={{
-												fullName: message.author,
-												bio: message.author === 'You' ? 'Event participant' : 'Community member',
-												interests: ['Events', 'Networking'],
-												userScore: message.author === 'You' ? 90 : 75
-											}}
-										/>
-										<div class="chat-header">
-											{message.author}
-											<time class="text-xs opacity-50">{message.timestamp}</time>
+									{#if message.author !== 'You'}
+										<div class="chat-start chat">
+											<UserAvatar
+												avatarClass="chat-image"
+												avatar={message.avatar}
+												name={message.author}
+												showName={false}
+												userId={message.author === 'You' ? '0' : '2'}
+												userData={{
+													fullName: message.author,
+													bio: message.author === 'You' ? 'Event participant' : 'Community member',
+													interests: ['Events', 'Networking'],
+													userScore: message.author === 'You' ? 90 : 40
+												}}
+											/>
+											<div class="chat-header">
+												{message.author}
+												<time class="text-xs opacity-50">{message.timestamp}</time>
+											</div>
+											<div
+												class="chat-bubble {message.author === 'You' ? 'chat-bubble-primary' : ''}"
+											>
+												{message.content}
+											</div>
 										</div>
-										<div
-											class="chat-bubble {message.author === 'You' ? 'chat-bubble-primary' : ''}"
-										>
-											{message.content}
+									{:else}
+										<div class="chat-end chat">
+											<div class="chat-header">
+												{message.author}
+												<time class="text-xs opacity-50">{message.timestamp}</time>
+											</div>
+											<div
+												class="chat-bubble {message.author === 'You' ? 'chat-bubble-primary' : ''}"
+											>
+												{message.content}
+											</div>
 										</div>
-									</div>
+									{/if}
 								{/each}
 							</div>
 

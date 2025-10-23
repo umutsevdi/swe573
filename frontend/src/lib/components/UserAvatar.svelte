@@ -47,7 +47,9 @@
 	}
 </script>
 
-{#if userId}
+{#if avatarClass === 'chat-image'}
+	{@render avatarContent()}
+{:else if userId}
 	<a href="/user/{userId}" class="cursor-pointer">
 		{@render avatarContent()}
 	</a>
@@ -56,6 +58,72 @@
 {/if}
 
 {#snippet avatarContent()}
+	{#if avatarClass === 'chat-image'}
+		{@render chatAvatar()}
+	{:else}
+		{@render normalAvatar()}
+	{/if}
+{/snippet}
+
+{#snippet chatAvatar()}
+	{#if userId}
+		<a
+			href="/user/{userId}"
+			class="avatar {avatarClass} relative cursor-pointer"
+			onmouseenter={handleMouseEnter}
+			onmouseleave={handleMouseLeave}
+		>
+			<div class="{size} rounded-full">
+				{#if avatar}
+					<img src={avatar} alt={name} />
+				{:else}
+					<div class="bg-neutral text-neutral-content">
+						<User />
+					</div>
+				{/if}
+			</div>
+			{#if showTooltip && userData}
+				<div class="absolute top-full left-0 z-50 mt-2">
+					<UserTooltipCard
+						fullName={userData.fullName}
+						bio={userData.bio}
+						interests={userData.interests}
+						userScore={userData.userScore}
+					/>
+				</div>
+			{/if}
+		</a>
+	{:else}
+		<div
+			class="avatar {avatarClass} relative"
+			role="presentation"
+			onmouseenter={handleMouseEnter}
+			onmouseleave={handleMouseLeave}
+		>
+			<div class="{size} rounded-full">
+				{#if avatar}
+					<img src={avatar} alt={name} />
+				{:else}
+					<div class="bg-neutral text-neutral-content">
+						<User />
+					</div>
+				{/if}
+			</div>
+			{#if showTooltip && userData}
+				<div class="absolute top-full left-0 z-50 mt-2">
+					<UserTooltipCard
+						fullName={userData.fullName}
+						bio={userData.bio}
+						interests={userData.interests}
+						userScore={userData.userScore}
+					/>
+				</div>
+			{/if}
+		</div>
+	{/if}
+{/snippet}
+
+{#snippet normalAvatar()}
 	<div
 		class="relative flex items-center gap-2 {clazz || ''}"
 		role="presentation"
@@ -76,7 +144,6 @@
 		{#if showName}
 			<span class="font-semibold">{name}</span>
 		{/if}
-
 		{#if showTooltip && userData}
 			<div class="absolute top-full left-0 z-50 mt-2">
 				<UserTooltipCard
@@ -89,7 +156,3 @@
 		{/if}
 	</div>
 {/snippet}
-
-<style>
-	/* Ensure tooltip appears above other elements */
-</style>

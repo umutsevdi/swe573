@@ -1,189 +1,205 @@
 <script lang="ts">
-	import SearchResultCard from '$lib/components/SearchResultCard.svelte';
-	import MapOverview from '$lib/components/MapOverview.svelte';
-	import FilterControls from '$lib/components/FilterControls.svelte';
-	import { ArrowUpDown, Users, Calendar } from '@lucide/svelte';
 	import { goto } from '$app/navigation';
-	import { browser } from '$app/environment';
-	import '../app.css';
+	import { page } from '$app/stores';
+	import { Funnel, Search } from '@lucide/svelte';
+	import MapOverview from '$lib/components/MapOverview.svelte';
+	import SearchResultCard from '$lib/components/SearchResultCard.svelte';
 
-	interface Event {
-		id: string;
-		title: string;
-		description: string;
-		tags: string[];
-		location: string;
-		latitude: number;
-		longitude: number;
-		type: 'Offer' | 'Need';
-		ownerUrl: string;
-		ownerProfileUrl: string;
-		participantCount: number;
-		date: string;
-	}
+	let { data } = $props();
 
-	interface PageData {
-		events: Event[];
-	}
+	let q = $state('');
+	let tags = $state<string[]>([]);
+	let tagInput = $state('');
+	let start = $state('');
+	let end = $state('');
+	let proximity = $state(50);
+	let userLat = $state<number | null>(null);
+	let userLng = $state<number | null>(null);
 
-	let { data }: { data: PageData } = $props();
-
-	let sortBy = $state<'date' | 'participants'>('date');
-	let sortOrder = $state<'asc' | 'desc'>('desc');
-
-	// Events are already filtered and sorted by server
-	let searchedEvents = data.events;
-
-	// Initialize sort from URL parameters
+	// Get user location
 	$effect(() => {
-		if (browser) {
-			const url = new URL(window.location.href);
-			const searchParams = url.searchParams;
-
-			sortBy = (searchParams.get('sort') as 'date' | 'participants') || 'date';
-			sortOrder = (searchParams.get('order') as 'asc' | 'desc') || 'desc';
+		if (typeof navigator !== 'undefined' && navigator.geolocation) {
+			navigator.geolocation.getCurrentPosition(
+				(position) => {
+					userLat = position.coords.latitude;
+					userLng = position.coords.longitude;
+				},
+				(error) => {
+					console.log('Geolocation error:', error);
+				}
+			);
 		}
 	});
 
-	function handleSearch(newFilters: {
-		searchQuery: string;
-		selectedTags: string[];
-		dateRange: { start: string; end: string };
-		proximityKm: number;
-		type: 'all' | 'Offer' | 'Need';
-	}) {
-		const url = new URL(window.location.href);
-		url.searchParams.delete('q');
-		url.searchParams.delete('tags');
-		url.searchParams.delete('start');
-		url.searchParams.delete('end');
-		url.searchParams.delete('proximity');
-		url.searchParams.delete('type');
-		url.searchParams.delete('sort');
-		url.searchParams.delete('order');
+	// Prefill from URL
+	$effect(() => {
+		const params = $page.url.searchParams;
+		q = params.get('q') || '';
+		const tagsParam = params.get('tags');
+		if (tagsParam) {
+			tags = tagsParam.split(',').filter(Boolean);
+		}
+		start = params.get('start') || '';
+		end = params.get('end') || '';
+		const prox = params.get('proximity');
+		if (prox) proximity = parseInt(prox) || 0;
+	});
 
-		if (newFilters.searchQuery) url.searchParams.set('q', newFilters.searchQuery);
-		if (newFilters.selectedTags.length)
-			url.searchParams.set('tags', newFilters.selectedTags.join(','));
-		if (newFilters.dateRange.start) url.searchParams.set('start', newFilters.dateRange.start);
-		if (newFilters.dateRange.end) url.searchParams.set('end', newFilters.dateRange.end);
-		if (newFilters.proximityKm !== 50)
-			url.searchParams.set('proximity', newFilters.proximityKm.toString());
-		if (newFilters.type !== 'all') url.searchParams.set('type', newFilters.type);
-		if (sortBy !== 'date') url.searchParams.set('sort', sortBy);
-		if (sortOrder !== 'desc') url.searchParams.set('order', sortOrder);
-
-		goto(url.toString());
+	function addTag() {
+		const trimmed = tagInput.trim().toLowerCase();
+		if (trimmed && !tags.includes(trimmed)) {
+			tags = [...tags, trimmed];
+			tagInput = '';
+		}
 	}
 
-	function toggleSort(field: 'date' | 'participants') {
-		if (sortBy === field) {
-			sortOrder = sortOrder === 'asc' ? 'desc' : 'asc';
-		} else {
-			sortBy = field;
-			sortOrder = 'desc';
+	function removeTag(tag: string) {
+		tags = tags.filter((t) => t !== tag);
+	}
+
+	function handleSubmit(event: Event) {
+		event.preventDefault();
+		const params = new URLSearchParams();
+		if (q.trim()) params.set('q', q.trim());
+		if (tags.length) params.set('tags', tags.join(','));
+		if (start) params.set('start', start);
+		if (end) params.set('end', end);
+		if (proximity > 0 && userLat && userLng) {
+			params.set('user_lat', userLat.toString());
+			params.set('user_lng', userLng.toString());
+			params.set('proximity', proximity.toString());
 		}
-
-		const url = new URL(window.location.href);
-		if (sortBy !== 'date') url.searchParams.set('sort', sortBy);
-		else url.searchParams.delete('sort');
-		if (sortOrder !== 'desc') url.searchParams.set('order', sortOrder);
-		else url.searchParams.delete('order');
-
-		goto(url.toString());
+		goto(`?${params.toString()}`);
 	}
 </script>
 
-<div class="min-h-screen bg-base-200">
-	<div class="container mx-auto px-4 py-8">
-		<!-- Header -->
-		<div class="mb-8 text-center">
-			<h1 class="mb-4 text-5xl font-bold">Welcome to Hive!</h1>
-		</div>
+<div class="container mx-auto mb-8 p-4">
+	<!-- Filter section -->
+	<div class="bg-base-200 mb-4 p-4">
+		<h2 class="mb-4 flex items-center gap-2 text-lg font-bold"><Funnel /> Filters</h2>
+		<form onsubmit={handleSubmit}>
+			<div class="flex flex-wrap items-center gap-4">
+				<!-- Search input -->
+				<div class="form-control flex-1">
+					<input
+						type="text"
+						placeholder="Search events..."
+						class="input-bordered input"
+						bind:value={q}
+					/>
+				</div>
 
-		<!-- Subtitle and Filters Section -->
-		<div class="mb-8">
-			<p class="mb-6 text-center text-lg text-base-content/70">
-				Discover offers and needs in your community
-			</p>
-			<FilterControls
-				searchQuery=""
-				selectedTags={[]}
-				dateRange={{ start: '', end: '' }}
-				proximityKm={50}
-				type="all"
-				onSearch={handleSearch}
-			/>
-		</div>
-
-		<!-- Main Content Grid -->
-		<div class="grid min-h-[600px] grid-cols-1 gap-8 lg:grid-cols-2">
-			<!-- Left Column: Map -->
-			<div class="space-y-4">
-				<div class="card bg-base-100 shadow-lg">
-					<div class="card-body p-4">
-						<h2 class="card-title text-lg">Explore on Map</h2>
-						<MapOverview events={searchedEvents} />
+				<!-- Tags -->
+				<div class="form-control flex-1">
+					<div class="flex gap-2">
+						<input
+							type="text"
+							placeholder="Add tag..."
+							class="input-bordered input"
+							bind:value={tagInput}
+							onkeydown={(e) => {
+								if (e.key === 'Enter') {
+									e.preventDefault();
+									addTag();
+								}
+							}}
+						/>
+						<button type="button" class="btn btn-outline" onclick={addTag}>+</button>
 					</div>
 				</div>
+				<!-- Start and End dates in one row -->
+				<div class="flex gap-4">
+					<div class="form-control">
+						<label class="label">
+							Start Date
+							<input type="date" class="input-bordered input" bind:value={start} />
+						</label>
+					</div>
+
+					<div class="form-control">
+						<label class="label">
+							End Date
+							<input type="date" class="input-bordered input" bind:value={end} />
+						</label>
+					</div>
+				</div>
+				<!-- Proximity -->
+				<div class="form-control">
+					<div class="gap-4 lg:flex">
+						Proximity
+						<input type="range" min="0" max="1000" class="range flex-1" bind:value={proximity} />
+						<span class="label-text">{proximity != 0 ? `${proximity}km` : 'No Filter'}</span>
+					</div>
+				</div>
+				<!-- Search button -->
+				<button type="submit" class="btn btn-primary"><Search /></button>
 			</div>
 
-			<!-- Right Column: Search & Results -->
-			<div class="space-y-6">
-				<!-- Sort Controls -->
-				<div class="flex items-center justify-between">
-					<h2 class="text-xl font-bold">
-						{searchedEvents.length} Result{searchedEvents.length !== 1 ? 's' : ''}
-					</h2>
-					<div class="flex gap-2">
-						<button
-							class="btn gap-2 btn-outline btn-sm"
-							onclick={() => toggleSort('date')}
-							class:active={sortBy === 'date'}
-						>
-							<Calendar class="h-4 w-4" />
-							Date
-							{#if sortBy === 'date'}
-								<ArrowUpDown class="h-4 w-4" />
-							{/if}
-						</button>
-						<button
-							class="btn gap-2 btn-outline btn-sm"
-							onclick={() => toggleSort('participants')}
-							class:active={sortBy === 'participants'}
-						>
-							<Users class="h-4 w-4" />
-							Participants
-							{#if sortBy === 'participants'}
-								<ArrowUpDown class="h-4 w-4" />
-							{/if}
-						</button>
-					</div>
-				</div>
-
-				<!-- Results List -->
-				<div class="max-h-[500px] space-y-4 overflow-y-auto">
-					{#if searchedEvents.length}
-						{#each searchedEvents as event (event.id)}
-							<SearchResultCard
-								title={event.title}
-								description={event.description}
-								tags={event.tags}
-								location={event.location}
-								participantCount={event.participantCount}
-								ownerProfileUrl={event.ownerProfileUrl}
-								type={event.type}
-								eventId={event.id}
-							/>
-						{/each}
-					{:else}
-						<div class="rounded-lg bg-base-100 py-12 text-center">
-							<p class="text-lg text-base-content/60">No events match your filters.</p>
-							<p class="mt-2 text-sm text-base-content/40">Try adjusting your search criteria.</p>
-						</div>
+			<!-- Active filters display -->
+			<div class="mt-4">
+				<div class="flex flex-wrap gap-2">
+					{#if q}
+						<span class="badge badge-primary gap-2">
+							Search: {q}
+							<button type="button" class="btn btn-ghost btn-xs" onclick={() => (q = '')}>×</button>
+						</span>
+					{/if}
+					{#each tags as tag}
+						<span class="badge badge-secondary gap-2">
+							Tag: {tag}
+							<button type="button" class="btn btn-ghost btn-xs" onclick={() => removeTag(tag)}
+								>×</button
+							>
+						</span>
+					{/each}
+					{#if start}
+						<span class="badge badge-accent gap-2">
+							Start: {start}
+							<button type="button" class="btn btn-ghost btn-xs" onclick={() => (start = '')}
+								>×</button
+							>
+						</span>
+					{/if}
+					{#if end}
+						<span class="badge badge-accent gap-2">
+							End: {end}
+							<button type="button" class="btn btn-ghost btn-xs" onclick={() => (end = '')}
+								>×</button
+							>
+						</span>
+					{/if}
+					{#if proximity > 0}
+						<span class="badge badge-info gap-2">
+							Proximity: {proximity} km
+							<button type="button" class="btn btn-ghost btn-xs" onclick={() => (proximity = 0)}
+								>×</button
+							>
+						</span>
 					{/if}
 				</div>
 			</div>
+		</form>
+	</div>
+	<div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
+		<!-- Left: Map -->
+		<div>
+			<MapOverview events={data.events} {userLat} {userLng} />
+		</div>
+
+		<!-- Right: List of cards -->
+		<div class="space-y-4">
+			{#each data.events as event}
+				<SearchResultCard
+					title={event.title}
+					description={event.description}
+					tags={event.tags}
+					location={event.location}
+					participantCount={event.participantCount}
+					ownerProfileUrl={event.ownerProfileUrl}
+					type={event.type}
+					eventId={event.id}
+				/>
+			{/each}
 		</div>
 	</div>
 </div>

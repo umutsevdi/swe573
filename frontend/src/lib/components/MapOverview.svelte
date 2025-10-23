@@ -1,34 +1,29 @@
 <script lang="ts">
-	import { browser } from '$app/environment';
-	import { goto } from '$app/navigation';
+	import { onMount, onDestroy } from 'svelte';
+	import 'leaflet/dist/leaflet.css';
 
 	interface Event {
 		id: string;
 		title: string;
-		location: string;
 		latitude: number;
 		longitude: number;
-		type: 'Offer' | 'Need';
-		tags: string[];
+		location: string;
 	}
 
-	interface Props {
-		events: Event[];
-		userLatitude?: number;
-		userLongitude?: number;
-	}
-
-	let { events, userLatitude, userLongitude }: Props = $props();
+	export let events: Event[];
+	export let height: string = 'h-96';
+	export let userLat: number | null = null;
+	export let userLng: number | null = null;
 
 	let mapContainer: HTMLElement;
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	let map: any = null;
+	let isClient = false;
 
-	// Only initialize on client side
-	$effect(() => {
-		if (browser && mapContainer && !map && events.length > 0) {
-			import('leaflet').then((L) => {
-				import('leaflet/dist/leaflet.css');
+	// Initialize map on client side
+	onMount(() => {
+		if (mapContainer && !map && events.length > 0) {
+			import('leaflet').then((L: any) => {
+				const theme = document.documentElement.getAttribute('data-theme') || 'light';
 
 				// Fix for default markers in Leaflet
 				// eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -40,159 +35,60 @@
 					shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png'
 				});
 
-				// Initialize map centered on events
-				const bounds: [number, number][] = events.map((event) => [event.latitude, event.longitude]);
-				map = L.map(mapContainer).fitBounds(bounds as L.LatLngBoundsExpression, {
-					padding: [20, 20]
-				});
+				// Calculate center
+				const avgLat = events.reduce((sum, e) => sum + e.latitude, 0) / events.length;
+				const avgLng = events.reduce((sum, e) => sum + e.longitude, 0) / events.length;
 
-				// Add OpenStreetMap tiles
-				L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+				// Initialize map
+				map = L.map(mapContainer).setView([avgLat, avgLng], 10);
+
+				// Add Carto tiles based on theme
+				const tileUrl =
+					theme === 'dark'
+						? 'https://cartodb-basemaps-{s}.global.ssl.fastly.net/dark_all/{z}/{x}/{y}.png'
+						: 'https://cartodb-basemaps-{s}.global.ssl.fastly.net/light_all/{z}/{x}/{y}.png';
+				L.tileLayer(tileUrl, {
 					attribution:
-						'© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+						'© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, © <a href="https://carto.com/attributions">CartoDB</a>',
 					maxZoom: 19
 				}).addTo(map);
 
 				// Add markers for each event
+				const markers: any[] = [];
 				events.forEach((event) => {
-					const icon =
-						event.type === 'Offer'
-							? new L.Icon({
-									iconUrl:
-										'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-green.png',
-									shadowUrl:
-										'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
-									iconSize: [25, 41],
-									iconAnchor: [12, 41],
-									popupAnchor: [1, -34],
-									shadowSize: [41, 41]
-								})
-							: new L.Icon({
-									iconUrl:
-										'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png',
-									shadowUrl:
-										'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
-									iconSize: [25, 41],
-									iconAnchor: [12, 41],
-									popupAnchor: [1, -34],
-									shadowSize: [41, 41]
-								});
-
-					const marker = L.marker([event.latitude, event.longitude], { icon }).addTo(map);
-
-					const popupContent = `
-						<div class="p-2">
-							<h3 class="font-bold text-sm">${event.title}</h3>
-							<p class="text-xs text-gray-600 mb-2">${event.location}</p>
-							<div class="flex gap-1 mb-2">
-								${event.tags.map((tag) => `<span class="badge badge-primary badge-xs">${tag}</span>`).join('')}
-							</div>
-							<button class="btn btn-primary btn-xs" onclick="window.location.href='/event/${event.id}'">
-								View Details
-							</button>
-						</div>
-					`;
-
-					marker.bindPopup(popupContent);
-
-					// Add click handler to navigate to event
-					marker.on('click', () => {
-						goto(`/event/${event.id}`);
-					});
+					const marker = L.marker([event.latitude, event.longitude]).addTo(map);
+					marker.bindPopup(`<b>${event.title}</b><br/>${event.location}`);
+					markers.push(marker);
 				});
 
-				// Add user location marker if provided
-				if (userLatitude && userLongitude) {
-					const userIcon = new L.Icon({
-						iconUrl:
-							'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-blue.png',
-						shadowUrl:
-							'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
-						iconSize: [25, 41],
-						iconAnchor: [12, 41],
-						popupAnchor: [1, -34],
-						shadowSize: [41, 41]
-					});
+				// Add user location marker
+				if (userLat && userLng) {
+					const userMarker = L.circleMarker([userLat, userLng], { color: 'blue', radius: 8 }).addTo(
+						map
+					);
+					userMarker.bindPopup('Your Location');
+					markers.push(userMarker);
+				}
 
-					const userMarker = L.marker([userLatitude, userLongitude], { icon: userIcon }).addTo(map);
-					userMarker.bindPopup('<b>Your Location</b>');
+				// Fit map to all markers
+				if (markers.length > 0) {
+					const group = new L.featureGroup(markers);
+					map.fitBounds(group.getBounds(), { padding: [20, 20] });
 				}
 			});
 		}
-
-		return () => {
-			if (map) {
-				map.remove();
-				map = null;
-			}
-		};
 	});
 
-	// Update map when events change
-	$effect(() => {
-		if (browser && map && events.length > 0) {
-			// Clear existing markers
-			map.eachLayer((layer: any) => {
-				if (layer instanceof (window as any).L.Marker) {
-					map.removeLayer(layer);
-				}
-			});
-
-			// Re-add markers
-			events.forEach((event) => {
-				const icon =
-					event.type === 'Offer'
-						? new (window as any).L.Icon({
-								iconUrl:
-									'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-green.png',
-								shadowUrl:
-									'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
-								iconSize: [25, 41],
-								iconAnchor: [12, 41],
-								popupAnchor: [1, -34],
-								shadowSize: [41, 41]
-							})
-						: new (window as any).L.Icon({
-								iconUrl:
-									'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png',
-								shadowUrl:
-									'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
-								iconSize: [25, 41],
-								iconAnchor: [12, 41],
-								popupAnchor: [1, -34],
-								shadowSize: [41, 41]
-							});
-
-				const marker = (window as any).L.marker([event.latitude, event.longitude], { icon }).addTo(
-					map
-				);
-
-				const popupContent = `
-					<div class="p-2">
-						<h3 class="font-bold text-sm">${event.title}</h3>
-						<p class="text-xs text-gray-600 mb-2">${event.location}</p>
-						<div class="flex gap-1 mb-2">
-							${event.tags.map((tag) => `<span class="badge badge-primary badge-xs">${tag}</span>`).join('')}
-						</div>
-						<button class="btn btn-primary btn-xs" onclick="window.location.href='/event/${event.id}'">
-							View Details
-						</button>
-					</div>
-				`;
-
-				marker.bindPopup(popupContent);
-				marker.on('click', () => {
-					goto(`/event/${event.id}`);
-				});
-			});
-
-			// Don't fit bounds on update to prevent map "refresh", only on initial load
+	onDestroy(() => {
+		if (map) {
+			map.remove();
+			map = null;
 		}
 	});
 </script>
 
 <div
-	class="h-full min-h-[500px] overflow-hidden rounded-lg border border-base-300"
+	class="{height} overflow-hidden rounded-lg border border-base-300"
 	bind:this={mapContainer}
 ></div>
 

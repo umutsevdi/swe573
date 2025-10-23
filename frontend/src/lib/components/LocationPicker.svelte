@@ -36,10 +36,15 @@
 				// Initialize map
 				map = L.map(mapContainer).setView([selectedLat, selectedLng], 13);
 
-				// Add OpenStreetMap tiles
-				L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+				// Add Carto tiles based on theme
+				const theme = document.documentElement.getAttribute('data-theme') || 'light';
+				const tileUrl =
+					theme === 'dark'
+						? 'https://cartodb-basemaps-{s}.global.ssl.fastly.net/dark_all/{z}/{x}/{y}.png'
+						: 'https://cartodb-basemaps-{s}.global.ssl.fastly.net/light_all/{z}/{x}/{y}.png';
+				L.tileLayer(tileUrl, {
 					attribution:
-						'© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+						'© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, © <a href="https://carto.com/attributions">CartoDB</a>',
 					maxZoom: 19
 				}).addTo(map);
 

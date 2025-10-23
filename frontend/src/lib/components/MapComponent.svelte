@@ -40,6 +40,7 @@
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	let map: any = null;
 	let isClient = $state(false);
+	let theme = $state(document.documentElement.getAttribute('data-theme') || 'light');
 
 	// Only initialize on client side
 	$effect(() => {
@@ -61,10 +62,14 @@
 				// Initialize map
 				map = L.map(mapContainer).setView([latitude, longitude], 13);
 
-				// Add OpenStreetMap tiles
-				L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+				// Add Carto tiles based on theme
+				const tileUrl =
+					theme === 'dark'
+						? 'https://cartodb-basemaps-{s}.global.ssl.fastly.net/dark_all/{z}/{x}/{y}.png'
+						: 'https://cartodb-basemaps-{s}.global.ssl.fastly.net/light_all/{z}/{x}/{y}.png';
+				L.tileLayer(tileUrl, {
 					attribution:
-						'© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+						'© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, © <a href="https://carto.com/attributions">CartoDB</a>',
 					maxZoom: 19
 				}).addTo(map);
 
@@ -72,7 +77,7 @@
 				const eventMarker = L.marker([latitude, longitude]).addTo(map);
 				eventMarker
 					.bindPopup(
-						`<b>📍 Destination: ${locationName}</b><br/>Lat: ${latitude.toFixed(4)}, Lng: ${longitude.toFixed(4)}`
+						`<b>Destination: ${locationName}</b><br/>Lat: ${latitude.toFixed(4)}, Lng: ${longitude.toFixed(4)}`
 					)
 					.openPopup();
 
@@ -96,7 +101,7 @@
 					userMarker = L.marker([userLatitude, userLongitude], { icon: userIcon }).addTo(map);
 					const distance = calculateDistance(userLatitude, userLongitude, latitude, longitude);
 					userMarker.bindPopup(
-						`<b>🏠 You're Here${userLocationName ? ` (${userLocationName})` : ''}</b><br/>Lat: ${userLatitude.toFixed(4)}, Lng: ${userLongitude.toFixed(4)}<br/>Distance: ${distance.toFixed(1)} km`
+						`<b>You ${userLocationName ? ` (${userLocationName})` : ''}</b><br/>Lat: ${userLatitude.toFixed(4)}, Lng: ${userLongitude.toFixed(4)}<br/>Distance: ${distance.toFixed(1)} km`
 					);
 
 					// Add distance line
@@ -119,22 +124,6 @@
 						fillOpacity: 0.1,
 						radius: 500
 					}).addTo(map);
-
-					// Add hover tooltips showing clear labels
-					eventMarker.on('mouseover', () => {
-						eventMarker.bindTooltip(`📍 Destination: ${locationName}`).openTooltip();
-					});
-					eventMarker.on('mouseout', () => {
-						eventMarker.unbindTooltip();
-					});
-
-					userMarker.on('mouseover', () => {
-						const personName = userLocationName || 'Your Location';
-						userMarker.bindTooltip(`🏠 You're Here: ${personName}`).openTooltip();
-					});
-					userMarker.on('mouseout', () => {
-						userMarker.unbindTooltip();
-					});
 				}
 
 				// Fit map to markers
@@ -237,22 +226,6 @@
 					fillOpacity: 0.1,
 					radius: 500
 				}).addTo(map);
-
-				// Add hover tooltips showing clear labels
-				eventMarker.on('mouseover', () => {
-					eventMarker.bindTooltip(`📍 Destination: ${locationName}`).openTooltip();
-				});
-				eventMarker.on('mouseout', () => {
-					eventMarker.unbindTooltip();
-				});
-
-				userMarker.on('mouseover', () => {
-					const personName = userLocationName || 'Your Location';
-					userMarker.bindTooltip(`🏠 You're Here: ${personName}`).openTooltip();
-				});
-				userMarker.on('mouseout', () => {
-					userMarker.unbindTooltip();
-				});
 			}
 
 			// Fit map to markers

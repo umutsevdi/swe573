@@ -23,7 +23,14 @@ type EventData = {
 	targetDate?: string;
 	duration?: string;
 	capacity?: number;
-	isParticipating: boolean;
+	userParticipationStatus: 'none' | 'pending' | 'accepted' | 'rejected';
+	participationRequests: {
+		id: string;
+		userId: string;
+		userName: string;
+		message: string;
+		status: 'CREATED' | 'PENDING' | 'ACCEPTED' | 'REJECTED';
+	}[];
 	chatMessages: ChatMessage[];
 };
 
@@ -47,7 +54,8 @@ const mockEvents: EventData[] = [
 		createdAt: '2024-10-20',
 		targetDate: '2024-10-25',
 		duration: '1 hour',
-		isParticipating: false,
+		userParticipationStatus: 'none',
+		participationRequests: [],
 		chatMessages: [
 			{
 				id: '1',
@@ -95,7 +103,23 @@ const mockEvents: EventData[] = [
 		createdAt: '2024-10-19',
 		targetDate: '2024-10-30',
 		duration: '3 hours',
-		isParticipating: false,
+		userParticipationStatus: 'none',
+		participationRequests: [
+			{
+				id: '1',
+				userId: 'user1',
+				userName: 'MathTutor',
+				message: 'I can help with calculus tutoring.',
+				status: 'PENDING'
+			},
+			{
+				id: '2',
+				userId: 'user2',
+				userName: 'CalcExpert',
+				message: 'Experienced in teaching integrals.',
+				status: 'PENDING'
+			}
+		],
 		chatMessages: [
 			{
 				id: '1',
@@ -144,7 +168,30 @@ const mockEvents: EventData[] = [
 		createdAt: '2024-10-18',
 		targetDate: '2024-11-05',
 		duration: 'Ongoing',
-		isParticipating: true,
+		userParticipationStatus: 'accepted',
+		participationRequests: [
+			{
+				id: '1',
+				userId: 'currentUser',
+				userName: 'You',
+				message: 'I would love some vegetables!',
+				status: 'ACCEPTED'
+			},
+			{
+				id: '2',
+				userId: 'user3',
+				userName: 'HealthyEater',
+				message: 'Tomatoes and cucumbers please.',
+				status: 'ACCEPTED'
+			},
+			{
+				id: '3',
+				userId: 'user4',
+				userName: 'LocalChef',
+				message: 'Herbs and peppers for my restaurant.',
+				status: 'PENDING'
+			}
+		],
 		chatMessages: [
 			{
 				id: '1',
@@ -181,5 +228,5 @@ export const load = async ({ params }: { params: { id: string } }) => {
 	if (!event) {
 		throw new Error('Event not found');
 	}
-	return { event, isOwner: true };
+	return { event, isOwner: Number(event.id) % 2 == 0 };
 };

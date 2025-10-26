@@ -10,6 +10,7 @@
 		HeartHandshake,
 		HandHelping
 	} from '@lucide/svelte';
+	import { resolve } from '$app/paths';
 	import MapComponent from '$lib/components/MapComponent.svelte';
 	import CreatePostModal from '$lib/components/CreatePostModal.svelte';
 	import UserAvatar from '$lib/components/UserAvatar.svelte';
@@ -36,7 +37,14 @@
 		participantCount: number;
 		maxParticipants?: number;
 		createdAt: string;
-		isParticipating: boolean;
+		userParticipationStatus: 'none' | 'pending' | 'accepted' | 'rejected';
+		participationRequests: {
+			id: string;
+			userId: string;
+			userName: string;
+			message: string;
+			status: 'CREATED' | 'PENDING' | 'ACCEPTED' | 'REJECTED';
+		}[];
 		chatMessages: ChatMessage[];
 	};
 
@@ -45,8 +53,9 @@
 
 	// Edit functionality
 	let showEditModal = $state(false);
+	let showParticipationModal = $state(false);
 
-	function updateEvent(data: any) {
+	function updateEvent(data: unknown) {
 		// In real app, API call to update
 		console.log('Update event:', data);
 		showEditModal = false;
@@ -55,8 +64,11 @@
 	}
 
 	// Chat functionality
+	let activeTab = $state('public');
 	let newMessage = $state('');
 	let chatMessages = $state(event.chatMessages);
+	let negotiationMessages = $state([]);
+	let newNegotiationMessage = $state('');
 
 	function sendMessage() {
 		if (newMessage.trim()) {
@@ -79,8 +91,94 @@
 		}
 	}
 
+	function sendNegotiationMessage() {
+		if (newNegotiationMessage.trim()) {
+			const message: ChatMessage = {
+				id: Date.now().toString(),
+				author: 'You', // In a real app, this would be the current user
+				avatar:
+					'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=100&q=80',
+				content: newNegotiationMessage.trim(),
+				timestamp: new Date().toLocaleString()
+			};
+			negotiationMessages = [...negotiationMessages, message];
+			newNegotiationMessage = '';
+			// Scroll to bottom after sending
+			setTimeout(() => {
+				if (negotiationContainer) {
+					negotiationContainer.scrollTop = negotiationContainer.scrollHeight;
+				}
+			}, 0);
+		}
+	}
+
 	// Participation functionality
-	let isParticipating = $state(event.isParticipating);
+	let userParticipationStatus = $state(event.userParticipationStatus);
+	let participationRequests = $state(event.participationRequests);
+	let participationMessage = $state('');
+
+	function sendParticipationRequest() {
+		const message = participationMessage.trim();
+		const request = {
+			id: Date.now().toString(),
+			userId: 'currentUser', // mock
+			userName: 'You',
+			message,
+			status: 'PENDING' as const
+		};
+		participationRequests = [...participationRequests, request];
+		userParticipationStatus = 'pending';
+		participationMessage = '';
+		// In real app, API call
+		console.log('Sent participation request:', request);
+	}
+
+	function leaveEvent() {
+		userParticipationStatus = 'none';
+		// Remove user's request
+		participationRequests = participationRequests.filter((req) => req.userId !== 'currentUser');
+		// In real app, API call
+	}
+
+	function acceptRequest(requestId: string) {
+		participationRequests = participationRequests.map((req) =>
+			req.id === requestId ? { ...req, status: 'ACCEPTED' } : req
+		);
+		// Update user status if it's their request
+		const request = participationRequests.find((r) => r.id === requestId);
+		if (request?.userId === 'currentUser') {
+			userParticipationStatus = 'accepted';
+		}
+		// In real app, API call
+	}
+
+	function rejectRequest(requestId: string) {
+		participationRequests = participationRequests.map((req) =>
+			req.id === requestId ? { ...req, status: 'REJECTED' } : req
+		);
+		const request = participationRequests.find((r) => r.id === requestId);
+		if (request?.userId === 'currentUser') {
+			userParticipationStatus = 'rejected';
+		}
+		// In real app, API call
+	}
+
+	function removeParticipant(requestId: string) {
+		participationRequests = participationRequests.map((req) =>
+			req.id === requestId ? { ...req, status: 'REJECTED' } : req
+		);
+		const request = participationRequests.find((r) => r.id === requestId);
+		if (request?.userId === 'currentUser') {
+			userParticipationStatus = 'rejected';
+		}
+		// In real app, API call
+	}
+
+	function withdrawRequest() {
+		participationRequests = participationRequests.filter((req) => req.userId !== 'currentUser');
+		userParticipationStatus = 'none';
+		// In real app, API call
+	}
 
 	// User location functionality
 	let userLatitude = $state<number | undefined>(undefined);
@@ -124,11 +222,6 @@
 			locationError = 'Geolocation is not supported by this browser.';
 		}
 	});
-
-	function toggleParticipation() {
-		isParticipating = !isParticipating;
-		// In a real app, this would make an API call
-	}
 
 	// Map and distance functionality
 	let userLocation = $state<{ lat: number; lng: number } | null>(null);
@@ -183,9 +276,15 @@
 
 	// Scroll to bottom of chat when new messages arrive
 	let chatContainer: HTMLElement;
+	let negotiationContainer: HTMLElement;
 	$effect(() => {
 		if (chatContainer) {
 			chatContainer.scrollTop = chatContainer.scrollHeight;
+		}
+	});
+	$effect(() => {
+		if (negotiationContainer) {
+			negotiationContainer.scrollTop = negotiationContainer.scrollHeight;
 		}
 	});
 </script>
@@ -205,7 +304,7 @@
 			<div class="relative flex h-full items-end p-6 text-white">
 				<div class="container mx-auto flex items-end justify-between">
 					<div>
-						<a href="/" class="btn mb-4 text-white btn-ghost hover:bg-white/20">
+						<a href={resolve('/')} class="btn mb-4 text-white btn-ghost hover:bg-white/20">
 							<ArrowLeft class="h-4 w-4" />
 							Back to Home
 						</a>
@@ -232,23 +331,49 @@
 					</div>
 					<div class="mt-4">
 						{#if !data.isOwner}
-							<button
-								class="btn btn-lg btn-primary {isParticipating ? 'btn-outline' : ''}"
-								onclick={toggleParticipation}
-							>
-								{#if event.type === 'Offer'}
-									<HeartHandshake class="h-5 w-5" />
-								{:else}
-									<HandHelping class="h-5 w-5" />
-								{/if}
-								{isParticipating ? 'Leave' : 'Apply to'}
-								{event.type.toLowerCase()}
-							</button>
-							{#if isParticipating}
+							{#if userParticipationStatus === 'none'}
+								<button
+									class="btn btn-lg btn-primary"
+									onclick={() => (showParticipationModal = true)}
+								>
+									{#if event.type === 'Offer'}
+										<HeartHandshake class="h-5 w-5" />
+									{:else}
+										<HandHelping class="h-5 w-5" />
+									{/if}
+									Apply to {event.type.toLowerCase()}
+								</button>
+							{:else if userParticipationStatus === 'pending'}
+								<div class="alert alert-info">
+									<Clock class="h-5 w-5" />
+									<span>Participation request pending approval.</span>
+								</div>
+								<button class="btn mt-2 btn-outline btn-warning" onclick={withdrawRequest}>
+									Withdraw Request
+								</button>
+							{:else if userParticipationStatus === 'accepted'}
+								<button class="btn btn-outline btn-lg btn-primary" onclick={leaveEvent}>
+									{#if event.type === 'Offer'}
+										<HeartHandshake class="h-5 w-5" />
+									{:else}
+										<HandHelping class="h-5 w-5" />
+									{/if}
+									Leave {event.type.toLowerCase()}
+								</button>
 								<div class="mt-4 alert alert-success">
 									<HeartHandshake class="h-5 w-5" />
 									<span>You are participating in this {event.type.toLowerCase()}!</span>
 								</div>
+							{:else if userParticipationStatus === 'rejected'}
+								<div class="alert alert-error">
+									<span>Your participation request was rejected.</span>
+								</div>
+								<button
+									class="btn mt-2 btn-lg btn-primary"
+									onclick={() => (showParticipationModal = true)}
+								>
+									Apply Again
+								</button>
 							{/if}
 							{#if event.maxParticipants && event.participantCount >= event.maxParticipants}
 								<p class="mt-2 text-sm text-white/70">
@@ -265,6 +390,94 @@
 				</div>
 			</div>
 		</div>
+
+		<!-- Participation Management Section for Owner -->
+		{#if data.isOwner}
+			<div class="container mx-auto px-6 py-8">
+				<div class="grid grid-cols-1 gap-8 lg:grid-cols-2">
+					<!-- Pending Requests -->
+					<div class="card bg-base-100 shadow-xl">
+						<div class="card-body">
+							<h3 class="card-title">
+								<Users class="h-5 w-5" />
+								Pending Participation Requests ({participationRequests.filter(
+									(r) => r.status === 'PENDING'
+								).length})
+							</h3>
+							{#if participationRequests.some((r) => r.status === 'PENDING')}
+								{#each participationRequests.filter((r) => r.status === 'PENDING') as request (request.id)}
+									<div
+										class="mb-4 border-b border-base-300 pb-4 last:mb-0 last:border-b-0 last:pb-0"
+									>
+										<div class="flex items-start justify-between">
+											<div class="flex-1">
+												<p class="font-semibold">{request.userName}</p>
+												{#if request.message}
+													<p class="mt-1 text-sm opacity-70">{request.message}</p>
+												{/if}
+											</div>
+											<div class="flex gap-2">
+												<button
+													class="btn btn-sm btn-success"
+													onclick={() => acceptRequest(request.id)}
+												>
+													Accept
+												</button>
+												<button
+													class="btn btn-sm btn-error"
+													onclick={() => rejectRequest(request.id)}
+												>
+													Reject
+												</button>
+											</div>
+										</div>
+									</div>
+								{/each}
+							{:else}
+								<p class="text-sm opacity-70">No pending participation requests.</p>
+							{/if}
+						</div>
+					</div>
+
+					<!-- Accepted Participants -->
+					<div class="card bg-base-100 shadow-xl">
+						<div class="card-body">
+							<h3 class="card-title">
+								<Users class="h-5 w-5" />
+								Accepted Participants ({participationRequests.filter((r) => r.status === 'ACCEPTED')
+									.length})
+							</h3>
+							{#if participationRequests.some((r) => r.status === 'ACCEPTED')}
+								{#each participationRequests.filter((r) => r.status === 'ACCEPTED') as request (request.id)}
+									<div
+										class="mb-4 border-b border-base-300 pb-4 last:mb-0 last:border-b-0 last:pb-0"
+									>
+										<div class="flex items-start justify-between">
+											<div class="flex-1">
+												<p class="font-semibold">{request.userName}</p>
+												{#if request.message}
+													<p class="mt-1 text-sm opacity-70">{request.message}</p>
+												{/if}
+											</div>
+											<div class="flex gap-2">
+												<button
+													class="btn btn-sm btn-error"
+													onclick={() => removeParticipant(request.id)}
+												>
+													Remove
+												</button>
+											</div>
+										</div>
+									</div>
+								{/each}
+							{:else}
+								<p class="text-sm opacity-70">There are no accepted participants.</p>
+							{/if}
+						</div>
+					</div>
+				</div>
+			</div>
+		{/if}
 
 		<!-- Main Content -->
 		<div class="container mx-auto px-6 py-8">
@@ -366,15 +579,36 @@
 				</div>
 
 				<!-- Right Column: Chat -->
-				<div>
-					<div class="card bg-base-100 shadow-xl">
-						<div class="card-body">
-							<h3 class="card-title">
-								<MessageSquare class="h-5 w-5" />
-								Public Chat
-								<span class="badge badge-sm">{chatMessages.length}</span>
-							</h3>
+				<div class="card bg-base-100 shadow-xl">
+					<div class="card-body">
+						<!-- Tabs -->
+						<div class="tabs-boxed mb-4 tabs">
+							<a
+								class="tab-lg tab {activeTab === 'public' ? 'tab-active' : ''}"
+								onclick={() => (activeTab = 'public')}
+							>
+								<MessageSquare class="mr-2 h-5 w-5" />
+								<span class="text-lg font-semibold">Public Chat</span>
+								<span class="ml-2 badge badge-sm">{chatMessages.length}</span>
+							</a>
+							<a
+								class="tab-lg tab {activeTab === 'negotiation'
+									? 'tab-active'
+									: ''} {userParticipationStatus !== 'accepted' && !data.isOwner
+									? 'pointer-events-none opacity-50'
+									: ''}"
+								onclick={() => {
+									if (userParticipationStatus === 'accepted' || data.isOwner)
+										activeTab = 'negotiation';
+								}}
+							>
+								<MessageSquare class="mr-2 h-5 w-5" />
+								<span class="text-lg font-semibold">Negotiation</span>
+								<span class="ml-2 badge badge-sm">{negotiationMessages.length}</span>
+							</a>
+						</div>
 
+						{#if activeTab === 'public'}
 							<!-- Chat Messages -->
 							<div bind:this={chatContainer} class="mb-4 h-96 overflow-y-auto p-2">
 								{#each chatMessages as message (message.id)}
@@ -436,11 +670,114 @@
 									<Send class="h-4 w-4" />
 								</button>
 							</div>
-						</div>
+						{:else if activeTab === 'negotiation'}
+							<!-- Negotiation Messages -->
+							<div bind:this={negotiationContainer} class="mb-4 h-96 overflow-y-auto p-2">
+								{#each negotiationMessages as message (message.id)}
+									{#if message.author !== 'You'}
+										<div class="chat-start chat">
+											<UserAvatar
+												avatarClass="chat-image"
+												avatar={message.avatar}
+												name={message.author}
+												showName={false}
+												userId={message.author === 'You' ? '0' : '2'}
+												userData={{
+													fullName: message.author,
+													bio: message.author === 'You' ? 'Event participant' : 'Community member',
+													interests: ['Events', 'Networking'],
+													userScore: message.author === 'You' ? 90 : 40
+												}}
+											/>
+											<div class="chat-header">
+												{message.author}
+												<time class="text-xs opacity-50">{message.timestamp}</time>
+											</div>
+											<div
+												class="chat-bubble {message.author === 'You' ? 'chat-bubble-primary' : ''}"
+											>
+												{message.content}
+											</div>
+										</div>
+									{:else}
+										<div class="chat-end chat">
+											<div class="chat-header">
+												{message.author}
+												<time class="text-xs opacity-50">{message.timestamp}</time>
+											</div>
+											<div
+												class="chat-bubble {message.author === 'You' ? 'chat-bubble-primary' : ''}"
+											>
+												{message.content}
+											</div>
+										</div>
+									{/if}
+								{/each}
+							</div>
+
+							<!-- Negotiation Message Input -->
+							<div class="flex gap-2">
+								<input
+									type="text"
+									placeholder="Type a message..."
+									class="input-bordered input flex-1"
+									bind:value={newNegotiationMessage}
+									onkeydown={(e) => {
+										if (e.key === 'Enter') {
+											sendNegotiationMessage();
+										}
+									}}
+								/>
+								<button
+									class="btn btn-primary"
+									onclick={sendNegotiationMessage}
+									disabled={!newNegotiationMessage.trim()}
+								>
+									<Send class="h-4 w-4" />
+								</button>
+							</div>
+						{/if}
 					</div>
 				</div>
 			</div>
 		</div>
+
+		<!-- Participation Modal -->
+		<div class="modal" class:modal-open={showParticipationModal}>
+			<div class="modal-box">
+				<h3 class="text-lg font-bold">Send Participation Request</h3>
+				<p class="py-4">Provide additional information for your request (optional).</p>
+				<textarea
+					class="textarea-bordered textarea w-full"
+					bind:value={participationMessage}
+					placeholder="Additional information..."
+				></textarea>
+				<div class="modal-action">
+					<button
+						class="btn"
+						onclick={() => {
+							showParticipationModal = false;
+							participationMessage = '';
+						}}>Cancel</button
+					>
+					<button
+						class="btn btn-primary"
+						onclick={() => {
+							sendParticipationRequest();
+							showParticipationModal = false;
+						}}>Send Request</button
+					>
+				</div>
+			</div>
+			<div
+				class="modal-backdrop"
+				onclick={() => {
+					showParticipationModal = false;
+					participationMessage = '';
+				}}
+			></div>
+		</div>
+
 		<CreatePostModal
 			bind:open={showEditModal}
 			editData={data.event}

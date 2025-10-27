@@ -37,20 +37,15 @@
 	}
 
 	let mapContainer: HTMLElement;
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	let map: any = null;
 	let isClient = $state(false);
-	let theme = $state(document.documentElement.getAttribute('data-theme') || 'light');
 
-	// Only initialize on client side
+	// Initialize map on client side
 	$effect(() => {
 		isClient = browser;
-		if (isClient && mapContainer && !map) {
+		if (browser && mapContainer && !map) {
 			import('leaflet').then((L) => {
-				import('leaflet/dist/leaflet.css');
-
 				// Fix for default markers in Leaflet
-				// eslint-disable-next-line @typescript-eslint/no-explicit-any
 				delete (L.Icon.Default.prototype as any)._getIconUrl;
 				L.Icon.Default.mergeOptions({
 					iconRetinaUrl:
@@ -63,6 +58,7 @@
 				map = L.map(mapContainer).setView([latitude, longitude], 13);
 
 				// Add Carto tiles based on theme
+				const theme = document.documentElement.getAttribute('data-theme') || 'light';
 				const tileUrl =
 					theme === 'dark'
 						? 'https://cartodb-basemaps-{s}.global.ssl.fastly.net/dark_all/{z}/{x}/{y}.png'
@@ -86,10 +82,10 @@
 
 				// Add user marker if user location provided
 				if (userLatitude && userLongitude) {
-					// Create custom icon for user marker (blue)
+					// Create custom icon for user marker (green)
 					const userIcon = new L.Icon({
 						iconUrl:
-							'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-blue.png',
+							'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-green.png',
 						shadowUrl:
 							'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
 						iconSize: [25, 41],
@@ -101,7 +97,7 @@
 					userMarker = L.marker([userLatitude, userLongitude], { icon: userIcon }).addTo(map);
 					const distance = calculateDistance(userLatitude, userLongitude, latitude, longitude);
 					userMarker.bindPopup(
-						`<b>You ${userLocationName ? ` (${userLocationName})` : ''}</b><br/>Lat: ${userLatitude.toFixed(4)}, Lng: ${userLongitude.toFixed(4)}<br/>Distance: ${distance.toFixed(1)} km`
+						`<b>🏠 You're Here${userLocationName ? ` (${userLocationName})` : ''}</b><br/>Lat: ${userLatitude.toFixed(4)}, Lng: ${userLongitude.toFixed(4)}<br/>Distance: ${distance.toFixed(1)} km`
 					);
 
 					// Add distance line
@@ -111,7 +107,7 @@
 							[latitude, longitude]
 						],
 						{
-							color: 'blue',
+							color: 'green',
 							weight: 2,
 							opacity: 0.7
 						}
@@ -119,8 +115,8 @@
 
 					// Add circle around user location (500m radius)
 					L.circle([userLatitude, userLongitude], {
-						color: 'blue',
-						fillColor: 'blue',
+						color: 'green',
+						fillColor: 'green',
 						fillOpacity: 0.1,
 						radius: 500
 					}).addTo(map);
@@ -152,17 +148,10 @@
 			map.setView([latitude, longitude], 13);
 
 			// Clear existing markers, polylines, and circles
-			// eslint-disable-next-line @typescript-eslint/no-explicit-any
 			map.eachLayer((layer: any) => {
-				// eslint-disable-next-line @typescript-eslint/no-explicit-any
-				// eslint-disable-next-line @typescript-eslint/no-explicit-any
-				// eslint-disable-next-line @typescript-eslint/no-explicit-any
 				if (
-					// eslint-disable-next-line @typescript-eslint/no-explicit-any
 					layer instanceof (window as any).L.Marker ||
-					// eslint-disable-next-line @typescript-eslint/no-explicit-any
 					layer instanceof (window as any).L.Polyline ||
-					// eslint-disable-next-line @typescript-eslint/no-explicit-any
 					layer instanceof (window as any).L.Circle
 				) {
 					map.removeLayer(layer);
@@ -170,7 +159,6 @@
 			});
 
 			// Add event marker
-			// eslint-disable-next-line @typescript-eslint/no-explicit-any
 			const eventMarker = (window as any).L.marker([latitude, longitude]).addTo(map);
 			eventMarker
 				.bindPopup(
@@ -182,11 +170,10 @@
 
 			// Add user marker if user location provided
 			if (userLatitude && userLongitude) {
-				// Create custom icon for user marker (blue)
-				// eslint-disable-next-line @typescript-eslint/no-explicit-any
+				// Create custom icon for user marker (green)
 				const userIcon = new (window as any).L.Icon({
 					iconUrl:
-						'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-blue.png',
+						'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-green.png',
 					shadowUrl:
 						'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
 					iconSize: [25, 41],
@@ -195,7 +182,6 @@
 					shadowSize: [41, 41]
 				});
 
-				// eslint-disable-next-line @typescript-eslint/no-explicit-any
 				userMarker = (window as any).L.marker([userLatitude, userLongitude], {
 					icon: userIcon
 				}).addTo(map);
@@ -205,24 +191,22 @@
 				);
 
 				// Add distance line
-				// eslint-disable-next-line @typescript-eslint/no-explicit-any
 				(window as any).L.polyline(
 					[
 						[userLatitude, userLongitude],
 						[latitude, longitude]
 					],
 					{
-						color: 'blue',
+						color: 'green',
 						weight: 2,
 						opacity: 0.7
 					}
 				).addTo(map);
 
 				// Add circle around user location (500m radius)
-				// eslint-disable-next-line @typescript-eslint/no-explicit-any
 				(window as any).L.circle([userLatitude, userLongitude], {
-					color: 'blue',
-					fillColor: 'blue',
+					color: 'green',
+					fillColor: 'green',
 					fillOpacity: 0.1,
 					radius: 500
 				}).addTo(map);

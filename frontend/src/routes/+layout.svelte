@@ -1,13 +1,13 @@
 <script lang="ts">
 	import '../app.css';
+	import { resolve } from '$app/paths';
 	import CreatePostModal from '$lib/components/CreatePostModal.svelte';
-	import UserAvatar from '$lib/components/UserAvatar.svelte';
 	import favicon from '$lib/assets/favicon.svg';
-	import { BookOpen, Github, Plus, Search, Menu, MessageSquare, Inbox } from '@lucide/svelte';
+	import { BookOpen, Github, Plus, MessageSquare, Inbox } from '@lucide/svelte';
 
 	let { children } = $props();
 
-	let createPostModal: any;
+	let createPostModal: unknown;
 	let modalOpen = $state(false);
 
 	function openCreatePostModal() {
@@ -25,12 +25,20 @@
 <div class="flex min-h-screen flex-col">
 	<!-- Navbar -->
 	<div class="navbar w-full bg-base-300">
-		<div class="flex-1"><a class="btn text-xl btn-ghost" href="/#">Hive</a></div>
+		<div class="flex-1"><a href={resolve('/')} class="btn text-xl btn-ghost">Hive</a></div>
 		<div class="flex-none">
 			<ul class="menu menu-horizontal">
 				<!-- Navbar menu content here -->
-				<li><a href="/forum" class="btn btn-ghost"><MessageSquare class="h-4 w-4" /> Forum</a></li>
-				<li><a href="/inbox" class="btn btn-ghost"><Inbox class="h-4 w-4" /> Inbox</a></li>
+				<li>
+					<a href={resolve('/forum')} class="btn cursor-pointer btn-ghost"
+						><MessageSquare class="h-4 w-4" /> Forum</a
+					>
+				</li>
+				<li>
+					<a href={resolve('/inbox')} class="btn cursor-pointer btn-ghost"
+						><Inbox class="h-4 w-4" /> Inbox</a
+					>
+				</li>
 			</ul>
 		</div>
 		<div class="flex">

@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { page } from '$app/stores';
+	import { resolve } from '$app/paths';
 	import { AlertTriangle, Home, RefreshCw } from '@lucide/svelte';
 
 	let status = $derived($page.status);
@@ -42,7 +43,7 @@
 			{/if}
 
 			<div class="flex justify-center gap-4">
-				<a href="/" class="btn btn-primary">
+				<a href={resolve('/')} class="btn cursor-pointer btn-primary">
 					<Home class="mr-2 h-4 w-4" />
 					Go Home
 				</a>

@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
+	import { resolve } from '$app/paths';
 	import { page } from '$app/stores';
 	import { Funnel, Search } from '@lucide/svelte';
 	import MapOverview from '$lib/components/MapOverview.svelte';
@@ -69,13 +70,13 @@
 			params.set('user_lng', userLng.toString());
 			params.set('proximity', proximity.toString());
 		}
-		goto(`?${params.toString()}`);
+		goto(resolve(`?${params.toString()}`));
 	}
 </script>
 
 <div class="container mx-auto mb-8 p-4">
 	<!-- Filter section -->
-	<div class="bg-base-200 mb-4 p-4">
+	<div class="mb-4 bg-base-200 p-4">
 		<h2 class="mb-4 flex items-center gap-2 text-lg font-bold"><Funnel /> Filters</h2>
 		<form onsubmit={handleSubmit}>
 			<div class="flex flex-wrap items-center gap-4">
@@ -139,13 +140,13 @@
 			<div class="mt-4">
 				<div class="flex flex-wrap gap-2">
 					{#if q}
-						<span class="badge badge-primary gap-2">
+						<span class="badge gap-2 badge-primary">
 							Search: {q}
 							<button type="button" class="btn btn-ghost btn-xs" onclick={() => (q = '')}>×</button>
 						</span>
 					{/if}
-					{#each tags as tag}
-						<span class="badge badge-secondary gap-2">
+					{#each tags as tag (tag)}
+						<span class="badge gap-2 badge-secondary">
 							Tag: {tag}
 							<button type="button" class="btn btn-ghost btn-xs" onclick={() => removeTag(tag)}
 								>×</button
@@ -153,7 +154,7 @@
 						</span>
 					{/each}
 					{#if start}
-						<span class="badge badge-accent gap-2">
+						<span class="badge gap-2 badge-accent">
 							Start: {start}
 							<button type="button" class="btn btn-ghost btn-xs" onclick={() => (start = '')}
 								>×</button
@@ -161,7 +162,7 @@
 						</span>
 					{/if}
 					{#if end}
-						<span class="badge badge-accent gap-2">
+						<span class="badge gap-2 badge-accent">
 							End: {end}
 							<button type="button" class="btn btn-ghost btn-xs" onclick={() => (end = '')}
 								>×</button
@@ -169,7 +170,7 @@
 						</span>
 					{/if}
 					{#if proximity > 0}
-						<span class="badge badge-info gap-2">
+						<span class="badge gap-2 badge-info">
 							Proximity: {proximity} km
 							<button type="button" class="btn btn-ghost btn-xs" onclick={() => (proximity = 0)}
 								>×</button
@@ -183,12 +184,12 @@
 	<div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
 		<!-- Left: Map -->
 		<div>
-			<MapOverview events={data.events} {userLat} {userLng} />
+			<MapOverview events={data.events} {userLat} {userLng} {proximity} />
 		</div>
 
 		<!-- Right: List of cards -->
 		<div class="space-y-4">
-			{#each data.events as event}
+			{#each data.events as event (event.id)}
 				<SearchResultCard
 					title={event.title}
 					description={event.description}
@@ -200,6 +201,9 @@
 					eventId={event.id}
 				/>
 			{/each}
+			{#if data.events.length === 0 && (q || tags.length > 0 || start || end || proximity > 0)}
+				<div class="alert alert-info">No events found matching your criteria.</div>
+			{/if}
 		</div>
 	</div>
 </div>

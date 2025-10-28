@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { HandHelping, HeartHandshake, MapPin, Users } from '@lucide/svelte';
 	import { goto } from '$app/navigation';
+	import { resolve } from '$app/paths';
 
 	export let title: string;
 	export let description: string;
@@ -14,7 +15,7 @@
 	let badgeColor = (cond: boolean) => (cond ? 'badge-primary' : 'badge-accent');
 
 	function handleCardClick() {
-		goto(`/event/${eventId}`);
+		goto(resolve(`/event/${eventId}`));
 	}
 
 	function handleKeydown(event: KeyboardEvent) {

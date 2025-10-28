@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { MessageSquare, HeartHandshake, HandHelping, Check, ExternalLink } from '@lucide/svelte';
-	import { goto } from '$app/navigation';
+	import { resolve } from '$app/paths';
 
 	type NotificationType = 'forum_reply' | 'offer_response' | 'need_response';
 
@@ -115,7 +115,7 @@
 												</button>
 											{/if}
 
-											<a href={notification.sourceUrl} class="btn btn-sm btn-primary">
+											<a href={resolve(notification.sourceUrl)} class="btn btn-sm btn-primary">
 												<ExternalLink class="h-4 w-4" />
 												View
 											</a>

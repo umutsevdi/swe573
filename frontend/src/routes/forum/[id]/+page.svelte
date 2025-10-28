@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { ArrowLeft, MessageSquare, Calendar } from '@lucide/svelte';
+	import { resolve } from '$app/paths';
 	import ForumPost from '$lib/components/ForumPost.svelte';
 	import UserAvatar from '$lib/components/UserAvatar.svelte';
 
@@ -35,7 +36,7 @@
 	<div class="hero min-h-screen bg-base-200">
 		<div class="hero-content w-full max-w-4xl flex-col">
 			<div class="w-full">
-				<a href="/forum" class="btn mb-4 btn-ghost">
+				<a href={resolve('/forum')} class="btn mb-4 btn-ghost">
 					<ArrowLeft />
 					Back to Forum
 				</a>

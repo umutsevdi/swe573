@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { User } from '@lucide/svelte';
+	import { resolve } from '$app/paths';
 	import UserTooltipCard from './UserTooltipCard.svelte';
 
 	let {
@@ -50,7 +51,7 @@
 {#if avatarClass === 'chat-image'}
 	{@render avatarContent()}
 {:else if userId}
-	<a href="/user/{userId}" class="cursor-pointer">
+	<a href={resolve(`/user/${userId}`)} class="cursor-pointer">
 		{@render avatarContent()}
 	</a>
 {:else}
@@ -68,7 +69,7 @@
 {#snippet chatAvatar()}
 	{#if userId}
 		<a
-			href="/user/{userId}"
+			href={resolve(`/user/${userId}`)}
 			class="avatar {avatarClass} relative cursor-pointer"
 			onmouseenter={handleMouseEnter}
 			onmouseleave={handleMouseLeave}

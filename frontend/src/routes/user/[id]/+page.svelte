@@ -8,7 +8,6 @@
 		Meh,
 		Smile,
 		Edit,
-		Settings,
 		Tag
 	} from '@lucide/svelte';
 	import type { PageProps } from './$types';

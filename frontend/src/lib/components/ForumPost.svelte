@@ -1,15 +1,6 @@
 <script lang="ts">
-	import { MessageCircle, User } from '@lucide/svelte';
+	import { MessageCircle } from '@lucide/svelte';
 	import UserAvatar from './UserAvatar.svelte';
-
-	type ForumPostData = {
-		id: string;
-		author: string;
-		avatar: string;
-		content: string;
-		timestamp: string;
-		replies: ForumPostData[];
-	};
 
 	let {
 		author,

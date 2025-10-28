@@ -1,7 +1,7 @@
 <script lang="ts">
-	import { MessageSquare, User, Calendar } from '@lucide/svelte';
+	import { MessageSquare, Calendar } from '@lucide/svelte';
+	import { resolve } from '$app/paths';
 	import UserAvatar from './UserAvatar.svelte';
-	import { goto } from '$app/navigation';
 
 	type ForumPostData = {
 		id: string;
@@ -27,8 +27,8 @@
 </script>
 
 <a
-	href={`/forum/${topic.id}`}
-	class="mb-4 block rounded-lg border border-base-300 bg-base-100 p-4 transition-colors hover:bg-base-200"
+	href={resolve(`/forum/${topic.id}`)}
+	class="mb-4 block cursor-pointer rounded-lg border border-base-300 bg-base-100 p-4 transition-colors hover:bg-base-200"
 >
 	<div class="flex items-center gap-3 text-xl font-medium">
 		<MessageSquare />

@@ -1,0 +1,16 @@
+
+networks:
+  app-tier:
+    driver: bridge
+
+services:
+  db:
+    image: 'postgres:latest'
+    ports:
+      - "5432:5432"
+    volumes:
+      - ${PWD}/db/:/var/lib/postgresql/19/data/
+    env_file:
+      - .env
+    networks:
+      - app-tier

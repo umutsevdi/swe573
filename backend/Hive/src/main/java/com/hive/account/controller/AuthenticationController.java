@@ -1,8 +1,8 @@
 package com.hive.account.controller;
 
 import com.hive.account.mapper.UserMapper;
-import com.hive.account.model.RegisterRequest;
-import com.hive.account.model.UserCardResponse;
+import com.hive.account.model.request.RegisterRequest;
+import com.hive.account.model.response.UserCardResponse;
 import com.hive.account.model.UserDTO;
 import com.hive.account.service.UserService;
 import com.hive.util.JwtUtil;

@@ -27,6 +27,7 @@ public class UserDTO implements UserDetails {
     private boolean isAccountTerminated;
     private LocalDateTime createDate;
     private int userScore;
+    private int timeBank;
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {

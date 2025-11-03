@@ -1,4 +1,4 @@
-package com.hive.account.model;
+package com.hive.account.model.response;
 
 import lombok.Data;
 

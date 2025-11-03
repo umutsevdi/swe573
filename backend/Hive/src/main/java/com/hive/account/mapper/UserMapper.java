@@ -1,10 +1,10 @@
 package com.hive.account.mapper;
 
 
-import com.hive.account.model.RegisterRequest;
-import com.hive.account.model.UserCardResponse;
-import com.hive.account.model.UserDTO;
-import com.hive.account.model.UserEntity;
+import com.hive.account.model.*;
+import com.hive.account.model.request.RegisterRequest;
+import com.hive.account.model.response.UserCardResponse;
+import com.hive.account.model.response.UserProfileResponse;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.Named;
@@ -26,6 +26,9 @@ public interface UserMapper {
     UserDTO requestToDto(RegisterRequest user);
 
     UserCardResponse dtoToCard(UserDTO user);
+
+    @Mapping(source = "timeBank", target = "remainingTime")
+    UserProfileResponse dtoToUserProfileResponse(UserDTO user);
 
     @Named("entity")
     default String serializeInterests(List<String> interests) {

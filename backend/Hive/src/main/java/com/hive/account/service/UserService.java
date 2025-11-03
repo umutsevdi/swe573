@@ -1,9 +1,11 @@
 package com.hive.account.service;
 
 import com.hive.account.mapper.UserMapper;
-import com.hive.account.model.RegisterRequest;
 import com.hive.account.model.UserDTO;
+import com.hive.account.model.UserEntity;
 import com.hive.account.model.UserRole;
+import com.hive.account.model.request.RegisterRequest;
+import com.hive.account.model.request.UpdateUserRequest;
 import com.hive.account.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.hibernate.PropertyValueException;
@@ -22,11 +24,12 @@ public class UserService implements UserDetailsService {
     private final UserMapper mapper = UserMapper.INSTANCE;
 
     public Optional<UserDTO> findById(Long id) {
-        return repository.findById(id).map(mapper::entityToDto);
+        return repository.findByIdAndIsActiveTrue(id).map(mapper::entityToDto);
     }
 
     public Optional<UserDTO> findByUsername(String username) {
-        return repository.findByUsername(username).map(mapper::entityToDto);
+        return repository.findByUsernameAndIsActiveTrue(username)
+                .map(mapper::entityToDto);
     }
 
     public void create(RegisterRequest request) throws PropertyValueException {
@@ -41,9 +44,42 @@ public class UserService implements UserDetailsService {
 
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
-        return repository.findByUsername(username)
+        return repository.findByUsernameAndIsActiveTrue(username)
                 .map(mapper::entityToDto)
                 .orElseThrow(() -> new UsernameNotFoundException("User not " +
                         "found"));
+    }
+
+    public UserDTO updateUser(String username, UpdateUserRequest request) throws UsernameNotFoundException {
+        UserDTO dto = repository.findByUsernameAndIsActiveTrue(username)
+                .map(mapper::entityToDto)
+                .orElseThrow(() -> new UsernameNotFoundException("User" +
+                        " not " +
+                        "found"));
+        boolean changed = false;
+        if (!request.getBio().isBlank() && !request.getBio().equals(dto.getBiography())) {
+            changed = true;
+            dto.setBiography(request.getBio());
+        }
+        if (!request.getProfileUrl().isBlank() && !request.getProfileUrl().equals(dto.getProfileUrl())) {
+            changed = true;
+            dto.setProfileUrl(request.getProfileUrl());
+        }
+        if (!request.getInterests().isEmpty() && !request.getInterests().equals(dto.getInterests())) {
+            changed = true;
+            dto.setInterests(request.getInterests());
+        }
+        if (changed) {
+            repository.save(mapper.dtoToEntity(dto));
+        }
+        return dto;
+    }
+
+    public void deactivateUser(String username) {
+        UserEntity entity = repository.findByUsernameAndIsActiveTrue(username)
+                .orElseThrow(() -> new UsernameNotFoundException(
+                        "User not found"));
+        entity.setActive(false);
+        repository.save(entity);
     }
 }

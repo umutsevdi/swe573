@@ -39,5 +39,7 @@ public class UserEntity {
     private LocalDateTime createDate;
     @Column(nullable = false)
     private int userScore = 100;
+    @Column(nullable = false)
+    private int timeBank = 10;
 
 }

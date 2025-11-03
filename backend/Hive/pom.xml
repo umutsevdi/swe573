@@ -113,6 +113,8 @@
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
                 <configuration>
+                    <mainClass>com.hive.HiveApplication</mainClass>
+                    <imageName>docker.io/sevdiumut/hive:latest</imageName>
                     <excludes>
                         <exclude>
                             <groupId>org.projectlombok</groupId>

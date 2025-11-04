@@ -1,10 +1,11 @@
-package com.hive.account.mapper;
+package com.hive.app.account.mapper;
 
 
-import com.hive.account.model.*;
-import com.hive.account.model.request.RegisterRequest;
-import com.hive.account.model.response.UserCardResponse;
-import com.hive.account.model.response.UserProfileResponse;
+import com.hive.app.account.model.UserDTO;
+import com.hive.app.account.model.UserEntity;
+import com.hive.app.account.model.request.RegisterRequest;
+import com.hive.app.account.model.response.UserCardResponse;
+import com.hive.app.account.model.response.UserProfileResponse;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.Named;
@@ -13,7 +14,7 @@ import org.mapstruct.factory.Mappers;
 import java.util.ArrayList;
 import java.util.List;
 
-@Mapper
+@Mapper(componentModel = "spring")
 public interface UserMapper {
     UserMapper INSTANCE = Mappers.getMapper(UserMapper.class);
 

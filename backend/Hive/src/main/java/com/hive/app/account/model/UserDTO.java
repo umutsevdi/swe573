@@ -1,4 +1,4 @@
-package com.hive.account.model;
+package com.hive.app.account.model;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.Data;

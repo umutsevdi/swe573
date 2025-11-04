@@ -1,10 +1,11 @@
-package com.hive.account.controller;
+package com.hive.app.account.controller;
 
-import com.hive.account.mapper.UserMapper;
-import com.hive.account.model.request.RegisterRequest;
-import com.hive.account.model.response.UserCardResponse;
-import com.hive.account.model.UserDTO;
-import com.hive.account.service.UserService;
+import com.hive.app.account.mapper.UserMapper;
+import com.hive.app.account.model.UserDTO;
+import com.hive.app.account.model.request.RegisterRequest;
+import com.hive.app.account.model.response.UserCardResponse;
+import com.hive.app.account.service.UserService;
+import com.hive.config.UserNotFoundException;
 import com.hive.util.JwtUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -13,10 +14,7 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -48,6 +46,15 @@ public class AuthenticationController {
         UserDTO user = (UserDTO) auth.getPrincipal();
         String token = jwtUtil.generateToken(user);
         return ResponseEntity.ok(new AuthResponse(token, mapper.dtoToCard(user)));
+    }
+
+    @GetMapping("/renew")
+    public ResponseEntity<AuthResponse> login(@RequestHeader(value = "Authorization") String authHeader) {
+        Long id = jwtUtil.extractId(jwtUtil.getBearer(authHeader));
+        return ResponseEntity.ok(service.findById(id)
+                .map(user -> new AuthResponse(jwtUtil.generateToken(user),
+                        mapper.dtoToCard(user)))
+                .orElseThrow(UserNotFoundException::new));
     }
 
     public record AuthRequest(String username, String password) {

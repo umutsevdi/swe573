@@ -1,12 +1,12 @@
-package com.hive.account.service;
+package com.hive.app.account.service;
 
-import com.hive.account.mapper.UserMapper;
-import com.hive.account.model.UserDTO;
-import com.hive.account.model.UserEntity;
-import com.hive.account.model.UserRole;
-import com.hive.account.model.request.RegisterRequest;
-import com.hive.account.model.request.UpdateUserRequest;
-import com.hive.account.repository.UserRepository;
+import com.hive.app.account.mapper.UserMapper;
+import com.hive.app.account.model.UserDTO;
+import com.hive.app.account.model.UserEntity;
+import com.hive.app.account.model.UserRole;
+import com.hive.app.account.model.request.RegisterRequest;
+import com.hive.app.account.model.request.UpdateUserRequest;
+import com.hive.app.account.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.hibernate.PropertyValueException;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -50,8 +50,8 @@ public class UserService implements UserDetailsService {
                         "found"));
     }
 
-    public UserDTO updateUser(String username, UpdateUserRequest request) throws UsernameNotFoundException {
-        UserDTO dto = repository.findByUsernameAndIsActiveTrue(username)
+    public UserDTO updateUser(Long id, UpdateUserRequest request) throws UsernameNotFoundException {
+        UserDTO dto = repository.findByIdAndIsActiveTrue(id)
                 .map(mapper::entityToDto)
                 .orElseThrow(() -> new UsernameNotFoundException("User" +
                         " not " +
@@ -75,8 +75,8 @@ public class UserService implements UserDetailsService {
         return dto;
     }
 
-    public void deactivateUser(String username) {
-        UserEntity entity = repository.findByUsernameAndIsActiveTrue(username)
+    public void deactivateUser(Long id) {
+        UserEntity entity = repository.findByIdAndIsActiveTrue(id)
                 .orElseThrow(() -> new UsernameNotFoundException(
                         "User not found"));
         entity.setActive(false);

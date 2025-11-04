@@ -1,6 +1,6 @@
-package com.hive.account.model.response;
+package com.hive.app.account.model.response;
 
-import com.hive.account.model.UserRole;
+import com.hive.app.account.model.UserRole;
 import lombok.Data;
 
 import java.time.LocalDateTime;

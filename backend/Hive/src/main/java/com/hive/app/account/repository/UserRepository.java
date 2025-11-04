@@ -1,6 +1,6 @@
-package com.hive.account.repository;
+package com.hive.app.account.repository;
 
-import com.hive.account.model.UserEntity;
+import com.hive.app.account.model.UserEntity;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 

@@ -45,7 +45,9 @@ public class GlobalExceptionHandler {
             LockedException.class,
             AccountExpiredException.class,
             CredentialsExpiredException.class,
-            AuthenticationServiceException.class
+            AuthenticationServiceException.class,
+            UserNotFoundException.class,
+            AuthenticationFailureException.class
     })
     public ResponseEntity<ApiError> handleAuthenticationException(
             AuthenticationException ex,

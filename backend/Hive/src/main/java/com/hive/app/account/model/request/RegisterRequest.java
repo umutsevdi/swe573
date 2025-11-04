@@ -1,4 +1,4 @@
-package com.hive.account.model.request;
+package com.hive.app.account.model.request;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.validation.constraints.Email;

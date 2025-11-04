@@ -1,13 +1,13 @@
 package com.hive.util;
 
-import com.hive.account.model.UserRole;
+import com.hive.app.account.model.UserDTO;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
 
@@ -26,21 +26,22 @@ public class JwtUtil {
 
     private static final long EXPIRATION_MS = 2 * 60 * 60 * 1000; // 2h
 
+    public String getBearer(String token) throws BadCredentialsException {
+        if (token == null || !token.startsWith("Bearer ")) {
+            throw new BadCredentialsException("JWT not found!");
+        }
+        return token.substring(7);
+    }
+
     public String generateToken(UserDetails userDetails) {
+        UserDTO user = (UserDTO) userDetails;
         Date now = new Date();
         Date expiry = new Date(now.getTime() + EXPIRATION_MS);
 
         return Jwts.builder()
-                .subject(userDetails.getUsername())
+                .subject(user.getId() + ":" + user.getUsername())
                 .issuer(issuer)
-                .issuedAt(now)
-                .claim("role",
-                        userDetails
-                                .getAuthorities()
-                                .stream()
-                                .findFirst()
-                                .map(GrantedAuthority::getAuthority)
-                                .orElse(UserRole.MEMBER.name()))
+                .claim("role", user.getRole().getAuthority())
                 .expiration(expiry)
                 .signWith(getSigningKey())
                 .compact();
@@ -50,8 +51,12 @@ public class JwtUtil {
         return extractUsername(token).equals(userDetails.getUsername()) && !isExpired(token);
     }
 
+    public Long extractId(String token) {
+        return Long.parseLong(parseClaims(token).getSubject().split(":")[0]);
+    }
+
     public String extractUsername(String token) {
-        return parseClaims(token).getSubject();
+        return parseClaims(token).getSubject().split(":")[1];
     }
 
     public String extractRoles(String token) {

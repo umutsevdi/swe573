@@ -20,7 +20,18 @@ import java.util.stream.Collectors;
 @Log4j2
 @RestControllerAdvice
 public class GlobalExceptionHandler {
-    @ExceptionHandler(MethodArgumentNotValidException.class)
+    public record ApiError(
+            Instant timestamp,
+            int status,
+            String error,
+            String path,
+            String message,
+            List<String> details) {
+    }
+
+    @ExceptionHandler({
+            MethodArgumentNotValidException.class,
+    })
     public ResponseEntity<ApiError> handleValidationException(
             MethodArgumentNotValidException ex,
             HttpServletRequest request) {
@@ -29,14 +40,11 @@ public class GlobalExceptionHandler {
                 .getFieldErrors()
                 .stream().map(FieldError::getField)
                 .collect(Collectors.toList());
-
-        ApiError error = buildError(
+        return new ResponseEntity<>(buildError(
                 HttpStatus.BAD_REQUEST,
                 request,
                 "Validation failed",
-                fieldErrors);
-
-        return new ResponseEntity<>(error, HttpStatus.BAD_REQUEST);
+                fieldErrors), HttpStatus.BAD_REQUEST);
     }
 
     @ExceptionHandler({
@@ -52,27 +60,33 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiError> handleAuthenticationException(
             AuthenticationException ex,
             HttpServletRequest request) {
-
-        ApiError error = buildError(
+        return new ResponseEntity<>(buildError(
                 HttpStatus.UNAUTHORIZED,
                 request,
                 "Authentication failed",
-                List.of(ex.getMessage()));
-        return new ResponseEntity<>(error, HttpStatus.UNAUTHORIZED);
+                List.of(ex.getMessage())), HttpStatus.UNAUTHORIZED);
+    }
+
+    @ExceptionHandler(AssetNotFoundException.class)
+    public ResponseEntity<ApiError> handleAssetNotFoundException(
+            AssetNotFoundException ex,
+            HttpServletRequest request) {
+        return new ResponseEntity<>(buildError(
+                HttpStatus.NOT_FOUND,
+                request,
+                "Asset not found!",
+                List.of(ex.getMessage())), HttpStatus.NOT_FOUND);
     }
 
     @ExceptionHandler(AccessDeniedException.class)
     public ResponseEntity<ApiError> handleAccessDenied(
             AccessDeniedException ex,
             HttpServletRequest request) {
-
-        ApiError error = buildError(
+        return new ResponseEntity<>(buildError(
                 HttpStatus.FORBIDDEN,
                 request,
                 "Access denied",
-                List.of(ex.getMessage()));
-
-        return new ResponseEntity<>(error, HttpStatus.FORBIDDEN);
+                List.of(ex.getMessage())), HttpStatus.FORBIDDEN);
     }
 
     @ExceptionHandler(Exception.class)
@@ -80,28 +94,22 @@ public class GlobalExceptionHandler {
             Exception ex,
             HttpServletRequest request) {
         log.error("Unhandled exception on {} {}", request.getMethod(), request.getRequestURI(), ex);
-
-        ApiError error = buildError(
+        return new ResponseEntity<>(buildError(
                 HttpStatus.INTERNAL_SERVER_ERROR,
                 request,
                 "An unexpected error occurred",
-                List.of(ex.getClass().getSimpleName() + ": " + ex.getMessage()));
-
-        return new ResponseEntity<>(error, HttpStatus.INTERNAL_SERVER_ERROR);
+                List.of(ex.getClass().getSimpleName() + ": " + ex.getMessage())), HttpStatus.INTERNAL_SERVER_ERROR);
     }
 
     @ExceptionHandler(NoHandlerFoundException.class)
     public ResponseEntity<ApiError> handleNotFound(
             NoHandlerFoundException ex,
             HttpServletRequest request) {
-
-        ApiError error = buildError(
+        return new ResponseEntity<>(buildError(
                 HttpStatus.NOT_FOUND,
                 request,
                 "Endpoint not found",
-                List.of(String.format("%s %s", ex.getHttpMethod(), ex.getRequestURL())));
-
-        return new ResponseEntity<>(error, HttpStatus.NOT_FOUND);
+                List.of(String.format("%s %s", ex.getHttpMethod(), ex.getRequestURL()))), HttpStatus.NOT_FOUND);
     }
 
     private static ApiError buildError(HttpStatus status,
@@ -116,6 +124,4 @@ public class GlobalExceptionHandler {
                 message,
                 details);
     }
-
 }
-

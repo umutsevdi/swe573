@@ -4,43 +4,49 @@ import com.hive.app.account.model.UserEntity;
 import jakarta.persistence.*;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
+import org.hibernate.annotations.CreationTimestamp;
 
 import java.time.LocalDateTime;
 
 @Data
 @RequiredArgsConstructor
-@Table(name = "EVENT")
+@Table(name = "EVENT",
+        indexes = {
+                @Index(name = "EVENT_OWNER_IDX", columnList = "OWNER_ID")
+        }
+)
 @Entity
 public class EventEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
     @Column
-    String title;
+    private String title;
     @Column
-    String description;
+    private String description;
     @Column
-    String tags;
+    private String tags;
     @Column
-    String backgroundImage;
+    private String backgroundImage;
     @Column
-    Double latitude;
+    private Double latitude;
     @Column
-    Double longitude;
+    private Double longitude;
     @Column
-    String locationName;
+    private String locationName;
     @Column
-    Integer maxParticipants;
+    private Integer maxParticipants;
     @Column
     @Enumerated(EnumType.ORDINAL)
-    EventType type;
+    private EventType type;
     @Column
-    Integer duration;
+    private Integer duration;
+    @CreationTimestamp
+    @Column(updatable = false)
+    private LocalDateTime createdAt;
     @Column
-    LocalDateTime createdAt;
-    @Column
-    LocalDateTime updatedAt;
-    @OneToOne(cascade = CascadeType.ALL)
-    @MapsId
+    private LocalDateTime updatedAt;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "OWNER_ID", nullable = false)
     private UserEntity owner;
 }

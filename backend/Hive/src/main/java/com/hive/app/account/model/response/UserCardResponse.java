@@ -6,10 +6,10 @@ import java.util.List;
 
 @Data
 public class UserCardResponse {
-    String profileUrl;
-    String fullName;
-    String bio;
-    List<String> interests;
-    int userScore;
+    private Long id;
+    private String fullName;
+    private String bio;
+    private List<String> interests;
+    private int userScore;
 }
 

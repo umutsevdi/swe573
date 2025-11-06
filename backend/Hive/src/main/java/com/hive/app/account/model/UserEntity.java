@@ -23,8 +23,6 @@ public class UserEntity {
     @Column(nullable = false)
     private String fullName;
     @Column(nullable = false)
-    private String profileUrl;
-    @Column(nullable = false)
     private String biography;
     @Column(nullable = false)
     private String interests;
@@ -36,7 +34,7 @@ public class UserEntity {
     @Column(nullable = false)
     private boolean isAccountTerminated;
     @Column(nullable = false)
-    private LocalDateTime createDate;
+    private LocalDateTime createdAt;
     @Column(nullable = false)
     private int userScore = 100;
     @Column(nullable = false)

@@ -10,5 +10,5 @@ public class Location {
     @JsonProperty("lon")
     private Double longitude;
     @JsonProperty("location")
-    String name;
+    private String name;
 }

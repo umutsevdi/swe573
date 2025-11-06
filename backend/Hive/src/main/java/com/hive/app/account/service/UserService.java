@@ -34,7 +34,7 @@ public class UserService implements UserDetailsService {
 
     public void create(RegisterRequest request) throws PropertyValueException {
         var dto = mapper.requestToDto(request);
-        dto.setCreateDate(LocalDateTime.now());
+        dto.setCreatedAt(LocalDateTime.now());
         dto.setUserScore(100);
         dto.setActive(true);
         dto.setRole(UserRole.MEMBER);
@@ -60,10 +60,6 @@ public class UserService implements UserDetailsService {
         if (!request.getBio().isBlank() && !request.getBio().equals(dto.getBiography())) {
             changed = true;
             dto.setBiography(request.getBio());
-        }
-        if (!request.getProfileUrl().isBlank() && !request.getProfileUrl().equals(dto.getProfileUrl())) {
-            changed = true;
-            dto.setProfileUrl(request.getProfileUrl());
         }
         if (!request.getInterests().isEmpty() && !request.getInterests().equals(dto.getInterests())) {
             changed = true;

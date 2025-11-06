@@ -13,7 +13,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/api/user")
+@RequestMapping("/user")
 @RequiredArgsConstructor
 public class UserController {
     private final JwtUtil jwtUtil;
@@ -39,7 +39,7 @@ public class UserController {
         return ResponseEntity.ok(user);
     }
 
-    @GetMapping("/me")
+    @GetMapping
     public ResponseEntity<UserDTO> getCurrentUser(@RequestHeader(value = "Authorization") String authHeader) {
         Long id = jwtUtil.extractId(jwtUtil.getBearer(authHeader));
         return ResponseEntity.ok(service.findById(id)
@@ -48,7 +48,7 @@ public class UserController {
     }
 
 
-    @PutMapping("/me")
+    @PutMapping
     public ResponseEntity<UserProfileResponse> updateUser(@RequestHeader(value = "Authorization") String
                                                                   authHeader,
                                                           UpdateUserRequest request) {
@@ -57,7 +57,7 @@ public class UserController {
     }
 
 
-    @DeleteMapping("/me")
+    @DeleteMapping
     public ResponseEntity<Void> deleteUser(@RequestHeader(value = "Authorization") String authHeader) {
         Long id = jwtUtil.extractId(jwtUtil.getBearer(authHeader));
         service.deactivateUser(id);

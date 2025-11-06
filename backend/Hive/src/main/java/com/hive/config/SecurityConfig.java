@@ -31,8 +31,11 @@ public class SecurityConfig {
                 .userDetailsService(userDetailsService)
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/docs/openapi/**", "/docs/swagger-ui.html", "/docs/swagger-ui/**").permitAll()
-                        .requestMatchers("/api/auth/**").permitAll()
+                        .requestMatchers("/docs/openapi/**",
+                                "/docs/swagger-ui.html",
+                                "/docs/swagger-ui/**",
+                                "/auth/**"
+                        ).permitAll()
                         .anyRequest().authenticated()).build();
     }
 

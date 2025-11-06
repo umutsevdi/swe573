@@ -17,7 +17,6 @@ public class UserDTO implements UserDetails {
     private String password; // Bcrypt Hashed
     private String email;
     private String fullName;
-    private String profileUrl;
     private String biography;
     private List<String> interests;
     private UserRole role;
@@ -25,7 +24,7 @@ public class UserDTO implements UserDetails {
     private boolean isActive;
     @JsonIgnore
     private boolean isAccountTerminated;
-    private LocalDateTime createDate;
+    private LocalDateTime createdAt;
     private int userScore;
     private int timeBank;
 

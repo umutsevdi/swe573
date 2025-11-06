@@ -6,13 +6,6 @@ import java.util.List;
 
 @Data
 public class UpdateUserRequest {
-    String bio;
-    List<String> interests;
-    String profileUrl;
-
-    public static UpdateUserRequest profileUrlRequest(String profileUrl) {
-        var req = new UpdateUserRequest();
-        req.setProfileUrl(profileUrl);
-        return req;
-    }
+    private String bio;
+    private List<String> interests;
 }

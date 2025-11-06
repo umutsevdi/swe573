@@ -1,50 +1,74 @@
 package com.hive.app.image.service;
 
+import com.hive.app.events.service.EventService;
 import com.hive.app.image.model.ImageEntity;
 import com.hive.app.image.repository.ImageRepository;
+import com.hive.config.AssetNotFoundException;
+import com.hive.config.AuthenticationFailureException;
 import lombok.RequiredArgsConstructor;
-import org.springframework.core.io.ByteArrayResource;
-import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.HttpMediaTypeNotAcceptableException;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
-import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
 public class ImageService {
 
     private final ImageRepository repo;
+    private final EventService eventService;
 
     @Transactional
-    public UUID store(MultipartFile file) throws IOException {
-        validate(file);
-        return repo.save(new ImageEntity(
-                UUID.randomUUID(),
-                file.getContentType(),
-                file.getSize(),
-                file.getBytes()
-        )).getId();
+    public void storeProfile(MultipartFile file,
+                             Long id,
+                             Long userId
+    ) throws HttpMediaTypeNotAcceptableException {
+        if (!userId.equals(id)) {
+            throw new AuthenticationFailureException();
+        }
+        try {
+            validate(file);
+            repo.save(new ImageEntity(
+                    ImageEntity.AssetType.PROFILE,
+                    userId,
+                    file.getContentType(),
+                    file.getSize(),
+                    file.getBytes()
+            ));
+        } catch (IOException e) {
+            throw new HttpMediaTypeNotAcceptableException(e.getMessage());
+        }
     }
 
     @Transactional
-    public void update(UUID id, MultipartFile file) throws IOException {
-        validate(file);
-        repo.save(new ImageEntity(
-                id,
-                file.getContentType(),
-                file.getSize(),
-                file.getBytes()
-        ));
+    public void storeEvent(MultipartFile file,
+                           Long id,
+                           Long userId
+    ) throws HttpMediaTypeNotAcceptableException {
+        eventService.findById(id)
+                .filter(event -> event.getOwner().getId().equals(userId))
+                .orElseThrow(AuthenticationFailureException::new);
+        try {
+            validate(file);
+            repo.save(new ImageEntity(
+                    ImageEntity.AssetType.EVENT,
+                    id,
+                    file.getContentType(),
+                    file.getSize(),
+                    file.getBytes()
+            ));
+        } catch (IOException e) {
+            throw new HttpMediaTypeNotAcceptableException(e.getMessage());
+        }
     }
+
 
     @Transactional(readOnly = true)
-    public Resource load(UUID id) {
-        return repo.findById(id)
-                .map(img -> new ByteArrayResource(img.getData()))
-                .orElseThrow(() -> new IllegalArgumentException("Image not found: " + id));
+    public ImageEntity loadImage(Long id, ImageEntity.AssetType assetType) throws AssetNotFoundException {
+        return repo.findByParentIdAndAssetType(id, assetType)
+                .orElseThrow(AssetNotFoundException::new);
     }
 
     private void validate(MultipartFile file) {
@@ -56,4 +80,6 @@ public class ImageService {
         }
     }
 
+
+    public static final String DEFAULT_PROFILE_URL = "https://www.pngitem.com/pimgs/m/421-4212266_transparent-default-avatar-png-default-avatar-images-png.png";
 }

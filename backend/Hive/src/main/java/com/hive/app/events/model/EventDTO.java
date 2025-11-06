@@ -9,15 +9,15 @@ import java.util.List;
 @Data
 public class EventDTO {
     private Long id;
-    String title;
-    String description;
-    List<String> tags;
-    String backgroundImage;
-    Location location;
-    Integer maxParticipants;
-    EventType type;
-    Integer duration;
-    LocalDateTime createdAt;
-    LocalDateTime updatedAt;
-    UserDTO owner;
+    private String title;
+    private String description;
+    private List<String> tags;
+    private String backgroundImage;
+    private Location location;
+    private Integer maxParticipants;
+    private EventType type;
+    private Integer duration;
+    private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
+    private UserDTO owner;
 }

@@ -23,36 +23,47 @@ public class ImageController {
     private final JwtUtil jwtUtil;
     private final UserService userService;
 
-    @PostMapping(path = "/{type}/{id}",
+    @PostMapping(path = "/profile/{id}",
             consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<Void> upload(@RequestPart("file") MultipartFile file,
-                                       @RequestHeader(value = "Authorization") String authHeader,
-                                       @PathVariable String type,
-                                       @PathVariable Long id
+    public ResponseEntity<Void> uploadProfilePhoto(@RequestPart("file") MultipartFile file,
+                                                   @RequestHeader(value = "Authorization") String authHeader,
+                                                   @PathVariable Long id
     ) throws HttpMediaTypeNotAcceptableException {
-        Long userId = jwtUtil.extractId(jwtUtil.getBearer(authHeader));
-        switch (ImageEntity.AssetType.valueOf(type.toUpperCase())) {
-            case EVENT -> service.storeEvent(file, id, userId);
-            case PROFILE -> service.storeProfile(file, id, userId);
-        }
+        service.storeProfile(file, id, jwtUtil.extractId(jwtUtil.getBearer(authHeader)));
         return ResponseEntity.ok().build();
     }
 
-    @GetMapping("/{type}/{id}")
-    public ResponseEntity<Resource> download(
-            @PathVariable String type,
+
+    @PostMapping(path = "/event/{id}",
+            consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<Void> uploadEventPhoto(@RequestPart("file") MultipartFile file,
+                                                 @RequestHeader(value = "Authorization") String authHeader,
+                                                 @PathVariable Long id
+    ) throws HttpMediaTypeNotAcceptableException {
+        service.storeEvent(file, id, jwtUtil.extractId(jwtUtil.getBearer(authHeader)));
+        return ResponseEntity.ok().build();
+    }
+
+    @GetMapping("/profile/{id}")
+    public ResponseEntity<Resource> downloadProfile(
             @PathVariable Long id
-    ) {
-        try {
-            ImageEntity entity = service.loadImage(id, ImageEntity.AssetType.valueOf(type.toUpperCase()));
-            Resource resource = new ByteArrayResource(entity.getData());
-            return ResponseEntity.ok()
-                    .contentType(MediaType.parseMediaType(entity.getContentType()))
-                    .header(HttpHeaders.CONTENT_DISPOSITION,
-                            "inline; filename=\"" + entity.getParentId() + "\"")
-                    .body(resource);
-        } catch (IllegalArgumentException | AssetNotFoundException e) {
-            return ResponseEntity.notFound().build();
-        }
+    ) throws AssetNotFoundException, IllegalArgumentException {
+        ImageEntity entity = service.loadImage(id, ImageEntity.AssetType.PROFILE);
+        return ResponseEntity.ok()
+                .contentType(MediaType.parseMediaType(entity.getContentType()))
+                .header(HttpHeaders.CONTENT_DISPOSITION,
+                        "inline; filename=\"" + entity.getParentId() + "\"")
+                .body(new ByteArrayResource(entity.getData()));
+    }
+
+    @GetMapping("/event/{id}")
+    public ResponseEntity<Resource> downloadEvent(@PathVariable Long id) throws AssetNotFoundException,
+            IllegalArgumentException {
+        ImageEntity entity = service.loadImage(id, ImageEntity.AssetType.EVENT);
+        return ResponseEntity.ok()
+                .contentType(MediaType.parseMediaType(entity.getContentType()))
+                .header(HttpHeaders.CONTENT_DISPOSITION,
+                        "inline; filename=\"" + entity.getParentId() + "\"")
+                .body(new ByteArrayResource(entity.getData()));
     }
 }

@@ -22,7 +22,7 @@ public class UserController {
 
     @GetMapping("/{id}")
     public ResponseEntity<UserProfileResponse> getUserById(@RequestHeader(value = "Authorization") String authHeader,
-                                                           @PathVariable Long id) {
+                                                           @PathVariable Long id) throws UserNotFoundException {
         Long authId = jwtUtil.extractId(jwtUtil.getBearer(authHeader));
         var user = service.findById(id)
                 .map(mapper::dtoToUserProfileResponse)
@@ -32,7 +32,7 @@ public class UserController {
     }
 
     @GetMapping("/{id}/card")
-    public ResponseEntity<UserCardResponse> getUserById(@PathVariable Long id) {
+    public ResponseEntity<UserCardResponse> getUserById(@PathVariable Long id) throws UserNotFoundException {
         var user = service.findById(id)
                 .map(mapper::dtoToCard)
                 .orElseThrow(UserNotFoundException::new);
@@ -40,7 +40,7 @@ public class UserController {
     }
 
     @GetMapping
-    public ResponseEntity<UserDTO> getCurrentUser(@RequestHeader(value = "Authorization") String authHeader) {
+    public ResponseEntity<UserDTO> getCurrentUser(@RequestHeader(value = "Authorization") String authHeader) throws UserNotFoundException {
         Long id = jwtUtil.extractId(jwtUtil.getBearer(authHeader));
         return ResponseEntity.ok(service.findById(id)
                 .filter(UserDTO::isAccountNonLocked)

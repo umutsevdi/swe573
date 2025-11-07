@@ -5,17 +5,17 @@ networks:
 
 services:
   db:
-    image: 'postgres:latest'
+    image: 'postgres:18-alpine'
     volumes:
-      - ${PWD}/Hive/db/live:/var/lib/postgresql/19/data/
+      - ./Hive/db/live:/var/lib/postgresql/19/data:Z
     env_file:
-      - Hive/live.env
+      - Hive/prod.env
     networks:
       - app-tier
   app:
     image: sevdiumut/hive
     env_file:
-      - Hive/live.env
+      - Hive/prod.env
     networks:
       - app-tier
     ports:

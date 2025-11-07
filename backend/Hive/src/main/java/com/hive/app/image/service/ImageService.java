@@ -64,7 +64,6 @@ public class ImageService {
         }
     }
 
-
     @Transactional(readOnly = true)
     public ImageEntity loadImage(Long id, ImageEntity.AssetType assetType) throws AssetNotFoundException {
         return repo.findByParentIdAndAssetType(id, assetType)
@@ -79,7 +78,4 @@ public class ImageService {
             throw new IllegalArgumentException("Only image/* MIME types are allowed.");
         }
     }
-
-
-    public static final String DEFAULT_PROFILE_URL = "https://www.pngitem.com/pimgs/m/421-4212266_transparent-default-avatar-png-default-avatar-images-png.png";
 }

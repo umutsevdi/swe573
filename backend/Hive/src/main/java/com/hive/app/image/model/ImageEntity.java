@@ -31,18 +31,18 @@ public class ImageEntity {
     @Column(nullable = false)
     private byte[] data;
 
-    public enum AssetType {
-        PROFILE,
-        EVENT,
-    }
-
-
     public ImageEntity(AssetType assetType, Long parentId, String contentType, Long size, byte[] data) {
         this.assetType = assetType;
         this.parentId = parentId;
         this.contentType = contentType;
         this.size = size;
         this.data = data;
+    }
+
+
+    public enum AssetType {
+        PROFILE,
+        EVENT,
     }
 
 }

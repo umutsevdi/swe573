@@ -1,2 +1,2 @@
 #/bin/bash
-set -a && source .env && mvnw spring-boot:build-image
+set -a && source test.env && mvnw spring-boot:build-image

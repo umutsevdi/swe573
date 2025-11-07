@@ -3,6 +3,7 @@ package com.hive.app.account.model;
 import jakarta.persistence.*;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
+import org.hibernate.annotations.CreationTimestamp;
 
 import java.time.LocalDateTime;
 
@@ -33,7 +34,8 @@ public class UserEntity {
     private boolean isActive;
     @Column(nullable = false)
     private boolean isAccountTerminated;
-    @Column(nullable = false)
+    @CreationTimestamp
+    @Column(updatable = false)
     private LocalDateTime createdAt;
     @Column(nullable = false)
     private int userScore = 100;

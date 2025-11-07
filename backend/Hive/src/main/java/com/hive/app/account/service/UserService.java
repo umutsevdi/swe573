@@ -35,6 +35,7 @@ public class UserService implements UserDetailsService {
     public void create(RegisterRequest request) throws PropertyValueException {
         var dto = mapper.requestToDto(request);
         dto.setCreatedAt(LocalDateTime.now());
+        dto.setTimeBank(10);
         dto.setUserScore(100);
         dto.setActive(true);
         dto.setRole(UserRole.MEMBER);

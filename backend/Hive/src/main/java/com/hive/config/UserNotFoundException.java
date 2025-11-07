@@ -1,8 +1,8 @@
 package com.hive.config;
 
-import org.springframework.security.core.AuthenticationException;
+import jakarta.servlet.ServletException;
 
-public class UserNotFoundException extends AuthenticationException {
+public class UserNotFoundException extends ServletException {
     public UserNotFoundException() {
         super("User not found!");
     }

@@ -1,5 +1,6 @@
 package com.hive.config;
 
+import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.http.HttpStatus;
@@ -12,6 +13,7 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.servlet.NoHandlerFoundException;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import java.time.Instant;
 import java.util.List;
@@ -20,13 +22,16 @@ import java.util.stream.Collectors;
 @Log4j2
 @RestControllerAdvice
 public class GlobalExceptionHandler {
-    public record ApiError(
-            Instant timestamp,
-            int status,
-            String error,
-            String path,
-            String message,
-            List<String> details) {
+    private static ApiError buildError(HttpStatus status,
+                                       HttpServletRequest request,
+                                       String message) {
+        return new ApiError(
+                Instant.now(),
+                status.value(),
+                status.getReasonPhrase(),
+                request.getRequestURI(),
+                message
+        );
     }
 
     @ExceptionHandler({
@@ -43,8 +48,8 @@ public class GlobalExceptionHandler {
         return new ResponseEntity<>(buildError(
                 HttpStatus.BAD_REQUEST,
                 request,
-                "Validation failed",
-                fieldErrors), HttpStatus.BAD_REQUEST);
+                "Validation failed! " +
+                        String.join("\n", fieldErrors)), HttpStatus.BAD_REQUEST);
     }
 
     @ExceptionHandler({
@@ -54,7 +59,6 @@ public class GlobalExceptionHandler {
             AccountExpiredException.class,
             CredentialsExpiredException.class,
             AuthenticationServiceException.class,
-            UserNotFoundException.class,
             AuthenticationFailureException.class
     })
     public ResponseEntity<ApiError> handleAuthenticationException(
@@ -63,19 +67,21 @@ public class GlobalExceptionHandler {
         return new ResponseEntity<>(buildError(
                 HttpStatus.UNAUTHORIZED,
                 request,
-                "Authentication failed",
-                List.of(ex.getMessage())), HttpStatus.UNAUTHORIZED);
+                "Authentication failed! " + ex.getMessage()), HttpStatus.UNAUTHORIZED);
     }
 
-    @ExceptionHandler(AssetNotFoundException.class)
+    @ExceptionHandler({
+            UserNotFoundException.class,
+            AssetNotFoundException.class
+    })
     public ResponseEntity<ApiError> handleAssetNotFoundException(
-            AssetNotFoundException ex,
+            ServletException ex,
             HttpServletRequest request) {
         return new ResponseEntity<>(buildError(
                 HttpStatus.NOT_FOUND,
                 request,
-                "Asset not found!",
-                List.of(ex.getMessage())), HttpStatus.NOT_FOUND);
+                ex.getMessage()),
+                HttpStatus.NOT_FOUND);
     }
 
     @ExceptionHandler(AccessDeniedException.class)
@@ -85,8 +91,7 @@ public class GlobalExceptionHandler {
         return new ResponseEntity<>(buildError(
                 HttpStatus.FORBIDDEN,
                 request,
-                "Access denied",
-                List.of(ex.getMessage())), HttpStatus.FORBIDDEN);
+                "Access denied! " + List.of(ex.getMessage())), HttpStatus.FORBIDDEN);
     }
 
     @ExceptionHandler(Exception.class)
@@ -97,31 +102,25 @@ public class GlobalExceptionHandler {
         return new ResponseEntity<>(buildError(
                 HttpStatus.INTERNAL_SERVER_ERROR,
                 request,
-                "An unexpected error occurred",
-                List.of(ex.getClass().getSimpleName() + ": " + ex.getMessage())), HttpStatus.INTERNAL_SERVER_ERROR);
+                "An unexpected error occurred!"), HttpStatus.INTERNAL_SERVER_ERROR);
     }
 
-    @ExceptionHandler(NoHandlerFoundException.class)
+    @ExceptionHandler({NoResourceFoundException.class, NoHandlerFoundException.class})
     public ResponseEntity<ApiError> handleNotFound(
-            NoHandlerFoundException ex,
+            ServletException ex,
             HttpServletRequest request) {
         return new ResponseEntity<>(buildError(
                 HttpStatus.NOT_FOUND,
                 request,
-                "Endpoint not found",
-                List.of(String.format("%s %s", ex.getHttpMethod(), ex.getRequestURL()))), HttpStatus.NOT_FOUND);
+                "Endpoint not found: " + ex.getMessage()), HttpStatus.NOT_FOUND);
     }
 
-    private static ApiError buildError(HttpStatus status,
-                                       HttpServletRequest request,
-                                       String message,
-                                       List<String> details) {
-        return new ApiError(
-                Instant.now(),
-                status.value(),
-                status.getReasonPhrase(),
-                request.getRequestURI(),
-                message,
-                details);
+    public record ApiError(
+            Instant timestamp,
+            int status,
+            String error,
+            String path,
+            String message
+    ) {
     }
 }

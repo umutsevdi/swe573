@@ -19,12 +19,11 @@ import java.util.Date;
 @RequiredArgsConstructor
 public class JwtUtil {
 
+    private static final long EXPIRATION_MS = 2 * 60 * 60 * 1000; // 2h
     @Value("${jwt.secret}")
     private String secretKey;
     @Value("${jwt.issuer}")
     private String issuer;
-
-    private static final long EXPIRATION_MS = 2 * 60 * 60 * 1000; // 2h
 
     public String getBearer(String token) throws BadCredentialsException {
         if (token == null || !token.startsWith("Bearer ")) {

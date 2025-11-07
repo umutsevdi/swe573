@@ -49,7 +49,7 @@ public class AuthenticationController {
     }
 
     @GetMapping("/renew")
-    public ResponseEntity<AuthResponse> login(@RequestHeader(value = "Authorization") String authHeader) {
+    public ResponseEntity<AuthResponse> login(@RequestHeader(value = "Authorization") String authHeader) throws UserNotFoundException {
         Long id = jwtUtil.extractId(jwtUtil.getBearer(authHeader));
         return ResponseEntity.ok(service.findById(id)
                 .map(user -> new AuthResponse(jwtUtil.generateToken(user),

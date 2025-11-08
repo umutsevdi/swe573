@@ -1,6 +1,5 @@
 package com.hive.app.threads.model;
 
-import com.hive.app.account.model.response.UserCardResponse;
 import lombok.Data;
 
 import java.time.LocalDateTime;
@@ -9,5 +8,5 @@ import java.time.LocalDateTime;
 public class ThreadMessageDTO {
     private String message;
     private LocalDateTime createdAt;
-    private UserCardResponse owner;
+    private Long ownerId;
 }

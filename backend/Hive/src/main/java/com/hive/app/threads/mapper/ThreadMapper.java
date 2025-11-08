@@ -22,10 +22,8 @@ import java.util.List;
 public interface ThreadMapper {
     ThreadMapper INSTANCE = Mappers.getMapper(ThreadMapper.class);
 
-    @Mapping(source = "owner.interests", target = "owner.interests", qualifiedByName = "entity")
     ThreadMessageEntity dtoToEntity(ThreadMessageDTO dto);
 
-    @Mapping(target = "owner.interests", source = "owner.interests", qualifiedByName = "dto")
     ThreadMessageDTO entityToDto(ThreadMessageEntity entity);
 
     @Mapping(source = "tags", target = "tags", qualifiedByName = "forumTagsEntity")

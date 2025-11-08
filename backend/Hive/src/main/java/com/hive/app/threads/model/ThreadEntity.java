@@ -25,6 +25,8 @@ public class ThreadEntity {
     @Column
     private String title;
     @Column
+    String description;
+    @Column
     private String tags;
     @Column
     private boolean active;

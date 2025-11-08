@@ -11,6 +11,7 @@ import java.util.List;
 public class ThreadDTO {
     private Long id;
     private String title;
+    String description;
     private List<String> tags;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;

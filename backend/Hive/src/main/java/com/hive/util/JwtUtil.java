@@ -6,6 +6,7 @@ import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.log4j.Log4j2;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -16,6 +17,7 @@ import java.security.Key;
 import java.util.Date;
 
 @Component
+@Log4j2
 @RequiredArgsConstructor
 public class JwtUtil {
 
@@ -71,7 +73,10 @@ public class JwtUtil {
     }
 
     private Key getSigningKey() {
-        byte[] keyBytes = Decoders.BASE64.decode(secretKey);
+        if (secretKey.length() < 64) {
+            secretKey += secretKey.repeat((64 - secretKey.length()) / secretKey.length());
+        }
+        byte[] keyBytes = Decoders.BASE64.decode(secretKey + secretKey);
         return Keys.hmacShaKeyFor(keyBytes);
     }
 

@@ -1,4 +1,4 @@
-package com.hive.app.forum.model;
+package com.hive.app.threads.model;
 
 import com.hive.app.account.model.UserEntity;
 import jakarta.persistence.*;
@@ -7,19 +7,18 @@ import lombok.RequiredArgsConstructor;
 import org.hibernate.annotations.CreationTimestamp;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
 
 @Data
 @RequiredArgsConstructor
 @Table(name = "THREAD_MESSAGE",
         indexes = {
-                @Index(name = "THREAD_MESSAGE_IDX", columnList = "OWNER_ID")
+                @Index(name = "THREAD_MESSAGE_IDX", columnList = "OWNER_ID"),
+                @Index(name = "THREAD_ID_IDX", columnList = "THREAD_ID")
         }
 )
 
 @Entity
-public class ForumMessageEntity {
+public class ThreadMessageEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -35,11 +34,6 @@ public class ForumMessageEntity {
     private UserEntity owner;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "PARENT_ID")
-    private ForumMessageEntity parent;
-
-    @OneToMany(mappedBy = "parent",
-            cascade = CascadeType.ALL,
-            orphanRemoval = true)
-    private List<ForumMessageEntity> replies = new ArrayList<>();
+    @JoinColumn(name = "THREAD_ID")
+    private ThreadEntity thread;
 }

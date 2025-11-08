@@ -3,7 +3,7 @@ package com.hive.app.image.service;
 import com.hive.app.events.service.EventService;
 import com.hive.app.image.model.ImageEntity;
 import com.hive.app.image.repository.ImageRepository;
-import com.hive.config.AssetNotFoundException;
+import com.hive.config.NotFoundException;
 import com.hive.config.AuthenticationFailureException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -65,9 +65,9 @@ public class ImageService {
     }
 
     @Transactional(readOnly = true)
-    public ImageEntity loadImage(Long id, ImageEntity.AssetType assetType) throws AssetNotFoundException {
+    public ImageEntity loadImage(Long id, ImageEntity.AssetType assetType) throws NotFoundException {
         return repo.findByParentIdAndAssetType(id, assetType)
-                .orElseThrow(AssetNotFoundException::new);
+                .orElseThrow(NotFoundException::new);
     }
 
     private void validate(MultipartFile file) {

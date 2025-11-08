@@ -72,7 +72,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler({
             UserNotFoundException.class,
-            AssetNotFoundException.class
+            NotFoundException.class
     })
     public ResponseEntity<ApiError> handleAssetNotFoundException(
             ServletException ex,

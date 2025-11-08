@@ -3,7 +3,7 @@ package com.hive.app.image.controller;
 import com.hive.app.account.service.UserService;
 import com.hive.app.image.model.ImageEntity;
 import com.hive.app.image.service.ImageService;
-import com.hive.config.AssetNotFoundException;
+import com.hive.config.NotFoundException;
 import com.hive.util.JwtUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.core.io.ByteArrayResource;
@@ -47,7 +47,7 @@ public class ImageController {
     @GetMapping("/profile/{id}")
     public ResponseEntity<Resource> downloadProfile(
             @PathVariable Long id
-    ) throws AssetNotFoundException, IllegalArgumentException {
+    ) throws NotFoundException, IllegalArgumentException {
         ImageEntity entity = service.loadImage(id, ImageEntity.AssetType.PROFILE);
         return ResponseEntity.ok()
                 .contentType(MediaType.parseMediaType(entity.getContentType()))
@@ -57,7 +57,7 @@ public class ImageController {
     }
 
     @GetMapping("/event/{id}")
-    public ResponseEntity<Resource> downloadEvent(@PathVariable Long id) throws AssetNotFoundException,
+    public ResponseEntity<Resource> downloadEvent(@PathVariable Long id) throws NotFoundException,
             IllegalArgumentException {
         ImageEntity entity = service.loadImage(id, ImageEntity.AssetType.EVENT);
         return ResponseEntity.ok()

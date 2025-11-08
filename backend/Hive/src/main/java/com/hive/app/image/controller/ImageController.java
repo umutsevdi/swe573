@@ -4,6 +4,7 @@ import com.hive.app.account.service.UserService;
 import com.hive.app.image.model.ImageEntity;
 import com.hive.app.image.service.ImageService;
 import com.hive.config.NotFoundException;
+import com.hive.util.JwtPayload;
 import com.hive.util.JwtUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.core.io.ByteArrayResource;
@@ -11,6 +12,7 @@ import org.springframework.core.io.Resource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.HttpMediaTypeNotAcceptableException;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -26,10 +28,10 @@ public class ImageController {
     @PostMapping(path = "/profile/{id}",
             consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<Void> uploadProfilePhoto(@RequestPart("file") MultipartFile file,
-                                                   @RequestHeader(value = "Authorization") String authHeader,
                                                    @PathVariable Long id
     ) throws HttpMediaTypeNotAcceptableException {
-        service.storeProfile(file, id, jwtUtil.extractId(jwtUtil.getBearer(authHeader)));
+        Long userId = ((JwtPayload) SecurityContextHolder.getContext().getAuthentication().getCredentials()).id();
+        service.storeProfile(file, id, userId);
         return ResponseEntity.ok().build();
     }
 
@@ -37,10 +39,10 @@ public class ImageController {
     @PostMapping(path = "/event/{id}",
             consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<Void> uploadEventPhoto(@RequestPart("file") MultipartFile file,
-                                                 @RequestHeader(value = "Authorization") String authHeader,
                                                  @PathVariable Long id
     ) throws HttpMediaTypeNotAcceptableException {
-        service.storeEvent(file, id, jwtUtil.extractId(jwtUtil.getBearer(authHeader)));
+        Long userId = ((JwtPayload) SecurityContextHolder.getContext().getAuthentication().getCredentials()).id();
+        service.storeEvent(file, id, userId);
         return ResponseEntity.ok().build();
     }
 

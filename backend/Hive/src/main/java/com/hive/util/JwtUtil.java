@@ -1,7 +1,6 @@
 package com.hive.util;
 
 import com.hive.app.account.model.UserDTO;
-import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
@@ -12,9 +11,9 @@ import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
 
-import javax.crypto.SecretKey;
 import java.security.Key;
 import java.util.Date;
+import java.util.Map;
 
 @Component
 @Log4j2
@@ -27,11 +26,8 @@ public class JwtUtil {
     @Value("${jwt.issuer}")
     private String issuer;
 
-    public String getBearer(String token) throws BadCredentialsException {
-        if (token == null || !token.startsWith("Bearer ")) {
-            throw new BadCredentialsException("JWT not found!");
-        }
-        return token.substring(7);
+    public JwtPayload parseToken(String token) {
+        return new JwtPayload(token, this::getSigningKey);
     }
 
     public String generateToken(UserDetails userDetails) {
@@ -40,36 +36,16 @@ public class JwtUtil {
         Date expiry = new Date(now.getTime() + EXPIRATION_MS);
 
         return Jwts.builder()
-                .subject(user.getId() + ":" + user.getUsername())
                 .issuer(issuer)
-                .claim("role", user.getRole().getAuthority())
+                .claims(Map.of(
+                                "role", user.getRole().getAuthority(),
+                                "id", user.getId(),
+                                "username", user.getUsername()
+                        )
+                )
                 .expiration(expiry)
                 .signWith(getSigningKey())
                 .compact();
-    }
-
-    public boolean validateToken(String token, UserDetails userDetails) {
-        return extractUsername(token).equals(userDetails.getUsername()) && !isExpired(token);
-    }
-
-    public Long extractId(String token) {
-        return Long.parseLong(parseClaims(token).getSubject().split(":")[0]);
-    }
-
-    public String extractUsername(String token) {
-        return parseClaims(token).getSubject().split(":")[1];
-    }
-
-    public String extractRoles(String token) {
-        Claims claims = parseClaims(token);
-        return claims.get("role", String.class);
-    }
-
-    private Claims parseClaims(String token) {
-        return Jwts
-                .parser().verifyWith((SecretKey) getSigningKey())
-                .build()
-                .parseSignedClaims(token).getPayload();
     }
 
     private Key getSigningKey() {
@@ -79,8 +55,5 @@ public class JwtUtil {
         byte[] keyBytes = Decoders.BASE64.decode(secretKey + secretKey);
         return Keys.hmacShaKeyFor(keyBytes);
     }
-
-    private boolean isExpired(String token) {
-        return parseClaims(token).getExpiration().before(new Date());
-    }
 }
+

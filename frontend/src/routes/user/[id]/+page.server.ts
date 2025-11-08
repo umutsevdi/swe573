@@ -1,4 +1,5 @@
 import type { PageServerLoad } from './$types';
+import { error } from '@sveltejs/kit';
 const users: Array<{
 	fullName: string;
 	bio: string;
@@ -209,11 +210,14 @@ const users: Array<{
 
 export const load: PageServerLoad = async ({ params }) => {
 	const id = Number(params.id);
-	console.log(id);
+	console.log('Loading user:', id);
 
 	if (!Number.isInteger(id) || id < 0 || id >= users.length) {
-		throw new Error('User not found');
+		console.log('User not found:', id);
+		throw error(404, 'User not found');
 	}
 
-	return users[id];
+	const userData = users[id];
+	console.log('Returning user data:', userData);
+	return userData;
 };

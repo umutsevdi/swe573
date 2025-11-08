@@ -67,7 +67,7 @@
 	let activeTab = $state('public');
 	let newMessage = $state('');
 	let chatMessages = $state(event.chatMessages);
-	let negotiationMessages = $state([]);
+	let negotiationMessages = $state<ChatMessage[]>([]);
 	let newNegotiationMessage = $state('');
 
 	function sendMessage() {
@@ -488,19 +488,7 @@
 					<div class="card bg-base-100 shadow-xl">
 						<div class="card-body">
 							<div class="mb-4 flex items-start gap-4">
-								<UserAvatar
-									avatar={event.authorAvatar}
-									name={event.author}
-									showName={false}
-									size="w-12"
-									userId="1"
-									userData={{
-										fullName: event.author,
-										bio: 'Event organizer and community builder',
-										interests: ['Community Events', 'Networking'],
-										userScore: 85
-									}}
-								/>
+								<UserAvatar userId={1} />
 								<div class="flex-1">
 									<h3 class="text-lg font-semibold">{event.author}</h3>
 									<div class="flex items-center gap-4 text-sm opacity-70">
@@ -614,19 +602,7 @@
 								{#each chatMessages as message (message.id)}
 									{#if message.author !== 'You'}
 										<div class="chat-start chat">
-											<UserAvatar
-												avatarClass="chat-image"
-												avatar={message.avatar}
-												name={message.author}
-												showName={false}
-												userId={message.author === 'You' ? '0' : '2'}
-												userData={{
-													fullName: message.author,
-													bio: message.author === 'You' ? 'Event participant' : 'Community member',
-													interests: ['Events', 'Networking'],
-													userScore: message.author === 'You' ? 90 : 40
-												}}
-											/>
+											<UserAvatar userId={message.author === 'You' ? 0 : 2} />
 											<div class="chat-header">
 												{message.author}
 												<time class="text-xs opacity-50">{message.timestamp}</time>
@@ -676,19 +652,7 @@
 								{#each negotiationMessages as message (message.id)}
 									{#if message.author !== 'You'}
 										<div class="chat-start chat">
-											<UserAvatar
-												avatarClass="chat-image"
-												avatar={message.avatar}
-												name={message.author}
-												showName={false}
-												userId={message.author === 'You' ? '0' : '2'}
-												userData={{
-													fullName: message.author,
-													bio: message.author === 'You' ? 'Event participant' : 'Community member',
-													interests: ['Events', 'Networking'],
-													userScore: message.author === 'You' ? 90 : 40
-												}}
-											/>
+											<UserAvatar userId={message.author === 'You' ? 0 : 2} />
 											<div class="chat-header">
 												{message.author}
 												<time class="text-xs opacity-50">{message.timestamp}</time>

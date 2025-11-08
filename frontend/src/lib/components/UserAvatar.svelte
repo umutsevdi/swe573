@@ -1,42 +1,76 @@
 <script lang="ts">
 	import { User } from '@lucide/svelte';
 	import { resolve } from '$app/paths';
+	import { SERVER_URL } from '$lib/config';
+	import { auth } from '$lib/stores/auth';
+	import { userCardCache, type UserCardData } from '$lib/stores/user';
 	import UserTooltipCard from './UserTooltipCard.svelte';
 
-	let {
-		avatar,
-		name,
-		userData,
-		showName = true,
-		clazz,
-		avatarClass,
-		size = 'w-10',
-		userId
-	} = $props<{
-		avatar?: string;
-		name: string;
-		userData?: {
-			fullName: string;
-			bio: string;
-			interests: string[];
-			userScore: number;
-		};
-		showName?: boolean;
-		clazz?: string;
-		avatarClass?: string;
-		size?: string;
-		userId?: string;
+	let { userId } = $props<{
+		userId: number;
 	}>();
+
+	let loading = $state(false);
+	let avatarError = $state(false);
+
+	// Subscribe to cache
+	let cache = $state<Map<number, UserCardData>>(new Map());
+	userCardCache.subscribe((value) => {
+		cache = value;
+	});
+
+	let userData = $derived(cache.has(userId) ? cache.get(userId)! : null);
+
+	// Load user data
+	$effect(() => {
+		if (userId && !cache.has(userId)) {
+			loadUserData(userId);
+		}
+	});
+
+	async function loadUserData(id: number) {
+		loading = true;
+
+		try {
+			const headers: any = {};
+			if ($auth.token) {
+				headers.Authorization = `Bearer ${$auth.token}`;
+			}
+			const response = await fetch(`${SERVER_URL}/user/${id}/card`, { headers });
+			if (!response.ok) {
+				throw new Error(`Failed to fetch user data (${response.status})`);
+			}
+
+			const data: any = await response.json();
+			console.log('Fetched user data for', id, data);
+			const userCardData: UserCardData = {
+				id,
+				fullName: data.fullName || 'Unknown User',
+				biography: data.biography || '',
+				interests: data.interests || [],
+				userScore: data.userScore || 0
+			};
+
+			// Update cache
+			userCardCache.update((currentCache) => {
+				return new Map(currentCache).set(id, userCardData);
+			});
+
+			userData = userCardData;
+		} catch (err) {
+			console.error('Error loading user data:', err);
+		} finally {
+			loading = false;
+		}
+	}
 
 	let showTooltip = $state(false);
 	let tooltipTimeout: number | undefined;
 
 	function handleMouseEnter() {
-		if (userData) {
-			tooltipTimeout = window.setTimeout(() => {
-				showTooltip = true;
-			}, 750);
-		}
+		tooltipTimeout = window.setTimeout(() => {
+			showTooltip = true;
+		}, 750);
 	}
 
 	function handleMouseLeave() {
@@ -48,112 +82,62 @@
 	}
 </script>
 
-{#if avatarClass === 'chat-image'}
-	{@render avatarContent()}
-{:else if userId}
-	<a href={resolve(`/user/${userId}`)} class="cursor-pointer">
-		{@render avatarContent()}
-	</a>
-{:else}
-	{@render avatarContent()}
-{/if}
-
-{#snippet avatarContent()}
-	{#if avatarClass === 'chat-image'}
-		{@render chatAvatar()}
-	{:else}
-		{@render normalAvatar()}
-	{/if}
-{/snippet}
-
-{#snippet chatAvatar()}
-	{#if userId}
-		<a
-			href={resolve(`/user/${userId}`)}
-			class="avatar {avatarClass} relative cursor-pointer"
-			onmouseenter={handleMouseEnter}
-			onmouseleave={handleMouseLeave}
-		>
-			<div class="{size} rounded-full">
-				{#if avatar}
-					<img src={avatar} alt={name} />
-				{:else}
-					<div class="bg-neutral text-neutral-content">
-						<User />
-					</div>
-				{/if}
-			</div>
-			{#if showTooltip && userData}
-				<div class="absolute top-full left-0 z-50 mt-2">
-					<UserTooltipCard
-						fullName={userData.fullName}
-						bio={userData.bio}
-						interests={userData.interests}
-						userScore={userData.userScore}
-					/>
+{#if loading}
+	<div class="flex items-center gap-2">
+		<div class="avatar">
+			<div class="w-10 rounded-full">
+				<div class="bg-neutral text-neutral-content">
+					<div class="loading loading-sm loading-spinner"></div>
 				</div>
-			{/if}
-		</a>
-	{:else}
-		<div
-			class="avatar {avatarClass} relative"
-			role="presentation"
-			onmouseenter={handleMouseEnter}
-			onmouseleave={handleMouseLeave}
-		>
-			<div class="{size} rounded-full">
-				{#if avatar}
-					<img src={avatar} alt={name} />
-				{:else}
-					<div class="bg-neutral text-neutral-content">
-						<User />
-					</div>
-				{/if}
 			</div>
-			{#if showTooltip && userData}
-				<div class="absolute top-full left-0 z-50 mt-2">
-					<UserTooltipCard
-						fullName={userData.fullName}
-						bio={userData.bio}
-						interests={userData.interests}
-						userScore={userData.userScore}
-					/>
-				</div>
-			{/if}
 		</div>
-	{/if}
-{/snippet}
-
-{#snippet normalAvatar()}
-	<div
-		class="relative flex items-center gap-2 {clazz || ''}"
-		role="presentation"
+		<span class="font-semibold">Loading...</span>
+	</div>
+{:else if userData}
+	<a
+		href={resolve(`/user/${userId}`)}
+		class="relative flex cursor-pointer items-center gap-2"
 		onmouseenter={handleMouseEnter}
 		onmouseleave={handleMouseLeave}
 	>
-		<div class="avatar {avatarClass || ''}">
-			<div class="{size} rounded-full">
-				{#if avatar}
-					<img src={avatar} alt={name} />
+		<div class="avatar">
+			<div class="w-10 rounded-full">
+				{#if !avatarError}
+					<img
+						src={`${SERVER_URL}/assets/profile/${userId}`}
+						alt={userData?.fullName || 'Unknown User'}
+						onerror={() => (avatarError = true)}
+					/>
 				{:else}
-					<div class="bg-neutral text-neutral-content">
-						<User />
+					<div class="avatar avatar-placeholder">
+						<div class="w-24 rounded-full bg-neutral text-neutral-content">
+							<span class="text-3xl"
+								>{(userData?.fullName || 'Unknown User')
+									.split(' ')
+									.map((a: string) => a.charAt(0))
+									.join(' ')}</span
+							>
+						</div>
 					</div>
 				{/if}
 			</div>
 		</div>
-		{#if showName}
-			<span class="font-semibold">{name}</span>
-		{/if}
-		{#if showTooltip && userData}
+		<span class="font-semibold">{userData?.fullName || 'Unknown User'}</span>
+		{#if showTooltip}
 			<div class="absolute top-full left-0 z-50 mt-2">
-				<UserTooltipCard
-					fullName={userData.fullName}
-					bio={userData.bio}
-					interests={userData.interests}
-					userScore={userData.userScore}
-				/>
+				<UserTooltipCard {userData} />
 			</div>
 		{/if}
+	</a>
+{:else}
+	<div class="flex items-center gap-2">
+		<div class="avatar">
+			<div class="w-10 rounded-full">
+				<div class="bg-neutral text-neutral-content">
+					<User />
+				</div>
+			</div>
+		</div>
+		<span class="font-semibold">Unknown User</span>
 	</div>
-{/snippet}
+{/if}

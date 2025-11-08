@@ -1,54 +1,144 @@
 <script lang="ts">
-	import { Search, Plus } from '@lucide/svelte';
-	import ForumTopic from '$lib/components/ForumTopic.svelte';
+	import { Calendar, Plus } from '@lucide/svelte';
+	import { goto } from '$app/navigation';
+	import { resolve } from '$app/paths';
+	import { enhance } from '$app/forms';
+	import UserAvatar from '$lib/components/UserAvatar.svelte';
+	import CreateThreadModal from '$lib/components/CreateThreadModal.svelte';
 
-	type ForumPostData = {
-		id: string;
-		author: string;
-		avatar: string;
-		content: string;
-		timestamp: string;
-		replies: number;
-	};
-
-	type ForumTopicData = {
-		id: string;
+	type ForumThread = {
+		id: number;
 		title: string;
-		author: string;
-		avatar: string;
+		active: boolean;
+		description: string;
 		createdAt: string;
-		repliesCount: number;
+		ownerId: number;
 		tags: string[];
-		posts: ForumPostData[];
 	};
 
-	let { data } = $props<{ topics: ForumTopicData[] }>();
-	let search = $state('');
+	let { data } = $props();
+	let threads = $derived(data.threads as ForumThread[]);
 
-	let topics = $derived(data.topics);
+	let modalOpen = $state(false);
+	let createForm: HTMLFormElement;
+
+	function openCreateModal() {
+		modalOpen = true;
+	}
+
+	function handleCreateSubmit(
+		event: CustomEvent<{ title: string; description: string; tags: string[] }>
+	) {
+		const { title, description, tags } = event.detail;
+
+		// Set hidden form values
+		const titleInput = createForm.querySelector('input[name="title"]') as HTMLInputElement;
+		const descInput = createForm.querySelector('input[name="description"]') as HTMLInputElement;
+		const tagsInput = createForm.querySelector('input[name="tags"]') as HTMLInputElement;
+
+		titleInput.value = title;
+		descInput.value = description;
+		tagsInput.value = JSON.stringify(tags);
+
+		// Submit the form
+		createForm.requestSubmit();
+	}
+	console.log(data.threads.forEach((e) => e.ownerId));
 </script>
 
 <div class="hero min-h-screen bg-base-200">
 	<div class="hero-content w-full max-w-4xl flex-col">
-		<h1 class="mb-6 text-4xl font-bold">Forum</h1>
-		<div class="mb-6 flex w-full gap-4">
-			<label class="input-bordered input flex flex-1 items-center gap-2">
-				<Search />
-				<input type="text" class="grow" placeholder="Search forum threads..." bind:value={search} />
-			</label>
-			<button class="btn btn-primary">
-				<Plus />
-				Create New Thread
-			</button>
-		</div>
 		<div class="w-full">
-			{#each topics.filter((topic: ForumTopicData) => topic.title
-						.toLowerCase()
-						.includes(search.toLowerCase()) || topic.tags.some((tag: string) => tag
-							.toLowerCase()
-							.includes(search.toLowerCase()))) as topic (topic.id)}
-				<ForumTopic {topic} />
-			{/each}
+			<div class="mb-8 flex items-center justify-between">
+				<h1 class="text-4xl font-bold">Forum</h1>
+				<button class="btn btn-primary" onclick={openCreateModal}>
+					<Plus class="mr-2 h-4 w-4" />
+					Create Thread
+				</button>
+			</div>
+
+			<div class="space-y-4">
+				{#each threads as thread (thread.id)}
+					<!-- svelte-ignore a11y_click_events_have_key_events -->
+					<div
+						class="card cursor-pointer shadow-md hover:shadow-lg {thread.active
+							? 'bg-base-100'
+							: 'bg-base-200'}"
+						onclick={() => goto(resolve(`/forum/${thread.id}`))}
+						role="button"
+						tabindex="0"
+						aria-label="View thread {thread.title}"
+					>
+						<div class="card-body p-4">
+							<!-- Title with closed badge -->
+							<div class="flex items-center">
+								<h2 class="card-title flex-1">{thread.title}</h2>
+								{#if !thread.active}
+									<div class="badge shrink-0 font-semibold uppercase badge-neutral">Closed</div>
+								{/if}
+							</div>
+
+							<!-- Description row with date on right -->
+							<div class="flex items-start gap-3">
+								<div class="flex-1">
+									<p class="line-clamp-2 text-sm text-base-content/70">{thread.description}</p>
+								</div>
+								<div class="flex shrink-0 items-center gap-1 text-sm opacity-70">
+									<Calendar class="h-4 w-4" />
+									<span>{new Date(thread.createdAt).toLocaleDateString()}</span>
+								</div>
+							</div>
+
+							<div class="flex">
+								<!-- Tags -->
+								{#if thread.tags.length > 0}
+									<div class="flex flex-1 flex-wrap gap-2">
+										{#each thread.tags as tag (tag)}
+											<div class="badge gap-2 badge-primary">{tag}</div>
+										{/each}
+									</div>
+								{/if}
+								<div class="flex shrink-0 items-center gap-2">
+									<UserAvatar userId={thread.ownerId} />
+								</div>
+							</div>
+						</div>
+					</div>
+				{/each}
+			</div>
+
+			{#if threads.length === 0}
+				<div class="text-center text-base-content/50">
+					<p>No forum threads found.</p>
+				</div>
+			{/if}
+
+			<!-- Hidden form for creating thread -->
+			<form bind:this={createForm} method="POST" action="?/create" use:enhance={() => {}}>
+				<input type="hidden" name="title" />
+				<input type="hidden" name="description" />
+				<input type="hidden" name="tags" />
+			</form>
+
+			<CreateThreadModal bind:open={modalOpen} on:submit={handleCreateSubmit} />
 		</div>
 	</div>
 </div>
+
+<style>
+	.card {
+		transition: all 0.2s ease-in-out;
+	}
+
+	.card:hover {
+		transform: translateY(-2px);
+	}
+
+	.line-clamp-2 {
+		display: -webkit-box;
+		-webkit-line-clamp: 2;
+		-webkit-box-orient: vertical;
+		overflow: hidden;
+		line-clamp: 2;
+	}
+</style>

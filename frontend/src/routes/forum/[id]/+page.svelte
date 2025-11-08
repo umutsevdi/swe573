@@ -1,69 +1,110 @@
 <script lang="ts">
 	import { ArrowLeft, MessageSquare, Calendar } from '@lucide/svelte';
 	import { resolve } from '$app/paths';
+	import { enhance } from '$app/forms';
+	import { invalidateAll } from '$app/navigation';
 	import ForumPost from '$lib/components/ForumPost.svelte';
 	import UserAvatar from '$lib/components/UserAvatar.svelte';
+	import EditThreadModal from '$lib/components/EditThreadModal.svelte';
+	import { auth } from '$lib/stores/auth';
 
 	type ForumPostData = {
-		id: string;
-		author: string;
-		avatar: string;
 		content: string;
 		timestamp: string;
-		replies: ForumPostData[];
+		userId: number;
 	};
 
 	type ForumTopicData = {
-		id: string;
+		id: number;
 		title: string;
-		author: string;
-		avatar: string;
+		description: string;
 		createdAt: string;
 		repliesCount: number;
 		tags: string[];
 		posts: ForumPostData[];
+		userId: number;
+		active: boolean;
 	};
 
 	let { data } = $props();
-	let topic = $derived(data.topic as ForumTopicData);
+	let topic = $derived(data as ForumTopicData);
+
+	let newMessageContent = $state('');
+	let replyingTo = $state<ForumPostData | null>(null);
+	let editModalOpen = $state(false);
+
+	function startReply(post: ForumPostData) {
+		replyingTo = post;
+		newMessageContent =
+			post.content
+				.split('\n')
+				.map((line) => `>> ${line}`)
+				.join('\n') + '\n\n';
+	}
+
+	function cancelReply() {
+		replyingTo = null;
+		newMessageContent = '';
+	}
+
+	async function closeThread() {
+		try {
+			const response = await fetch(`http://localhost:8080/thread/${topic.id}/close`, {
+				method: 'GET',
+				headers: {
+					Authorization: `Bearer ${$auth.token}`
+				}
+			});
+			if (response.ok) {
+				invalidateAll();
+			}
+		} catch (error) {
+			console.error('Failed to close thread:', error);
+		}
+	}
+
+	async function updateThread(updates: { title: string; description: string; tags: string[] }) {
+		console.log('Updating thread with:', updates);
+		try {
+			const response = await fetch(`http://localhost:8080/thread/${topic.id}`, {
+				method: 'PUT',
+				headers: {
+					Authorization: `Bearer ${$auth.token}`,
+					'Content-Type': 'application/json'
+				},
+				body: JSON.stringify(updates)
+			});
+			console.log('Response status:', response.status);
+			if (response.ok) {
+				invalidateAll();
+			} else {
+				console.log('Response text:', await response.text());
+			}
+		} catch (error) {
+			console.error('Failed to update thread:', error);
+		}
+	}
 </script>
 
-{#if !data.topic}
-	<div class="hero flex min-h-screen items-center justify-center bg-base-200">
-		<div class="loading loading-lg loading-spinner"></div>
-	</div>
-{:else}
+{#if topic}
 	<div class="hero min-h-screen bg-base-200">
 		<div class="hero-content w-full max-w-4xl flex-col">
 			<div class="w-full">
-				<a href={resolve('/forum')} class="btn mb-4 btn-ghost">
+				<a href={resolve('/forum')} class="btn mb-4">
 					<ArrowLeft />
 					Back to Forum
 				</a>
 				<div class="card mb-6 bg-base-100 shadow-xl">
 					<div class="card-body">
-						<h1 class="mb-4 card-title text-3xl">{topic.title}</h1>
+						<h1 class="mb-2 card-title text-3xl">{topic.title}</h1>
+						<p class="mb-4 text-base-content/70">{topic.description}</p>
 						<div class="mb-4 flex items-center gap-3">
-							<UserAvatar
-								avatar={topic.avatar}
-								name={topic.author}
-								showName={false}
-								userId="3"
-								userData={{
-									fullName: topic.author,
-									bio: 'Forum contributor',
-									interests: ['Discussion', 'Community'],
-									userScore: 80
-								}}
-							/>
-							<div>
-								<span class="font-semibold">{topic.author}</span>
-								<div class="flex items-center gap-2 text-sm opacity-70">
-									<Calendar />
-									<span>{topic.createdAt}</span>
-									<MessageSquare />
-									<span>{topic.repliesCount} replies</span>
-								</div>
+							<UserAvatar userId={topic.userId} />
+							<div class="flex items-center gap-2 text-sm opacity-70">
+								<Calendar />
+								<span>{topic.createdAt}</span>
+								<MessageSquare />
+								<span>{topic.repliesCount} replies</span>
 							</div>
 						</div>
 						<div class="mb-4 flex gap-1">
@@ -71,22 +112,79 @@
 								<span class="badge badge-outline">{tag}</span>
 							{/each}
 						</div>
+						{#if topic.active && $auth.userCard?.id === topic.userId}
+							<div class="flex gap-2">
+								<button class="btn btn-warning" onclick={() => (editModalOpen = true)}>
+									Update Thread
+								</button>
+								<button class="btn btn-error" onclick={closeThread}> Close Thread </button>
+							</div>
+						{/if}
 					</div>
 				</div>
 				<div class="space-y-4">
-					{#each topic.posts as post (post.id)}
+					{#each topic.posts as post, index (index)}
 						<ForumPost
-							{...post}
-							userData={{
-								fullName: post.author,
-								bio: 'Sample bio',
-								interests: ['Tech'],
-								userScore: 75
-							}}
+							content={post.content}
+							timestamp={post.timestamp}
+							userId={post.userId}
+							onReply={startReply}
 						/>
 					{/each}
 				</div>
+				{#if topic.active}
+					<div class="mt-8">
+						<div class="card bg-base-100 shadow-sm">
+							<div class="card-body p-4">
+								<h3 class="mb-4 card-title text-lg">Add New Message</h3>
+								<form
+									method="POST"
+									action="?/reply"
+									use:enhance={() => {
+										return async ({ result }) => {
+											if (result.type === 'success') {
+												newMessageContent = '';
+												invalidateAll();
+											}
+										};
+									}}
+								>
+									<input type="hidden" name="message" bind:value={newMessageContent} />
+									<textarea
+										class="textarea-bordered textarea mb-4 w-full"
+										placeholder="Write your message..."
+										rows="3"
+										bind:value={newMessageContent}
+										required
+									></textarea>
+									<div class="flex justify-end gap-2">
+										{#if replyingTo}
+											<button class="btn btn-ghost" type="button" onclick={cancelReply}>
+												Cancel
+											</button>
+										{/if}
+										<button class="btn btn-primary" type="submit">
+											<MessageSquare class="mr-2 h-4 w-4" />
+											Post Message
+										</button>
+									</div>
+								</form>
+							</div>
+						</div>
+					</div>
+				{/if}
 			</div>
 		</div>
+	</div>
+	<EditThreadModal
+		bind:open={editModalOpen}
+		currentTitle={topic.title}
+		currentDescription={topic.description}
+		currentTags={topic.tags}
+		on:update={(e) => updateThread(e.detail)}
+	/>
+{:else}
+	<div class="hero flex min-h-screen items-center justify-center bg-base-200">
+		<div class="loading loading-lg loading-spinner"></div>
 	</div>
 {/if}

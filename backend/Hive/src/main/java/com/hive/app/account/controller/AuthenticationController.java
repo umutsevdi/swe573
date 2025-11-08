@@ -6,6 +6,7 @@ import com.hive.app.account.model.request.RegisterRequest;
 import com.hive.app.account.model.response.UserCardResponse;
 import com.hive.app.account.service.UserService;
 import com.hive.config.UserNotFoundException;
+import com.hive.util.JwtPayload;
 import com.hive.util.JwtUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -25,7 +26,7 @@ public class AuthenticationController {
     private final UserService service;
     private final PasswordEncoder passwordEncoder;
     private final AuthenticationManager authenticationManager;
-    private final UserMapper mapper = UserMapper.INSTANCE;
+    private final UserMapper mapper;
 
     @PostMapping("/register")
     public ResponseEntity<String> register(@RequestBody RegisterRequest dto) {
@@ -50,11 +51,16 @@ public class AuthenticationController {
 
     @GetMapping("/renew")
     public ResponseEntity<AuthResponse> login(@RequestHeader(value = "Authorization") String authHeader) throws UserNotFoundException {
-        Long id = jwtUtil.extractId(jwtUtil.getBearer(authHeader));
-        return ResponseEntity.ok(service.findById(id)
-                .map(user -> new AuthResponse(jwtUtil.generateToken(user),
-                        mapper.dtoToCard(user)))
-                .orElseThrow(UserNotFoundException::new));
+        JwtPayload payload = jwtUtil.parseToken(authHeader);
+        if (!payload.expired()) {
+            return ResponseEntity.ok(service
+                    .findById(payload.id())
+                    .map(user -> new AuthResponse(jwtUtil.generateToken(user),
+                            mapper.dtoToCard(user)))
+                    .orElseThrow(UserNotFoundException::new));
+
+        }
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
     }
 
     public record AuthRequest(String username, String password) {

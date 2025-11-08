@@ -5,7 +5,7 @@ import lombok.Data;
 import java.time.LocalDateTime;
 
 @Data
-public class ThreadMessageDTO {
+public class ThreadMessageProjection {
     private String message;
     private LocalDateTime createdAt;
     private Long ownerId;

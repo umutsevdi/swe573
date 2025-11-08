@@ -12,7 +12,7 @@ import java.util.Optional;
 @RequiredArgsConstructor
 public class EventService {
     private final EventRepository repository;
-    private final EventMapper mapper = EventMapper.INSTANCE;
+    private final EventMapper mapper;
 
     public void createEvent() {
 

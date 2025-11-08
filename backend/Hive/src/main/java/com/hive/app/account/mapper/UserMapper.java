@@ -8,17 +8,15 @@ import com.hive.app.account.model.response.UserCardResponse;
 import com.hive.app.account.model.response.UserProfileResponse;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
+import org.mapstruct.MappingConstants;
 import org.mapstruct.Named;
-import org.mapstruct.ReportingPolicy;
 import org.mapstruct.factory.Mappers;
 
 import java.util.ArrayList;
 import java.util.List;
 
-@Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.IGNORE)
+@Mapper(componentModel = MappingConstants.ComponentModel.SPRING)
 public interface UserMapper {
-    UserMapper INSTANCE = Mappers.getMapper(UserMapper.class);
-
     @Mapping(source = "interests", target = "interests", qualifiedByName = "entity")
     UserEntity dtoToEntity(UserDTO user);
 
@@ -27,7 +25,6 @@ public interface UserMapper {
 
     UserDTO requestToDto(RegisterRequest user);
 
-    @Mapping(source = "biography", target = "bio")
     UserCardResponse dtoToCard(UserDTO user);
 
 

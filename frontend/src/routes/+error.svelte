@@ -17,28 +17,28 @@
 				<div class="mb-5 flex justify-center">
 					<AlertTriangle class="h-32 w-32 text-warning" />
 				</div>
-				<h1 class="mb-5 text-5xl font-bold text-warning">Oops!</h1>
+				<h1 class="mb-5 text-5xl font-bold text-warning">{status} - Page Not Found</h1>
 				<p class="mb-5 text-lg">The page you're looking for doesn't exist or has been moved.</p>
 				<p class="mb-5 text-sm opacity-75">
-					Error {status}: {error?.message || 'Page not found'}
+					{error?.message || 'Page not found'}
 				</p>
 			{:else if isServerError}
 				<div class="mb-5 flex justify-center">
 					<AlertTriangle class="h-32 w-32 text-error" />
 				</div>
-				<h1 class="mb-5 text-5xl font-bold text-error">Server Error</h1>
+				<h1 class="mb-5 text-5xl font-bold text-error">{status} - Server Error</h1>
 				<p class="mb-5 text-lg">Something went wrong on our end. Please try again later.</p>
 				<p class="mb-5 text-sm opacity-75">
-					Error {status}: {error?.message || 'Internal server error'}
+					{error?.message || 'Internal server error'}
 				</p>
 			{:else}
 				<div class="mb-5 flex justify-center">
 					<AlertTriangle class="h-32 w-32 text-base-content" />
 				</div>
-				<h1 class="mb-5 text-5xl font-bold">Something went wrong</h1>
+				<h1 class="mb-5 text-5xl font-bold">{status} - Error</h1>
 				<p class="mb-5 text-lg">An unexpected error occurred.</p>
 				<p class="mb-5 text-sm opacity-75">
-					Error {status}: {error?.message || 'Unknown error'}
+					{error?.message || 'Unknown error'}
 				</p>
 			{/if}
 

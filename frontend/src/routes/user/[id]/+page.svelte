@@ -14,9 +14,18 @@
 	import SearchResultCard from '$lib/components/SearchResultCard.svelte';
 	import EditProfileModal from '$lib/components/EditProfileModal.svelte';
 	let { data }: PageProps = $props();
-	const { fullName, bio, interests, profileUrl, isSelf, offers, needs, remainingTime, userScore } =
-		data;
-
+	const dataObj = data || {};
+	const {
+		fullName,
+		bio,
+		interests = [],
+		profileUrl,
+		isSelf,
+		offers = [],
+		needs = [],
+		remainingTime,
+		userScore
+	} = dataObj;
 	let editModalOpen = $state(false);
 
 	const badgeColors = ['text-success', 'text-warning', 'text-error'];

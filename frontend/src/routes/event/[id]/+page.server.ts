@@ -1,3 +1,5 @@
+import { error } from '@sveltejs/kit';
+
 type ChatMessage = {
 	id: string;
 	author: string;
@@ -226,7 +228,7 @@ const mockEvents: EventData[] = [
 export const load = async ({ params }: { params: { id: string } }) => {
 	const event = mockEvents.find((e) => e.id === params.id);
 	if (!event) {
-		throw new Error('Event not found');
+		throw error(404, 'Event not found');
 	}
 	return { event, isOwner: Number(event.id) % 2 == 0 };
 };

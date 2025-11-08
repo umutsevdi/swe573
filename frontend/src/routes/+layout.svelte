@@ -4,6 +4,8 @@
 	import CreatePostModal from '$lib/components/CreatePostModal.svelte';
 	import favicon from '$lib/assets/favicon.svg';
 	import { BookOpen, Github, Plus, MessageSquare, Inbox } from '@lucide/svelte';
+	import { auth } from '$lib/stores/auth';
+	import { goto } from '$app/navigation';
 
 	let { children } = $props();
 
@@ -17,6 +19,11 @@
 	function handlePostSubmit(event: CustomEvent) {
 		console.log('New post submitted:', event.detail);
 		// TODO: Handle the post submission (send to API, etc.)
+	}
+
+	function handleLogout() {
+		auth.logout();
+		goto('/auth');
 	}
 </script>
 
@@ -43,27 +50,42 @@
 		</div>
 		<div class="flex">
 			<ul class="menu menu-horizontal">
-				<li>
-					<details>
-						<summary>
-							<div class="btn avatar btn-circle btn-ghost">
-								<div class="w-10 rounded-full">
-									<img
-										alt="Tailwind CSS Navbar component"
-										src="https://img.daisyui.com/images/stock/photo-1534528741775-53994a69daeb.webp"
-									/>
+				{#if $auth.isLoggedIn}
+					<li>
+						<details>
+							<summary>
+								<div class="btn avatar btn-circle btn-ghost">
+									<div class="w-10 rounded-full">
+										<img
+											alt="User avatar"
+											src="https://img.daisyui.com/images/stock/photo-1534528741775-53994a69daeb.webp"
+										/>
+									</div>
 								</div>
-							</div>
-						</summary>
-						<ul class="rounded-t-none bg-base-100 p-2">
-							<li>
-								<button class="btn w-full text-left btn-ghost"> Profile </button>
-							</li>
-							<li><button class="btn w-full text-left btn-ghost">Settings</button></li>
-							<li><button class="btn w-full text-left btn-ghost">Logout</button></li>
-						</ul>
-					</details>
-				</li>
+							</summary>
+							<ul class="rounded-t-none bg-base-100 p-2">
+								<li>
+									<a
+										href={resolve('/user/' + $auth.userCard?.id)}
+										class="btn w-full text-left btn-ghost"
+									>
+										Profile
+									</a>
+								</li>
+								<li><button class="btn w-full text-left btn-ghost">Settings</button></li>
+								<li>
+									<button class="btn w-full text-left btn-ghost" onclick={handleLogout}
+										>Logout</button
+									>
+								</li>
+							</ul>
+						</details>
+					</li>
+				{:else}
+					<li>
+						<a href={resolve('/auth')} class="btn btn-ghost">Login</a>
+					</li>
+				{/if}
 			</ul>
 		</div>
 	</div>

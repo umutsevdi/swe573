@@ -9,7 +9,11 @@ import java.util.List;
 public interface ThreadInfo {
     Long getId();
 
+    Long getOwnerId();
+
     String getTitle();
+
+    String getDescription();
 
     LocalDateTime getCreatedAt();
 
@@ -17,7 +21,10 @@ public interface ThreadInfo {
     String getTags();
 
     default List<String> getTagsList() {
-        return List.of(Strings.split(getTags(), ","));
+        if (getTags().contains(",")) {
+            return List.of(Strings.split(getTags(), ","));
+        }
+        return List.of(getTags());
     }
 
     boolean isActive();

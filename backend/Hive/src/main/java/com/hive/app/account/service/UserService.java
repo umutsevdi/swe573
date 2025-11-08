@@ -2,7 +2,6 @@ package com.hive.app.account.service;
 
 import com.hive.app.account.mapper.UserMapper;
 import com.hive.app.account.model.UserDTO;
-import com.hive.app.account.model.UserEntity;
 import com.hive.app.account.model.UserRole;
 import com.hive.app.account.model.request.RegisterRequest;
 import com.hive.app.account.model.request.UpdateUserRequest;
@@ -21,7 +20,7 @@ import java.util.Optional;
 @RequiredArgsConstructor
 public class UserService implements UserDetailsService {
     private final UserRepository repository;
-    private final UserMapper mapper = UserMapper.INSTANCE;
+    private final UserMapper mapper;
 
     public Optional<UserDTO> findById(Long id) {
         return repository.findByIdAndIsActiveTrue(id).map(mapper::entityToDto);
@@ -51,12 +50,7 @@ public class UserService implements UserDetailsService {
                         "found"));
     }
 
-    public UserDTO updateUser(Long id, UpdateUserRequest request) throws UsernameNotFoundException {
-        UserDTO dto = repository.findByIdAndIsActiveTrue(id)
-                .map(mapper::entityToDto)
-                .orElseThrow(() -> new UsernameNotFoundException("User" +
-                        " not " +
-                        "found"));
+    public UserDTO updateUser(UserDTO dto, UpdateUserRequest request) throws UsernameNotFoundException {
         boolean changed = false;
         if (!request.getBio().isBlank() && !request.getBio().equals(dto.getBiography())) {
             changed = true;
@@ -72,11 +66,8 @@ public class UserService implements UserDetailsService {
         return dto;
     }
 
-    public void deactivateUser(Long id) {
-        UserEntity entity = repository.findByIdAndIsActiveTrue(id)
-                .orElseThrow(() -> new UsernameNotFoundException(
-                        "User not found"));
-        entity.setActive(false);
-        repository.save(entity);
+    public void deactivateUser(UserDTO dto) {
+        dto.setActive(false);
+        repository.save(mapper.dtoToEntity(dto));
     }
 }

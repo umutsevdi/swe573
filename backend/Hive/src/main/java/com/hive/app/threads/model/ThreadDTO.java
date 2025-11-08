@@ -1,6 +1,5 @@
 package com.hive.app.threads.model;
 
-import com.hive.app.account.model.response.UserCardResponse;
 import lombok.Data;
 
 import java.time.LocalDateTime;
@@ -15,7 +14,7 @@ public class ThreadDTO {
     private List<String> tags;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
-    private UserCardResponse owner;
+    private Long ownerId;
     private boolean active;
-    private List<ThreadMessageDTO> messages = new ArrayList<>();
+    private List<ThreadMessageProjection> messages = new ArrayList<>();
 }

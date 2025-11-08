@@ -4,34 +4,30 @@ package com.hive.app.threads.mapper;
 import com.hive.app.account.mapper.UserMapper;
 import com.hive.app.threads.model.ThreadDTO;
 import com.hive.app.threads.model.ThreadEntity;
-import com.hive.app.threads.model.ThreadMessageDTO;
 import com.hive.app.threads.model.ThreadMessageEntity;
+import com.hive.app.threads.model.ThreadMessageProjection;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
+import org.mapstruct.MappingConstants;
 import org.mapstruct.Named;
-import org.mapstruct.ReportingPolicy;
-import org.mapstruct.factory.Mappers;
 
 import java.util.ArrayList;
 import java.util.List;
 
-@Mapper(componentModel = "spring",
-        unmappedTargetPolicy = ReportingPolicy.IGNORE,
-        uses = {UserMapper.class}
-)
+@Mapper(componentModel = MappingConstants.ComponentModel.SPRING, uses = {UserMapper.class})
 public interface ThreadMapper {
-    ThreadMapper INSTANCE = Mappers.getMapper(ThreadMapper.class);
+    @Mapping(source = "ownerId", target = "owner.id")
+    ThreadMessageEntity dtoToEntity(ThreadMessageProjection dto);
 
-    ThreadMessageEntity dtoToEntity(ThreadMessageDTO dto);
-
-    ThreadMessageDTO entityToDto(ThreadMessageEntity entity);
+    @Mapping(target = "ownerId", source = "owner.id")
+    ThreadMessageProjection entityToDto(ThreadMessageEntity entity);
 
     @Mapping(source = "tags", target = "tags", qualifiedByName = "forumTagsEntity")
-    @Mapping(source = "owner.interests", target = "owner.interests", qualifiedByName = "entity")
+    @Mapping(source = "ownerId", target = "owner.id")
     ThreadEntity dtoToEntity(ThreadDTO dto);
 
     @Mapping(source = "tags", target = "tags", qualifiedByName = "forumTagsDTO")
-    @Mapping(target = "owner.interests", source = "owner.interests", qualifiedByName = "dto")
+    @Mapping(target = "ownerId", source = "owner.id")
     ThreadDTO entityToDto(ThreadEntity entity);
 
     @Named("forumTagsEntity")

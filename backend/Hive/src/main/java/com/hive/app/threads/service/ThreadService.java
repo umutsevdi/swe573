@@ -1,37 +1,38 @@
 package com.hive.app.threads.service;
 
-import com.hive.app.account.repository.UserRepository;
+import com.hive.app.account.mapper.UserMapper;
+import com.hive.app.account.model.UserDTO;
 import com.hive.app.threads.mapper.ThreadMapper;
 import com.hive.app.threads.model.*;
 import com.hive.app.threads.repository.ThreadMessageRepository;
 import com.hive.app.threads.repository.ThreadRepository;
 import com.hive.config.NotFoundException;
-import com.hive.config.UserNotFoundException;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.log4j.Log4j2;
 import org.apache.logging.log4j.util.Strings;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
-import java.util.Comparator;
 import java.util.List;
 
 @Service
 @RequiredArgsConstructor
+@Log4j2
 public class ThreadService {
 
     private final ThreadRepository threads;
     private final ThreadMessageRepository messages;
-    private final ThreadMapper mapper = ThreadMapper.INSTANCE;
-    private final UserRepository users;
-    private final UserRepository userRepository;
+    private final ThreadMapper mapper;
+    private final UserMapper userMapper;
 
     @Transactional
-    public ThreadDTO newForum(ThreadRequest request, Long userId) throws UserNotFoundException {
+    public ThreadDTO newForum(ThreadRequest request, UserDTO user) {
         ThreadEntity entity = new ThreadEntity();
         entity.setTags(Strings.join(request.getTags(), ','));
-        entity.setOwner(userRepository.findById(userId).orElseThrow(UserNotFoundException::new));
+        entity.setOwner(userMapper.dtoToEntity(user));
         entity.setTitle(request.getTitle());
+        entity.setDescription(request.getDescription());
         entity.setCreatedAt(LocalDateTime.now());
         entity.setUpdatedAt(LocalDateTime.now());
         entity.setActive(true);
@@ -39,9 +40,10 @@ public class ThreadService {
     }
 
     @Transactional
-    public ThreadDTO updateThread(ThreadRequest request, Long threadId, Long userId) throws NotFoundException {
+    public ThreadDTO updateThread(UserDTO user, Long threadId, ThreadRequest request) throws NotFoundException {
+        log.info("received {}", request);
         ThreadEntity entity =
-                threads.findByIdAndOwnerIdAndActive(threadId, userId, true).orElseThrow(NotFoundException::new);
+                threads.findByIdAndOwnerIdAndActive(threadId, user.getId(), true).orElseThrow(NotFoundException::new);
         boolean updated = false;
         if (request.getTags() != null) {
             entity.setTags(Strings.join(request.getTags(), ','));
@@ -63,22 +65,17 @@ public class ThreadService {
 
 
     @Transactional
-    public ThreadMessageDTO newReply(Long userId, Long threadId, String message) throws NotFoundException {
+    public ThreadMessageProjection newReply(UserDTO user, Long threadId, String message) throws NotFoundException {
         ThreadMessageEntity entity = new ThreadMessageEntity();
         entity.setThread(threads.findByIdAndActive(threadId, true).orElseThrow(NotFoundException::new));
-        entity.setOwner(users.findByIdAndIsActiveTrue(userId).orElseThrow(NotFoundException::new));
+        entity.setOwner(userMapper.dtoToEntity(user));
         entity.setMessage(message);
         entity.setCreatedAt(LocalDateTime.now());
         return mapper.entityToDto(messages.save(entity));
     }
 
     public ThreadDTO getThread(Long threadId) throws NotFoundException {
-        return mapper.entityToDto(threads.findById(threadId).map(
-                        obj -> {
-                            obj.getMessages().sort(Comparator.comparing(ThreadMessageEntity::getCreatedAt));
-                            return obj;
-                        })
-                .orElseThrow(NotFoundException::new));
+        return mapper.entityToDto(threads.findById(threadId).orElseThrow(NotFoundException::new));
     }
 
     public List<ThreadInfo> getThreads(Boolean show) {

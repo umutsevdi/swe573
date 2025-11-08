@@ -8,7 +8,7 @@ import java.util.List;
 public class UserCardResponse {
     private Long id;
     private String fullName;
-    private String bio;
+    private String biography;
     private List<String> interests;
     private int userScore;
 }

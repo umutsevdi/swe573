@@ -325,7 +325,7 @@
 						</h1>
 						<div class="flex flex-wrap gap-2">
 							{#each event.tags as tag (tag)}
-								<span class="badge badge-outline badge-lg badge-secondary">{tag}</span>
+								<span class="badge badge-outline badge-lg badge-primary">{tag}</span>
 							{/each}
 						</div>
 					</div>

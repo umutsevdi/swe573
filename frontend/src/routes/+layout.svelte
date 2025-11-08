@@ -4,7 +4,23 @@
 	import CreatePostModal from '$lib/components/CreatePostModal.svelte';
 	import Toast from '$lib/components/Toast.svelte';
 	import favicon from '$lib/assets/favicon.svg';
-	import { BookOpen, Github, Plus, MessageSquare, Inbox, User } from '@lucide/svelte';
+	import {
+		BookOpen,
+		Github,
+		Plus,
+		MessageSquare,
+		Inbox,
+		User,
+		Home,
+		LogOut,
+		Settings,
+		PanelRightClose,
+		PanelRightOpen,
+		UsersRound,
+		MapPinned,
+		Mails,
+		Bell
+	} from '@lucide/svelte';
 	import { auth } from '$lib/stores/auth';
 	import { goto } from '$app/navigation';
 	import { SERVER_URL } from '$lib/config';
@@ -69,120 +85,141 @@
 
 <CreatePostModal bind:this={createPostModal} bind:open={modalOpen} on:submit={handlePostSubmit} />
 
-<div class="flex min-h-screen flex-col">
-	<!-- Navbar -->
-	<div class="navbar w-full bg-base-300">
-		<div class="flex-1"><a href={resolve('/')} class="btn text-xl btn-ghost">Hive</a></div>
-		<div class="flex-none">
-			<ul class="menu menu-horizontal">
-				<!-- Navbar menu content here -->
-				{#if $auth.isLoggedIn}
+<div class="drawer-open drawer">
+	<input id="my-drawer-4" type="checkbox" class="drawer-toggle" />
+	<div class="drawer-content">
+		{@render children?.()}
+		<Toast />
+		<footer class="footer items-center bg-neutral p-4 text-neutral-content sm:footer-horizontal">
+			<aside class="grid-flow-col items-center">
+				<p>Copyright © {new Date().getFullYear()} - All right reserved</p>
+			</aside>
+
+			<nav class="grid-flow-col justify-center gap-4 md:place-self-center md:justify-self-end">
+				<ul tabindex="-1" class="menu menu-vertical lg:menu-horizontal">
 					<li>
-						<a href={resolve('/forum')} class="btn cursor-pointer btn-ghost"
-							><MessageSquare class="h-4 w-4" /> Forum</a
+						<a
+							class="tooltip tooltip-left"
+							href="https://github.com/umutsevdi/swe573/wiki"
+							target="_blank"
+							data-tip="Application documentation."
 						>
+							<BookOpen />
+						</a>
 					</li>
 					<li>
-						<a href={resolve('/inbox')} class="btn cursor-pointer btn-ghost"
-							><Inbox class="h-4 w-4" /> Inbox</a
+						<a
+							class="tooltip tooltip-left"
+							href="https://github.com/umutsevdi/swe573"
+							target="_blank"
+							data-tip="Source code is available at GitHub."
 						>
+							<Github />
+						</a>
 					</li>
-				{/if}
-			</ul>
-		</div>
-		<div class="flex">
-			<ul class="menu menu-horizontal">
-				{#if $auth.isLoggedIn}
-					<li>
-						<details>
-							<summary>
-								<div class="btn avatar btn-circle btn-ghost">
-									<div class="w-10 rounded-full">
-										{#if navbarAvatarUrl}
-											<img alt="User avatar" src={navbarAvatarUrl} />
-										{:else}
-											<div
-												class="flex h-full items-center justify-center bg-neutral text-neutral-content"
-											>
-												<User class="h-6 w-6" />
-											</div>
-										{/if}
-									</div>
-								</div>
-							</summary>
-							<ul class="rounded-t-none bg-base-100 p-2">
-								<li>
-									<a
-										href={resolve('/user/' + $auth.userCard?.id)}
-										class="btn w-full text-left btn-ghost"
-									>
-										Profile
-									</a>
-								</li>
-								<li><button class="btn w-full text-left btn-ghost">Settings</button></li>
-								<li>
-									<button class="btn w-full text-left btn-ghost" onclick={handleLogout}
-										>Logout</button
-									>
-								</li>
-							</ul>
-						</details>
-					</li>
-				{:else}
-					<li>
-						<a href={resolve('/auth')} class="btn btn-ghost">Login</a>
-					</li>
-				{/if}
-			</ul>
-		</div>
+				</ul>
+			</nav>
+		</footer>
+
+		<!-- Floating Action Button -->
+		{#if $auth.isLoggedIn}
+			<button
+				class="tooltip btn fixed tooltip-left right-12 bottom-12 z-10 btn-circle btn-primary"
+				data-tip="Create a new Offer or Need"
+				onclick={openCreatePostModal}
+			>
+				<Plus class="h-6 w-6" />
+			</button>
+		{/if}
 	</div>
-	<!-- Page content here -->
-	{@render children?.()}
 
-	<Toast />
+	<div class="drawer-side drawer-end is-drawer-close:overflow-visible">
+		<label for="my-drawer-4" aria-label="close sidebar" class="drawer-overlay"></label>
+		{#if $auth.isLoggedIn}
+			<div
+				class="bg-base-400 flex min-h-full flex-col items-start is-drawer-close:w-14 is-drawer-open:w-32"
+			>
+				<!-- Sidebar content here -->
+				<ul class="menu w-full grow gap-4">
+					<li>
+						<a
+							href={resolve('/')}
+							class="is-drawer-close:tooltip is-drawer-close:tooltip-right"
+							data-tip="Discover"
+							><MapPinned class="h-6 w-6" />
+							<span class="is-drawer-close:hidden">Discover</span>
+						</a>
+					</li>
+					<li>
+						<a
+							href={resolve('/forum')}
+							class="is-drawer-close:tooltip is-drawer-close:tooltip-right"
+							data-tip="Forum"
+							><Mails class="h-6 w-6" />
+							<span class="is-drawer-close:hidden">Forum</span>
+						</a>
+					</li>
+					<li>
+						<a
+							href={resolve('/inbox')}
+							class="is-drawer-close:tooltip is-drawer-close:tooltip-right"
+							data-tip="Inbox"
+							><Bell class="h-6 w-6" />
+							<span class="is-drawer-close:hidden">Inbox</span>
+						</a>
+					</li>
+					<li>
+						<a
+							href={resolve(`/user/${$auth.userCard?.id}`)}
+							class="is-drawer-close:tooltip is-drawer-close:tooltip-right"
+							data-tip="Profile"
+						>
+							<div class="avatar">
+								<div
+									class="w-6 rounded-full ring-2 ring-primary ring-offset-2 ring-offset-base-100"
+								>
+									<img alt="Profile" src={navbarAvatarUrl} />
+								</div>
+							</div>
+							<span class="is-drawer-close:hidden">Profile</span>
+						</a>
+					</li>
+					<li>
+						<a
+							href={resolve('/inbox')}
+							class="is-drawer-close:tooltip is-drawer-close:tooltip-right"
+							data-tip="Settings"
+							><Settings class="h-6 w-6" />
+							<span class="is-drawer-close:hidden">Settings</span>
+						</a>
+					</li>
+					<li>
+						<button
+							class="is-drawer-close:tooltip is-drawer-close:tooltip-right"
+							data-tip="Logout"
+							onclick={handleLogout}
+						>
+							<LogOut class="h-5 w-6" />
+							<span class="is-drawer-close:hidden">Logout</span>
+						</button>
+					</li>
+				</ul>
 
-	<footer class="footer items-center bg-neutral p-4 text-neutral-content sm:footer-horizontal">
-		<aside class="grid-flow-col items-center">
-			<p>Copyright © {new Date().getFullYear()} - All right reserved</p>
-		</aside>
-
-		<nav class="grid-flow-col justify-center gap-4 md:place-self-center md:justify-self-end">
-			<ul tabindex="-1" class="menu menu-vertical lg:menu-horizontal">
-				<li>
-					<a
-						class="tooltip tooltip-left"
-						href="https://github.com/umutsevdi/swe573/wiki"
-						target="_blank"
-						data-tip="Application documentation."
-					>
-						<BookOpen />
-					</a>
-				</li>
-				<li>
-					<a
-						class="tooltip tooltip-left"
-						href="https://github.com/umutsevdi/swe573"
-						target="_blank"
-						data-tip="Source code is available at GitHub."
-					>
-						<Github />
-					</a>
-				</li>
-			</ul>
-		</nav>
-	</footer>
-
-	<!-- Floating Action Button -->
-	{#if $auth.isLoggedIn}
-		<button
-			class="btn fixed right-4 bottom-4 z-10 btn-circle btn-primary"
-			onclick={openCreatePostModal}
-		>
-			<Plus class="h-6 w-6" />
-		</button>
-	{/if}
+				<ul>
+					<!-- button to open/close drawer -->
+					<div class="m-2 is-drawer-close:tooltip is-drawer-close:tooltip-right" data-tip="Open">
+						<label
+							for="my-drawer-4"
+							class="drawer-button btn btn-circle btn-ghost is-drawer-open:rotate-y-180"
+						>
+							<PanelRightOpen />
+						</label>
+					</div>
+				</ul>
+			</div>
+		{/if}
+	</div>
 </div>
-
 <svelte:head>
 	<link rel="icon" href={favicon} />
 </svelte:head>

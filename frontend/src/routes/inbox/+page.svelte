@@ -53,7 +53,7 @@
 <div class="hero min-h-screen bg-base-200">
 	<div class="hero-content w-full max-w-4xl flex-col">
 		<div class="w-full">
-			<div class="mb-6 flex items-center justify-between">
+			<div class="mb-8 flex items-center justify-between">
 				<h1 class="text-4xl font-bold">Inbox</h1>
 				{#if unreadCount > 0}
 					<div class="badge badge-lg badge-primary">{unreadCount} unread</div>

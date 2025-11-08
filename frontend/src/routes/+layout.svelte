@@ -2,6 +2,7 @@
 	import '../app.css';
 	import { resolve } from '$app/paths';
 	import CreatePostModal from '$lib/components/CreatePostModal.svelte';
+	import Toast from '$lib/components/Toast.svelte';
 	import favicon from '$lib/assets/favicon.svg';
 	import { BookOpen, Github, Plus, MessageSquare, Inbox } from '@lucide/svelte';
 	import { auth } from '$lib/stores/auth';
@@ -91,6 +92,8 @@
 	</div>
 	<!-- Page content here -->
 	{@render children?.()}
+
+	<Toast />
 
 	<footer class="footer items-center bg-neutral p-4 text-neutral-content sm:footer-horizontal">
 		<aside class="grid-flow-col items-center">

@@ -1,10 +1,10 @@
 package com.hive.app.image.controller;
 
+import com.hive.app.account.model.UserDTO;
 import com.hive.app.account.service.UserService;
 import com.hive.app.image.model.ImageEntity;
 import com.hive.app.image.service.ImageService;
 import com.hive.config.NotFoundException;
-import com.hive.util.JwtPayload;
 import com.hive.util.JwtUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.core.io.ByteArrayResource;
@@ -30,7 +30,7 @@ public class ImageController {
     public ResponseEntity<Void> uploadProfilePhoto(@RequestPart("file") MultipartFile file,
                                                    @PathVariable Long id
     ) throws HttpMediaTypeNotAcceptableException {
-        Long userId = ((JwtPayload) SecurityContextHolder.getContext().getAuthentication().getCredentials()).id();
+        Long userId = ((UserDTO) SecurityContextHolder.getContext().getAuthentication().getPrincipal()).getId();
         service.storeProfile(file, id, userId);
         return ResponseEntity.ok().build();
     }
@@ -41,7 +41,7 @@ public class ImageController {
     public ResponseEntity<Void> uploadEventPhoto(@RequestPart("file") MultipartFile file,
                                                  @PathVariable Long id
     ) throws HttpMediaTypeNotAcceptableException {
-        Long userId = ((JwtPayload) SecurityContextHolder.getContext().getAuthentication().getCredentials()).id();
+        Long userId = ((UserDTO) SecurityContextHolder.getContext().getAuthentication().getPrincipal()).getId();
         service.storeEvent(file, id, userId);
         return ResponseEntity.ok().build();
     }

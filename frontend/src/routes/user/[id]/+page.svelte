@@ -13,19 +13,25 @@
 	import type { PageProps } from './$types';
 	import SearchResultCard from '$lib/components/SearchResultCard.svelte';
 	import EditProfileModal from '$lib/components/EditProfileModal.svelte';
+	import { SERVER_URL } from '$lib/config';
+	import { auth } from '$lib/stores/auth';
+	import { page } from '$app/stores';
+	import { toast } from '$lib';
+
 	let { data }: PageProps = $props();
 	const dataObj = data || {};
-	const {
+	let {
 		fullName,
 		bio,
 		interests = [],
 		profileUrl,
+		backgroundUrl,
 		isSelf,
 		offers = [],
 		needs = [],
 		remainingTime,
 		userScore
-	} = dataObj;
+	} = $state(dataObj);
 	let editModalOpen = $state(false);
 
 	const badgeColors = ['text-success', 'text-warning', 'text-error'];
@@ -33,19 +39,145 @@
 		i > 70 ? badgeColors[0] : i > 49 ? badgeColors[1] : badgeColors[2];
 
 	let activeTab = $state('offers');
+	let backgroundLoaded = $state(false);
+	let avatarBlobUrl = $state<string | null>(null);
+	let backgroundBlobUrl = $state<string | null>(null);
+
+	async function handleProfileUpdate(
+		event: CustomEvent<{ bio: string; interests: string[]; avatar?: File }>
+	) {
+		const { bio: newBio, interests: newInterests, avatar: newAvatar } = event.detail;
+
+		try {
+			// Prepare update data - only send changed fields
+			const updateData: { bio?: string; interests?: string[] } = {};
+			if (newBio !== bio) updateData.bio = newBio;
+			if (JSON.stringify(newInterests) !== JSON.stringify(interests))
+				updateData.interests = newInterests;
+
+			// If there are changes to bio or interests, send PUT request
+			if (Object.keys(updateData).length > 0) {
+				const response = await fetch(`${SERVER_URL}/user`, {
+					method: 'PUT',
+					headers: {
+						'Content-Type': 'application/json',
+						Authorization: `Bearer ${$auth.token}`
+					},
+					body: JSON.stringify(updateData)
+				});
+
+				if (!response.ok) {
+					throw new Error('Failed to update profile');
+				}
+
+				const updatedData = await response.json();
+				// Update local state with server response
+				bio = updatedData.biography || updatedData.bio || bio;
+				interests = updatedData.interests || interests;
+			}
+
+			// If avatar changed, upload it
+			if (newAvatar) {
+				const formData = new FormData();
+				formData.append('file', newAvatar);
+
+				const uploadResponse = await fetch(`${SERVER_URL}/assets/profile/${$page.params.id}`, {
+					method: 'POST', // Assuming it's POST for upload
+					headers: {
+						Authorization: `Bearer ${$auth.token}`
+					},
+					body: formData
+				});
+
+				if (!uploadResponse.ok) {
+					throw new Error('Failed to upload avatar');
+				}
+
+				// Reload avatar with new image
+				await loadAvatar();
+			}
+
+			// Success
+			toast.success('Profile updated successfully!');
+		} catch (error) {
+			console.error('Failed to update profile:', error);
+			toast.error('Failed to update profile. Please try again.');
+		}
+	}
+
+	async function loadAvatar() {
+		try {
+			const response = await fetch(`${SERVER_URL}/assets/profile/${$page.params.id}`, {
+				headers: {
+					Authorization: `Bearer ${$auth.token}`
+				}
+			});
+
+			if (response.ok) {
+				const blob = await response.blob();
+				avatarBlobUrl = URL.createObjectURL(blob);
+			}
+		} catch (error) {
+			console.error('Failed to load avatar:', error);
+		}
+	}
+
+	async function loadBackground() {
+		try {
+			const response = await fetch(`${SERVER_URL}/assets/bg/${$page.params.id}`, {
+				headers: {
+					Authorization: `Bearer ${$auth.token}`
+				}
+			});
+
+			if (response.ok) {
+				const blob = await response.blob();
+				backgroundBlobUrl = URL.createObjectURL(blob);
+				backgroundLoaded = true;
+			} else {
+				backgroundLoaded = false;
+			}
+		} catch (error) {
+			console.error('Failed to load background:', error);
+			backgroundLoaded = false;
+		}
+	}
+
+	// Load avatar and background when component mounts
+	$effect(() => {
+		if ($auth.token && $page.params.id) {
+			loadAvatar();
+			loadBackground();
+		}
+
+		// Cleanup blob URLs on unmount
+		return () => {
+			if (avatarBlobUrl) {
+				URL.revokeObjectURL(avatarBlobUrl);
+			}
+			if (backgroundBlobUrl) {
+				URL.revokeObjectURL(backgroundBlobUrl);
+			}
+		};
+	});
 </script>
 
 <div class="min-h-screen bg-base-200 py-8">
 	<div class="container mx-auto max-w-6xl px-4">
 		<!-- Profile Header -->
 		<div class="card bg-base-100 shadow-xl">
-			<div class="card-body">
+			<div
+				class="card-body"
+				style={backgroundLoaded && backgroundBlobUrl
+					? `background-image: url(${backgroundBlobUrl}); background-size: cover; background-position: center;`
+					: ''}
+			>
 				<div class="flex flex-col items-center gap-6 md:flex-row md:items-start">
 					<!-- Avatar -->
 					<div class="flex flex-col items-center">
 						<div class="avatar">
 							<div class="w-32 rounded-full ring ring-primary ring-offset-2 ring-offset-base-100">
-								<img src={profileUrl} alt={`${fullName} avatar`} />
+								<img src={avatarBlobUrl || profileUrl} alt={`${fullName} avatar`} />
 							</div>
 						</div>
 					</div>
@@ -189,9 +321,5 @@
 	currentBio={bio}
 	currentInterests={interests}
 	currentAvatar={profileUrl}
-	on:update={(event) => {
-		// Handle update, for now just log
-		console.log('Profile update:', event.detail);
-		// In real app, send to server
-	}}
+	on:update={handleProfileUpdate}
 />

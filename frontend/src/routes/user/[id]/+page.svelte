@@ -30,7 +30,7 @@
 		isSelf,
 		offers = [],
 		needs = [],
-		remainingTime,
+		timeBank,
 		userScore
 	} = $state(dataObj);
 	let editModalOpen = $state(false);
@@ -44,10 +44,40 @@
 	let avatarBlobUrl = $state<string | null>(null);
 	let backgroundBlobUrl = $state<string | null>(null);
 
-	async function handleProfileUpdate(
-		event: CustomEvent<{ bio: string; interests: string[]; avatar?: File }>
+	async function uploadAsset(
+		file: File | undefined,
+		type: 'profile' | 'bg',
+		reload: () => Promise<void>
 	) {
-		const { bio: newBio, interests: newInterests, avatar: newAvatar } = event.detail;
+		if (!file) return;
+
+		const formData = new FormData();
+		formData.append('file', file);
+
+		const uploadResponse = await fetch(`${SERVER_URL}/assets/${type}/${$page.params.id}`, {
+			method: 'POST',
+			headers: {
+				Authorization: `Bearer ${$auth.token}`
+			},
+			body: formData
+		});
+
+		if (!uploadResponse.ok) {
+			throw new Error(`Failed to upload ${type}`);
+		}
+
+		await reload();
+	}
+
+	async function handleProfileUpdate(
+		event: CustomEvent<{ bio: string; interests: string[]; avatar?: File; background?: File }>
+	) {
+		const {
+			bio: newBio,
+			interests: newInterests,
+			avatar: newAvatar,
+			background: newBackground
+		} = event.detail;
 
 		try {
 			// Prepare update data - only send changed fields
@@ -77,26 +107,9 @@
 				interests = updatedData.interests || interests;
 			}
 
-			// If avatar changed, upload it
-			if (newAvatar) {
-				const formData = new FormData();
-				formData.append('file', newAvatar);
-
-				const uploadResponse = await fetch(`${SERVER_URL}/assets/profile/${$page.params.id}`, {
-					method: 'POST', // Assuming it's POST for upload
-					headers: {
-						Authorization: `Bearer ${$auth.token}`
-					},
-					body: formData
-				});
-
-				if (!uploadResponse.ok) {
-					throw new Error('Failed to upload avatar');
-				}
-
-				// Reload avatar with new image
-				await loadAvatar();
-			}
+			// Upload assets if changed
+			await uploadAsset(newAvatar, 'profile', loadAvatar);
+			await uploadAsset(newBackground, 'bg', loadBackground);
 
 			// Success
 			toast.success('Profile updated successfully!');
@@ -186,7 +199,9 @@
 					<!-- User Info -->
 					<div class="flex-1 text-center md:text-left">
 						<div class="flex items-center justify-center gap-2 md:justify-start">
-							<h1 class="text-3xl font-bold">{fullName}</h1>
+							<h1 class="text-3xl font-bold" style="text-shadow: 1px 1px 3px rgba(0,0,0,0.8);">
+								{fullName}
+							</h1>
 							{#if isSelf}
 								<span class="badge badge-primary">You</span>
 							{/if}
@@ -207,8 +222,18 @@
 								</div>
 							</div>
 						</div>
-						<p class="text-sm text-base-content/70 italic">@{username}</p>
-						<p class="mt-2 text-lg text-base-content/80">{bio}</p>
+						<p
+							class="text-sm text-base-content/70 italic"
+							style="text-shadow: 1px 1px 2px rgba(0,0,0,0.8);"
+						>
+							@{username}
+						</p>
+						<p
+							class="mt-2 text-lg text-base-content/80"
+							style="text-shadow: 1px 1px 2px rgba(0,0,0,0.8);"
+						>
+							{bio}
+						</p>
 						{#if isSelf}
 							<button class="btn mt-4 btn-primary" onclick={() => (editModalOpen = true)}>
 								<Edit class="mr-2 h-4 w-4" />
@@ -224,23 +249,27 @@
 						<div class="stat-figure text-info">
 							<Tag class="h-8 w-8" />
 						</div>
-						<div class="stat-title">Interests</div>
-						<div class="stat-value text-info">
+						<div class="stat-title text-info">Interests</div>
+						<div class="stat-value text-info" style="text-shadow: 1px 1px 2px rgba(0,0,0,0.8);">
 							<div class="flex flex-wrap gap-2">
 								{#each interests as interest (interest)}
 									<span class="badge badge-outline badge-lg">{interest}</span>
 								{/each}
 							</div>
 						</div>
-						<div class="stat-desc"></div>
+						<div class="stat-desc text-info"></div>
 					</div>
 					<div class="stat">
-						<div class="stat-figure text-accent">
+						<div class="stat-figure text-info">
 							<Hourglass class="h-8 w-8" />
 						</div>
-						<div class="stat-title">Time Available</div>
-						<div class="stat-value text-accent">{remainingTime}</div>
-						<div class="stat-desc">Hours per week</div>
+						<div class="stat-title text-info" style="text-shadow: 1px 1px 2px rgba(0,0,0,0.8);">
+							Time Available
+						</div>
+						<div class="stat-value text-info" style="text-shadow: 1px 1px 2px rgba(0,0,0,0.8);">
+							{timeBank}
+						</div>
+						<div class="stat-desc text-info">Hours per week</div>
 					</div>
 				</div>
 			</div>
@@ -323,5 +352,6 @@
 	currentBio={bio}
 	currentInterests={interests}
 	currentAvatar={avatarBlobUrl || profileUrl}
+	currentBackground={backgroundBlobUrl || backgroundUrl}
 	on:update={handleProfileUpdate}
 />

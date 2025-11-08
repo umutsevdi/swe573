@@ -19,5 +19,5 @@ public class UserProfileResponse {
     private LocalDateTime createdAt;
     private int userScore;
     private boolean isSelf;
-    private int remainingTime;
+    private int timeBank;
 }

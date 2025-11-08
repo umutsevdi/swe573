@@ -1,6 +1,7 @@
 package com.hive.app.image.model;
 
 import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.springframework.core.convert.ConversionFailedException;
@@ -20,6 +21,7 @@ import java.util.Locale;
 })
 @Data
 @NoArgsConstructor
+@AllArgsConstructor
 public class ImageEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

@@ -4,7 +4,7 @@
 	import CreatePostModal from '$lib/components/CreatePostModal.svelte';
 	import Toast from '$lib/components/Toast.svelte';
 	import favicon from '$lib/assets/favicon.svg';
-	import { BookOpen, Github, Plus, MessageSquare, Inbox } from '@lucide/svelte';
+	import { BookOpen, Github, Plus, MessageSquare, Inbox, User } from '@lucide/svelte';
 	import { auth } from '$lib/stores/auth';
 	import { goto } from '$app/navigation';
 	import { SERVER_URL } from '$lib/config';
@@ -37,6 +37,10 @@
 			if (response.ok) {
 				const blob = await response.blob();
 				navbarAvatarUrl = URL.createObjectURL(blob);
+			} else if (response.status === 401) {
+				// Token invalid, logout
+				auth.logout();
+				goto(resolve('/auth'));
 			}
 		} catch (error) {
 			console.error('Failed to load navbar avatar:', error);
@@ -72,16 +76,18 @@
 		<div class="flex-none">
 			<ul class="menu menu-horizontal">
 				<!-- Navbar menu content here -->
-				<li>
-					<a href={resolve('/forum')} class="btn cursor-pointer btn-ghost"
-						><MessageSquare class="h-4 w-4" /> Forum</a
-					>
-				</li>
-				<li>
-					<a href={resolve('/inbox')} class="btn cursor-pointer btn-ghost"
-						><Inbox class="h-4 w-4" /> Inbox</a
-					>
-				</li>
+				{#if $auth.isLoggedIn}
+					<li>
+						<a href={resolve('/forum')} class="btn cursor-pointer btn-ghost"
+							><MessageSquare class="h-4 w-4" /> Forum</a
+						>
+					</li>
+					<li>
+						<a href={resolve('/inbox')} class="btn cursor-pointer btn-ghost"
+							><Inbox class="h-4 w-4" /> Inbox</a
+						>
+					</li>
+				{/if}
 			</ul>
 		</div>
 		<div class="flex">
@@ -92,11 +98,15 @@
 							<summary>
 								<div class="btn avatar btn-circle btn-ghost">
 									<div class="w-10 rounded-full">
-										<img
-											alt="User avatar"
-											src={navbarAvatarUrl ||
-												'https://img.daisyui.com/images/stock/photo-1534528741775-53994a69daeb.webp'}
-										/>
+										{#if navbarAvatarUrl}
+											<img alt="User avatar" src={navbarAvatarUrl} />
+										{:else}
+											<div
+												class="flex h-full items-center justify-center bg-neutral text-neutral-content"
+											>
+												<User class="h-6 w-6" />
+											</div>
+										{/if}
 									</div>
 								</div>
 							</summary>
@@ -136,7 +146,7 @@
 			<p>Copyright © {new Date().getFullYear()} - All right reserved</p>
 		</aside>
 
-		<nav class="grid-flow-col gap-4 md:place-self-center md:justify-self-end">
+		<nav class="grid-flow-col justify-center gap-4 md:place-self-center md:justify-self-end">
 			<ul tabindex="-1" class="menu menu-vertical lg:menu-horizontal">
 				<li>
 					<a
@@ -163,12 +173,14 @@
 	</footer>
 
 	<!-- Floating Action Button -->
-	<button
-		class="btn fixed right-4 bottom-4 z-10 btn-circle btn-primary"
-		onclick={openCreatePostModal}
-	>
-		<Plus class="h-6 w-6" />
-	</button>
+	{#if $auth.isLoggedIn}
+		<button
+			class="btn fixed right-4 bottom-4 z-10 btn-circle btn-primary"
+			onclick={openCreatePostModal}
+		>
+			<Plus class="h-6 w-6" />
+		</button>
+	{/if}
 </div>
 
 <svelte:head>

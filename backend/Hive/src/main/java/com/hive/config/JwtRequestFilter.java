@@ -2,6 +2,7 @@ package com.hive.config;
 
 import com.hive.util.JwtPayload;
 import com.hive.util.JwtUtil;
+import io.jsonwebtoken.JwtException;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -33,19 +34,21 @@ public class JwtRequestFilter extends OncePerRequestFilter {
                                     FilterChain chain) throws ServletException, IOException {
         final String authHeader = request.getHeader(HttpHeaders.AUTHORIZATION);
         if (authHeader != null && authHeader.startsWith("Bearer ")) {
-            final JwtPayload payload = jwtUtil.parseToken(authHeader);
-            String username = payload.username();
-            if (username != null) {
-                UserDetails userDetails = userDetailsService.loadUserByUsername(username);
-                if (payload.isValid(userDetails) && userDetails.isAccountNonLocked()) {
-                    var authToken = new UsernamePasswordAuthenticationToken(
-                            userDetails,
-                            null,
-                            userDetails.getAuthorities());
-                    authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-                    SecurityContextHolder.getContext().setAuthentication(authToken);
+            try {
+                final JwtPayload payload = jwtUtil.parseToken(authHeader);
+                String username = payload.username();
+                if (username != null) {
+                    UserDetails userDetails = userDetailsService.loadUserByUsername(username);
+                    if (payload.isValid(userDetails) && userDetails.isAccountNonLocked()) {
+                        var authToken = new UsernamePasswordAuthenticationToken(
+                                userDetails,
+                                null,
+                                userDetails.getAuthorities());
+                        authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                        SecurityContextHolder.getContext().setAuthentication(authToken);
+                    }
                 }
-                log.info("Authenticated {}", username);
+            } catch (JwtException ignored) {
             }
         }
         chain.doFilter(request, response);

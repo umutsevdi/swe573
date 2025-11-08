@@ -26,7 +26,7 @@ public class GlobalExceptionHandler {
                                        HttpServletRequest request,
                                        String message) {
         return new ApiError(
-                Instant.now(),
+                Instant.now().toString(),
                 status.value(),
                 status.getReasonPhrase(),
                 request.getRequestURI(),
@@ -116,7 +116,7 @@ public class GlobalExceptionHandler {
     }
 
     public record ApiError(
-            Instant timestamp,
+            String timestamp,
             int status,
             String error,
             String path,

@@ -10,7 +10,6 @@ import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.MappingConstants;
 import org.mapstruct.Named;
-import org.mapstruct.factory.Mappers;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -28,7 +27,6 @@ public interface UserMapper {
     UserCardResponse dtoToCard(UserDTO user);
 
 
-    @Mapping(source = "timeBank", target = "remainingTime")
     UserProfileResponse dtoToUserProfileResponse(UserDTO user);
 
     @Named("entity")

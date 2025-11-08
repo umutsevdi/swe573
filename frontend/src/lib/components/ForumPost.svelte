@@ -15,8 +15,6 @@
 		userId: number;
 		onReply?: (post: Post) => void;
 	}>();
-	console.log(userId);
-
 	let showReplyButton = $state(false);
 
 	let parsedLines = $derived(

@@ -28,24 +28,17 @@ public class ImageController {
     private final JwtUtil jwtUtil;
     private final UserService userService;
 
-    @PostMapping(path = "/profile/{id}",
+    @PostMapping(path = "/{type}/{id}",
             consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<Void> uploadProfilePhoto(@RequestPart("file") MultipartFile file,
+                                                   @PathVariable ImageEntity.AssetType type,
                                                    @PathVariable Long id
     ) throws HttpMediaTypeNotAcceptableException {
         Long userId = ((UserDTO) SecurityContextHolder.getContext().getAuthentication().getPrincipal()).getId();
-        service.storeProfile(file, id, userId);
-        return ResponseEntity.ok().build();
-    }
-
-
-    @PostMapping(path = "/event/{id}",
-            consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<Void> uploadEventPhoto(@RequestPart("file") MultipartFile file,
-                                                 @PathVariable Long id
-    ) throws HttpMediaTypeNotAcceptableException {
-        Long userId = ((UserDTO) SecurityContextHolder.getContext().getAuthentication().getPrincipal()).getId();
-        service.storeEvent(file, id, userId);
+        switch (type) {
+            case EVENT -> service.storeEvent(file, userId, id);
+            case PROFILE, BG -> service.storeUserImage(file, type, userId, id);
+        }
         return ResponseEntity.ok().build();
     }
 
@@ -53,7 +46,7 @@ public class ImageController {
     public ResponseEntity<Resource> downloadProfile(
             @PathVariable ImageEntity.AssetType type,
             @PathVariable Long id
-    ) throws NotFoundException, IllegalArgumentException {
+    ) throws IllegalArgumentException {
         ImageEntity entity = service.loadImage(id, type);
         if (entity == null) {
             return ResponseEntity.status(HttpStatus.MOVED_TEMPORARILY)

@@ -1,5 +1,6 @@
 import { SERVER_URL } from '$lib/config';
-import { redirect, error, type Cookies } from '@sveltejs/kit';
+import { redirect, type Cookies } from '@sveltejs/kit';
+import { fetchWithAuth } from '$lib/utils/fetch';
 
 type ForumThread = {
 	id: number;
@@ -14,31 +15,17 @@ type ForumThread = {
 export const load = async ({ cookies }: { cookies: Cookies }) => {
 	const token = cookies.get('token');
 
-	try {
-		const response = await fetch(`${SERVER_URL}/thread`, {
-			headers: {
-				Authorization: `Bearer ${token}`
-			}
-		});
+	const response = await fetchWithAuth(`${SERVER_URL}/thread`, token, cookies);
 
-		if (!response.ok) {
-			throw new Error(`Failed to fetch threads (${response.status})`);
-		}
+	const threads: ForumThread[] = await response.json();
 
-		const threads: ForumThread[] = await response.json();
+	// Transform tagsList: split by comma and flatten
+	const transformedThreads = threads.map((thread) => ({
+		...thread,
+		tags: thread.tagsList.flatMap((tag) => tag.split(',')).map((t) => t.trim())
+	}));
 
-		// Transform tagsList: split by comma and flatten
-		const transformedThreads = threads.map((thread) => ({
-			...thread,
-			tags: thread.tagsList.flatMap((tag) => tag.split(',')).map((t) => t.trim())
-		}));
-
-		return { threads: transformedThreads };
-	} catch (err) {
-		console.error('Error fetching threads:', err);
-		const errorMessage = err instanceof Error ? err.message : 'Failed to load forum threads';
-		throw error(500, errorMessage);
-	}
+	return { threads: transformedThreads };
 };
 
 export const actions = {

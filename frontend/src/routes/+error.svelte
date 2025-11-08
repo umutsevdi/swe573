@@ -17,10 +17,28 @@
 				<div class="mb-5 flex justify-center">
 					<AlertTriangle class="h-32 w-32 text-warning" />
 				</div>
-				<h1 class="mb-5 text-5xl font-bold text-warning">{status} - Page Not Found</h1>
-				<p class="mb-5 text-lg">The page you're looking for doesn't exist or has been moved.</p>
+				<h1 class="mb-5 text-5xl font-bold text-warning">
+					{status} - {status === 404
+						? 'Page Not Found'
+						: status === 403
+							? 'Forbidden'
+							: status === 401
+								? 'Unauthorized'
+								: 'Client Error'}
+				</h1>
+				<p class="mb-5 text-lg">
+					{#if status === 404}
+						The page you're looking for doesn't exist or has been moved.
+					{:else if status === 403}
+						You don't have permission to access this resource.
+					{:else if status === 401}
+						You need to be logged in to access this resource.
+					{:else}
+						A client error occurred.
+					{/if}
+				</p>
 				<p class="mb-5 text-sm opacity-75">
-					{error?.message || 'Page not found'}
+					{error?.message || 'An error occurred'}
 				</p>
 			{:else if isServerError}
 				<div class="mb-5 flex justify-center">

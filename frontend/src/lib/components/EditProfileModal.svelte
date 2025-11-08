@@ -3,19 +3,21 @@
 	import { X, Upload, User, Tag, Plus } from '@lucide/svelte';
 
 	const dispatch = createEventDispatcher<{
-		update: { bio: string; interests: string[]; avatar?: File };
+		update: { bio: string; interests: string[]; avatar?: File; background?: File };
 	}>();
 
 	let {
 		open = $bindable(false),
 		currentBio = '',
 		currentInterests = [],
-		currentAvatar
+		currentAvatar,
+		currentBackground
 	} = $props<{
 		open: boolean;
 		currentBio: string;
 		currentInterests: string[];
 		currentAvatar?: string;
+		currentBackground?: string;
 	}>();
 
 	let modal: HTMLDialogElement | undefined;
@@ -24,6 +26,8 @@
 	let interestInput = $state('');
 	let avatarFile = $state<File | null>(null);
 	let avatarPreview = $state<string | null>(currentAvatar || null);
+	let backgroundFile = $state<File | null>(null);
+	let backgroundPreview = $state<string | null>(currentBackground || null);
 
 	function openModal() {
 		modal?.showModal();
@@ -56,6 +60,19 @@
 		}
 	}
 
+	function handleBackgroundChange(event: Event) {
+		const target = event.target as HTMLInputElement;
+		const file = target.files?.[0];
+		if (file) {
+			backgroundFile = file;
+			const reader = new FileReader();
+			reader.onload = (e) => {
+				backgroundPreview = e.target?.result as string;
+			};
+			reader.readAsDataURL(file);
+		}
+	}
+
 	function addInterest() {
 		const trimmedInterest = interestInput.trim().toLowerCase();
 		if (trimmedInterest && !interests.includes(trimmedInterest)) {
@@ -79,7 +96,8 @@
 		dispatch('update', {
 			bio,
 			interests,
-			avatar: avatarFile || undefined
+			avatar: avatarFile || undefined,
+			background: backgroundFile || undefined
 		});
 		closeModal();
 	}
@@ -90,6 +108,8 @@
 		interestInput = '';
 		avatarFile = null;
 		avatarPreview = currentAvatar || null;
+		backgroundFile = null;
+		backgroundPreview = currentBackground || null;
 	}
 
 	$effect(() => {
@@ -128,6 +148,33 @@
 						<Upload class="mr-2 h-4 w-4" />
 						Upload Photo
 						<input type="file" accept="image/*" class="hidden" onchange={handleAvatarChange} />
+					</label>
+				</div>
+			</div>
+
+			<!-- Background Upload -->
+			<div class="form-control">
+				<label class="label">
+					<span class="label-text">Background Picture</span>
+				</label>
+				<div class="flex items-center gap-4">
+					<div class="avatar">
+						<div class="h-16 w-16 rounded">
+							{#if backgroundPreview}
+								<img src={backgroundPreview} alt="Background preview" class="object-cover" />
+							{:else}
+								<div
+									class="flex h-full items-center justify-center bg-neutral text-neutral-content"
+								>
+									<User class="h-8 w-8" />
+								</div>
+							{/if}
+						</div>
+					</div>
+					<label class="btn btn-outline btn-sm">
+						<Upload class="mr-2 h-4 w-4" />
+						Upload Background
+						<input type="file" accept="image/*" class="hidden" onchange={handleBackgroundChange} />
 					</label>
 				</div>
 			</div>

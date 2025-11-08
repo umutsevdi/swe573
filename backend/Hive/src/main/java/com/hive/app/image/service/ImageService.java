@@ -46,9 +46,10 @@ public class ImageService {
     }
 
     @Transactional
-    public void storeProfile(MultipartFile file,
-                             Long id,
-                             Long userId
+    public void storeUserImage(MultipartFile file,
+                               ImageEntity.AssetType assetType,
+                               Long id,
+                               Long userId
     ) throws HttpMediaTypeNotAcceptableException {
         if (!userId.equals(id)) {
             throw new AuthenticationFailureException();
@@ -56,8 +57,9 @@ public class ImageService {
         try {
             validate(file);
             repo.save(new ImageEntity(
-                    ImageEntity.AssetType.PROFILE,
+                    repo.findByParentIdAndAssetType(userId, assetType).map(ImageEntity::getId).orElse(null),
                     userId,
+                    assetType,
                     file.getContentType(),
                     file.getSize(),
                     file.getBytes()

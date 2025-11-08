@@ -3,15 +3,19 @@ package com.hive.app.image.service;
 import com.hive.app.events.service.EventService;
 import com.hive.app.image.model.ImageEntity;
 import com.hive.app.image.repository.ImageRepository;
-import com.hive.config.NotFoundException;
 import com.hive.config.AuthenticationFailureException;
+import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
+import org.springframework.core.io.Resource;
+import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.HttpMediaTypeNotAcceptableException;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
@@ -19,6 +23,27 @@ public class ImageService {
 
     private final ImageRepository repo;
     private final EventService eventService;
+
+    private Map<ImageEntity.AssetType, ImageEntity> images = new HashMap<>();
+
+    @PostConstruct
+    private void init() throws IOException {
+        PathMatchingResourcePatternResolver resolver = new PathMatchingResourcePatternResolver();
+        for (Resource r : resolver.getResources("classpath:/static/**/*.png")) {
+            String filename = r.getFilename();
+            if (filename == null) {
+                continue;
+            }
+            ImageEntity.AssetType type =
+                    ImageEntity.AssetType.valueOf(filename.replaceFirst("(?i)\\.png$", "").toUpperCase());
+            images.put(type, new ImageEntity(
+                    type,
+                    null,
+                    "images/png",
+                    r.contentLength(),
+                    r.getContentAsByteArray()));
+        }
+    }
 
     @Transactional
     public void storeProfile(MultipartFile file,
@@ -65,9 +90,12 @@ public class ImageService {
     }
 
     @Transactional(readOnly = true)
-    public ImageEntity loadImage(Long id, ImageEntity.AssetType assetType) throws NotFoundException {
-        return repo.findByParentIdAndAssetType(id, assetType)
-                .orElseThrow(NotFoundException::new);
+    public ImageEntity loadImage(Long id, ImageEntity.AssetType assetType) {
+        return repo.findByParentIdAndAssetType(id, assetType).orElse(null);
+    }
+
+    public ImageEntity loadDefault(ImageEntity.AssetType assetType) {
+        return images.get(assetType);
     }
 
     private void validate(MultipartFile file) {

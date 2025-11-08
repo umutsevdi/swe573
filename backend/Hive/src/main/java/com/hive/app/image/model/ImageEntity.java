@@ -3,6 +3,12 @@ package com.hive.app.image.model;
 import jakarta.persistence.*;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.springframework.core.convert.ConversionFailedException;
+import org.springframework.core.convert.TypeDescriptor;
+import org.springframework.core.convert.converter.Converter;
+import org.springframework.stereotype.Component;
+
+import java.util.Locale;
 
 /**
  * if AssetType:PROFILE parentId is UserId
@@ -43,6 +49,24 @@ public class ImageEntity {
     public enum AssetType {
         PROFILE,
         EVENT,
+        BG;
+
     }
 
+    @Component
+    public static class StringToAssetTypeConverter implements Converter<String, AssetType> {
+
+        @Override
+        public AssetType convert(String source) {
+            try {
+                return AssetType.valueOf(source.trim().toUpperCase(Locale.ROOT));
+            } catch (IllegalArgumentException ex) {
+                throw new ConversionFailedException(
+                        TypeDescriptor.valueOf(String.class),
+                        TypeDescriptor.valueOf(AssetType.class),
+                        source,
+                        ex);
+            }
+        }
+    }
 }

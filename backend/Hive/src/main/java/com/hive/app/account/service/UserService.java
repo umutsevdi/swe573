@@ -52,11 +52,11 @@ public class UserService implements UserDetailsService {
 
     public UserDTO updateUser(UserDTO dto, UpdateUserRequest request) throws UsernameNotFoundException {
         boolean changed = false;
-        if (!request.getBio().isBlank() && !request.getBio().equals(dto.getBiography())) {
+        if (request.getBio() != null && !request.getBio().isBlank() && !request.getBio().equals(dto.getBiography())) {
             changed = true;
             dto.setBiography(request.getBio());
         }
-        if (!request.getInterests().isEmpty() && !request.getInterests().equals(dto.getInterests())) {
+        if (request.getInterests() != null && !request.getInterests().isEmpty() && !request.getInterests().equals(dto.getInterests())) {
             changed = true;
             dto.setInterests(request.getInterests());
         }

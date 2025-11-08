@@ -3,7 +3,13 @@
 	import { resolve } from '$app/paths';
 	import { SERVER_URL } from '$lib/config';
 	import { auth } from '$lib/stores/auth';
-	import { userCardCache, type UserCardData } from '$lib/stores/user';
+	import {
+		userCardCache,
+		userDataPromises,
+		avatarPromises,
+		avatarBlobs,
+		type UserCardData
+	} from '$lib/stores/user';
 	import UserTooltipCard from './UserTooltipCard.svelte';
 
 	let { userId } = $props<{
@@ -12,55 +18,117 @@
 
 	let loading = $state(false);
 	let avatarError = $state(false);
+	let avatarBlobUrl = $state<string | null>(null);
 
-	// Subscribe to cache
-	let cache = $state<Map<number, UserCardData>>(new Map());
-	userCardCache.subscribe((value) => {
-		cache = value;
-	});
+	let userData = $derived($userCardCache.has(userId) ? $userCardCache.get(userId)! : null);
+	let avatarBlob = $derived($avatarBlobs.has(userId) ? $avatarBlobs.get(userId)! : null);
 
-	let userData = $derived(cache.has(userId) ? cache.get(userId)! : null);
-
-	// Load user data
+	// Load user data and avatar
 	$effect(() => {
-		if (userId && !cache.has(userId)) {
+		if (userId && !userData && !$userDataPromises.has(userId)) {
 			loadUserData(userId);
 		}
+		if (userId && $auth.token && !avatarBlob && !$avatarPromises.has(userId)) {
+			loadAvatar(userId);
+		}
+		if (avatarBlob && !avatarBlobUrl) {
+			avatarBlobUrl = URL.createObjectURL(avatarBlob);
+		}
+
+		// Cleanup blob URL on unmount
+		return () => {
+			if (avatarBlobUrl) {
+				URL.revokeObjectURL(avatarBlobUrl);
+			}
+		};
 	});
 
 	async function loadUserData(id: number) {
 		loading = true;
 
 		try {
-			const headers: any = {};
-			if ($auth.token) {
-				headers.Authorization = `Bearer ${$auth.token}`;
-			}
-			const response = await fetch(`${SERVER_URL}/user/${id}/card`, { headers });
-			if (!response.ok) {
-				throw new Error(`Failed to fetch user data (${response.status})`);
+			if ($userDataPromises.has(id)) {
+				await $userDataPromises.get(id)!;
+				return;
 			}
 
-			const data: any = await response.json();
-			console.log('Fetched user data for', id, data);
-			const userCardData: UserCardData = {
-				id,
-				fullName: data.fullName || 'Unknown User',
-				biography: data.biography || '',
-				interests: data.interests || [],
-				userScore: data.userScore || 0
-			};
+			const promise = (async () => {
+				const headers: any = {};
+				if ($auth.token) {
+					headers.Authorization = `Bearer ${$auth.token}`;
+				}
+				const response = await fetch(`${SERVER_URL}/user/${id}/card`, { headers });
+				if (!response.ok) {
+					throw new Error(`Failed to fetch user data (${response.status})`);
+				}
 
-			// Update cache
-			userCardCache.update((currentCache) => {
-				return new Map(currentCache).set(id, userCardData);
-			});
+				const data: any = await response.json();
+				const userCardData: UserCardData = {
+					id,
+					fullName: data.fullName || 'Unknown User',
+					biography: data.biography || '',
+					interests: data.interests || [],
+					userScore: data.userScore || 0
+				};
 
-			userData = userCardData;
+				// Update cache
+				userCardCache.update((currentCache) => {
+					return new Map(currentCache).set(id, userCardData);
+				});
+				return userCardData;
+			})();
+
+			userDataPromises.update((m) => new Map(m).set(id, promise));
+
+			await promise;
 		} catch (err) {
 			console.error('Error loading user data:', err);
 		} finally {
+			userDataPromises.update((m) => {
+				const newM = new Map(m);
+				newM.delete(id);
+				return newM;
+			});
 			loading = false;
+		}
+	}
+
+	async function loadAvatar(id: number) {
+		try {
+			if ($avatarPromises.has(id)) {
+				await $avatarPromises.get(id)!;
+				return;
+			}
+
+			const promise = (async () => {
+				const response = await fetch(`${SERVER_URL}/assets/profile/${id}`, {
+					headers: {
+						Authorization: `Bearer ${$auth.token}`
+					}
+				});
+
+				if (response.ok) {
+					const blob = await response.blob();
+					avatarBlobs.update((m) => new Map(m).set(id, blob));
+					return blob;
+				} else {
+					throw new Error('Failed to load avatar');
+				}
+			})();
+
+			avatarPromises.update((m) => new Map(m).set(id, promise));
+
+			await promise;
+			avatarError = false;
+		} catch (error) {
+			console.error('Failed to load avatar:', error);
+			avatarError = true;
+		} finally {
+			avatarPromises.update((m) => {
+				const newM = new Map(m);
+				newM.delete(id);
+				return newM;
+			});
 		}
 	}
 
@@ -102,9 +170,9 @@
 	>
 		<div class="avatar">
 			<div class="w-10 rounded-full">
-				{#if !avatarError}
+				{#if avatarBlobUrl && !avatarError}
 					<img
-						src={`${SERVER_URL}/assets/profile/${userId}`}
+						src={avatarBlobUrl}
 						alt={userData?.fullName || 'Unknown User'}
 						onerror={() => (avatarError = true)}
 					/>

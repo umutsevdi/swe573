@@ -7,11 +7,13 @@
 	import { BookOpen, Github, Plus, MessageSquare, Inbox } from '@lucide/svelte';
 	import { auth } from '$lib/stores/auth';
 	import { goto } from '$app/navigation';
+	import { SERVER_URL } from '$lib/config';
 
 	let { children } = $props();
 
 	let createPostModal: unknown;
 	let modalOpen = $state(false);
+	let navbarAvatarUrl = $state<string | null>(null);
 
 	function openCreatePostModal() {
 		createPostModal?.openModal();
@@ -22,10 +24,43 @@
 		// TODO: Handle the post submission (send to API, etc.)
 	}
 
+	async function loadNavbarAvatar() {
+		if (!$auth.userCard?.id || !$auth.token) return;
+
+		try {
+			const response = await fetch(`${SERVER_URL}/assets/profile/${$auth.userCard.id}`, {
+				headers: {
+					Authorization: `Bearer ${$auth.token}`
+				}
+			});
+
+			if (response.ok) {
+				const blob = await response.blob();
+				navbarAvatarUrl = URL.createObjectURL(blob);
+			}
+		} catch (error) {
+			console.error('Failed to load navbar avatar:', error);
+		}
+	}
+
 	function handleLogout() {
 		auth.logout();
-		goto('/auth');
+		goto(resolve('/auth'));
 	}
+
+	// Load navbar avatar when user logs in
+	$effect(() => {
+		if ($auth.isLoggedIn && $auth.userCard?.id && $auth.token) {
+			loadNavbarAvatar();
+		}
+
+		// Cleanup blob URL on unmount
+		return () => {
+			if (navbarAvatarUrl) {
+				URL.revokeObjectURL(navbarAvatarUrl);
+			}
+		};
+	});
 </script>
 
 <CreatePostModal bind:this={createPostModal} bind:open={modalOpen} on:submit={handlePostSubmit} />
@@ -59,7 +94,8 @@
 									<div class="w-10 rounded-full">
 										<img
 											alt="User avatar"
-											src="https://img.daisyui.com/images/stock/photo-1534528741775-53994a69daeb.webp"
+											src={navbarAvatarUrl ||
+												'https://img.daisyui.com/images/stock/photo-1534528741775-53994a69daeb.webp'}
 										/>
 									</div>
 								</div>

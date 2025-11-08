@@ -80,6 +80,7 @@ export const load: PageServerLoad = async ({ params, cookies }) => {
 
 		const mappedData = {
 			fullName: userData.fullName,
+			username: userData.username,
 			bio: userData.biography,
 			interests: userData.interests,
 			profileUrl: `${SERVER_URL}/assets/profile/${id}`,

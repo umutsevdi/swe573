@@ -22,6 +22,7 @@
 	const dataObj = data || {};
 	let {
 		fullName,
+		username,
 		bio,
 		interests = [],
 		profileUrl,
@@ -206,6 +207,7 @@
 								</div>
 							</div>
 						</div>
+						<p class="text-sm text-base-content/70 italic">@{username}</p>
 						<p class="mt-2 text-lg text-base-content/80">{bio}</p>
 						{#if isSelf}
 							<button class="btn mt-4 btn-primary" onclick={() => (editModalOpen = true)}>
@@ -320,6 +322,6 @@
 	bind:open={editModalOpen}
 	currentBio={bio}
 	currentInterests={interests}
-	currentAvatar={profileUrl}
+	currentAvatar={avatarBlobUrl || profileUrl}
 	on:update={handleProfileUpdate}
 />

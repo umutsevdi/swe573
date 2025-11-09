@@ -39,7 +39,7 @@
 
 			const data = await response.json();
 			auth.login(data.token, data.card);
-			goto('/');
+			goto(resolve('/'));
 		} catch (error) {
 			console.error('Login error:', error);
 			loginError = error instanceof Error ? error.message : 'Login failed. Please try again.';
@@ -240,7 +240,7 @@
 							{#if registerInterests.length > 0}
 								<div class="flex flex-wrap gap-2">
 									{#each registerInterests as interest (interest)}
-										<div class="badge gap-2 badge-primary">
+										<div class="badge gap-2 badge-outline badge-accent">
 											{interest}
 											<button
 												type="button"

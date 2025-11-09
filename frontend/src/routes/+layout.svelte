@@ -8,15 +8,9 @@
 		BookOpen,
 		Github,
 		Plus,
-		MessageSquare,
-		Inbox,
-		User,
-		Home,
 		LogOut,
 		Settings,
-		PanelRightClose,
 		PanelRightOpen,
-		UsersRound,
 		MapPinned,
 		Mails,
 		Bell
@@ -54,7 +48,7 @@
 			console.log('Event created:', result);
 
 			// Navigate to the new event page
-			goto(`/event/${result.id}`);
+			goto(resolve(`/event/${result.id}`));
 		} catch (error) {
 			console.error('Error creating event:', error);
 			alert('Failed to create event. Please try again.');

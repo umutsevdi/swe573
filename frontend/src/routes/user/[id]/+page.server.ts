@@ -1,7 +1,7 @@
 import type { PageServerLoad } from './$types';
 import { error } from '@sveltejs/kit';
 import { SERVER_URL } from '$lib/config';
-import { fetchWithAuth } from '$lib/utils/fetch';
+import { loadWithAuth } from '$lib/utils/fetch';
 
 interface UserApiResponse {
 	id: number;
@@ -23,26 +23,7 @@ interface UserApiResponse {
 	credentialsNonExpired: boolean;
 }
 
-interface OfferNeedItem {
-	id: string;
-	title: string;
-	description: string;
-	tags: string[];
-	location: string;
-	participantCount: number;
-	type?: 'Offer' | 'Need';
-}
-
-function decodeJwtPayload(token: string): { id?: number } | null {
-	try {
-		const payload = token.split('.')[1];
-		const decoded = atob(payload.replace(/-/g, '+').replace(/_/g, '/'));
-		return JSON.parse(decoded);
-	} catch (e) {
-		console.error('Failed to decode JWT:', e);
-		return null;
-	}
-}
+import { decodeJwtPayload } from '$lib/utils/jwt';
 
 export const load: PageServerLoad = async ({ params, cookies }) => {
 	const id = Number(params.id);
@@ -51,16 +32,10 @@ export const load: PageServerLoad = async ({ params, cookies }) => {
 		throw error(404, 'User not found');
 	}
 
-	const token = cookies.get('token');
-	if (!token) {
-		throw error(401, 'Unauthorized');
-	}
-
-	const response = await fetchWithAuth(`${SERVER_URL}/user/${id}`, token, cookies);
-
-	const userData: UserApiResponse = await response.json();
+	const userData: UserApiResponse = await loadWithAuth(`${SERVER_URL}/user/${id}`, cookies);
 
 	// Decode JWT to get current user id
+	const token = cookies.get('token')!;
 	const payload = decodeJwtPayload(token);
 	const currentUserId = payload?.id;
 	const mappedData = {
@@ -69,8 +44,6 @@ export const load: PageServerLoad = async ({ params, cookies }) => {
 		biography: userData.biography,
 		interests: userData.interests,
 		isSelf: currentUserId === id,
-		offers: [] as OfferNeedItem[], // API doesn't return offers/needs yet
-		needs: [] as OfferNeedItem[], // API doesn't return offers/needs yet
 		timeBank: userData.timeBank || 0, // Default to 0 if not available
 		userScore: userData.userScore
 	};

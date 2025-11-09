@@ -3,6 +3,7 @@
 	import { resolve } from '$app/paths';
 	import { SERVER_URL } from '$lib/config';
 	import { auth } from '$lib/stores/auth';
+	import { loadAvatar as loadAvatarUtil } from '$lib/utils/avatar';
 	import {
 		userCardCache,
 		userDataPromises,
@@ -100,24 +101,10 @@
 			}
 
 			const promise = (async (): Promise<string> => {
-				const response = await fetch(`${SERVER_URL}/assets/profile/${id}`, {
-					headers: {
-						Authorization: `Bearer ${$auth.token}`
-					}
-				});
-
-				if (response.ok) {
-					const blob = await response.blob();
-					const blobUrl = URL.createObjectURL(blob);
-					avatarUrls.update((m) => new Map(m).set(id, blobUrl));
-					return blobUrl;
-				} else if (response.status === 404) {
-					const fallbackUrl = '/assets/profile.png';
-					avatarUrls.update((m) => new Map(m).set(id, fallbackUrl));
-					return fallbackUrl;
-				} else {
-					throw new Error('Failed to load avatar');
-				}
+				const result = await loadAvatarUtil(id, $auth.token);
+				const blobUrl = result || '/assets/profile.png';
+				avatarUrls.update((m) => new Map(m).set(id, blobUrl));
+				return blobUrl;
 			})();
 
 			avatarPromises.update((m) => new Map(m).set(id, promise));
@@ -125,6 +112,8 @@
 			await promise;
 		} catch (error) {
 			console.error('Failed to load avatar:', error);
+			// Set fallback on error to prevent continuous queries
+			avatarUrls.update((m) => new Map(m).set(id, '/assets/profile.png'));
 		} finally {
 			avatarPromises.update((m) => {
 				const newM = new Map(m);

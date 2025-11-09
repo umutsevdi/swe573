@@ -1,5 +1,13 @@
 import { error, redirect, type Cookies } from '@sveltejs/kit';
 
+/**
+ * Fetches a URL with authentication, handling common errors.
+ * @param url - The URL to fetch.
+ * @param token - The auth token.
+ * @param cookies - The cookies for redirects.
+ * @param options - Additional fetch options.
+ * @returns The response.
+ */
 export async function fetchWithAuth(
 	url: string,
 	token: string,
@@ -32,6 +40,21 @@ export async function fetchWithAuth(
 	}
 
 	return response;
+}
+
+/**
+ * Loads JSON data from a URL with authentication.
+ * @param url - The URL to fetch.
+ * @param cookies - The cookies for auth and redirects.
+ * @returns The JSON data.
+ */
+export async function loadWithAuth(url: string, cookies: Cookies): Promise<any> {
+	const token = cookies.get('token');
+	if (!token) {
+		throw redirect(302, '/auth');
+	}
+	const response = await fetchWithAuth(url, token, cookies);
+	return response.json();
 }
 
 export async function fetchAuthenticatedImage(

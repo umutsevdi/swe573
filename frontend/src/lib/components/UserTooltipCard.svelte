@@ -38,7 +38,7 @@
 				<h4 class="mb-1 text-xs font-semibold text-base-content/60">Interests</h4>
 				<div class="flex flex-wrap gap-1">
 					{#each userData.interests as interest (interest)}
-						<span class="badge badge-xs badge-primary">{interest}</span>
+						<span class="badge badge-outline badge-xs badge-accent">{interest}</span>
 					{/each}
 				</div>
 			</div>

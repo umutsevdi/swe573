@@ -111,7 +111,7 @@
 						</div>
 						<div class="mb-4 flex gap-1">
 							{#each topic.tags as tag (tag)}
-								<span class="badge badge-outline">{tag}</span>
+								<span class="badge badge-outline badge-accent">{tag}</span>
 							{/each}
 						</div>
 						{#if topic.active && $auth.userCard?.id === topic.userId}

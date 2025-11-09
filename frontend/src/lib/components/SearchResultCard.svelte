@@ -2,17 +2,18 @@
 	import { HandHelping, HeartHandshake, MapPin, Users } from '@lucide/svelte';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
+	import UserAvatar from './UserAvatar.svelte';
 
 	export let title: string;
-	export let description: string;
+	export let description: string = '';
 	export let tags: string[] = [];
 	export let location: string;
 	export let participantCount: number;
-	export let ownerProfileUrl: string = '';
+	export let ownerId: number;
 	export let type: 'Offer' | 'Need' = 'Offer';
 	export let eventId: string;
 
-	let badgeColor = (cond: boolean) => (cond ? 'badge-primary' : 'badge-accent');
+	let badgeColor = (cond: boolean) => (cond ? 'badge-success' : 'badge-accent');
 
 	function handleCardClick() {
 		goto(resolve(`/event/${eventId}`));
@@ -51,7 +52,9 @@
 		<!-- Description row with participants/owner on right -->
 		<div class="flex items-start gap-3">
 			<div class="flex-1">
-				<p class="line-clamp-2 text-sm whitespace-pre-wrap text-base-content/70">{description}</p>
+				{#if description}
+					<p class="line-clamp-2 text-sm whitespace-pre-wrap text-base-content/70">{description}</p>
+				{/if}
 			</div>
 			<!-- Header with location -->
 			<div class="mb-3 flex items-center justify-between">
@@ -67,7 +70,7 @@
 			{#if tags.length > 0}
 				<div class="flex flex-1 flex-wrap gap-1">
 					{#each tags as tag (tag)}
-						<span class="badge badge-outline badge-secondary">{tag}</span>
+						<span class="badge badge-outline badge-accent">{tag}</span>
 					{/each}
 				</div>
 			{/if}
@@ -76,13 +79,7 @@
 					<Users class="h-4 w-4 opacity-60" />
 					<span class="text-sm opacity-70">{participantCount}</span>
 				</div>
-				{#if ownerProfileUrl}
-					<div class="avatar">
-						<div class="w-6 rounded-full">
-							<img src={ownerProfileUrl} alt="Owner" />
-						</div>
-					</div>
-				{/if}
+				<UserAvatar userId={ownerId} />
 			</div>
 		</div>
 	</div>

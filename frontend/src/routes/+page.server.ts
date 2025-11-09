@@ -1,18 +1,6 @@
 import type { PageServerLoad } from './$types';
 
-function getDistance(lat1: number, lng1: number, lat2: number, lng2: number): number {
-	const R = 6371; // Earth's radius in km
-	const dLat = ((lat2 - lat1) * Math.PI) / 180;
-	const dLng = ((lng2 - lng1) * Math.PI) / 180;
-	const a =
-		Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-		Math.cos((lat1 * Math.PI) / 180) *
-			Math.cos((lat2 * Math.PI) / 180) *
-			Math.sin(dLng / 2) *
-			Math.sin(dLng / 2);
-	const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-	return R * c;
-}
+import { calculateDistance } from '$lib/utils/geo';
 
 const EVENTS: Array<{
 	id: string;
@@ -20,6 +8,7 @@ const EVENTS: Array<{
 	description: string;
 	ownerUrl: string;
 	ownerProfileUrl: string;
+	ownerId: number;
 	tags: string[];
 	latitude: number;
 	longitude: number;
@@ -39,6 +28,7 @@ const EVENTS: Array<{
 		type: 'Offer' as const,
 		ownerUrl: 'https://img.daisyui.com/images/stock/photo-1534528741775-53994a69daeb.webp',
 		ownerProfileUrl: 'https://img.daisyui.com/images/stock/photo-1534528741775-53994a69daeb.webp',
+		ownerId: 1,
 		participantCount: 4,
 		date: '2024-12-15'
 	},
@@ -49,6 +39,7 @@ const EVENTS: Array<{
 		tags: ['tutoring', 'math', 'college'],
 		location: 'Munich, DE',
 		latitude: 48.1351,
+		ownerId: 2,
 		longitude: 11.582,
 		type: 'Need' as const,
 		ownerUrl: 'https://img.daisyui.com/images/stock/photo-1534528741775-53994a69daeb.webp',
@@ -67,6 +58,7 @@ const EVENTS: Array<{
 		type: 'Need' as const,
 		ownerUrl: 'https://img.daisyui.com/images/stock/photo-1534528741775-53994a69daeb.webp',
 		ownerProfileUrl: 'https://img.daisyui.com/images/stock/photo-1534528741775-53994a69daeb.webp',
+		ownerId: 3,
 		participantCount: 0,
 		date: '2024-12-25'
 	},
@@ -81,6 +73,7 @@ const EVENTS: Array<{
 		ownerUrl: '/user/1',
 		ownerProfileUrl:
 			'https://images.unsplash.com/photo-1595290293434-555d42427e84?ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&q=80&w=687',
+		ownerId: 4,
 		latitude: 39.9334,
 		longitude: 32.8597,
 		date: '2025-12-25'
@@ -99,6 +92,7 @@ const EVENTS: Array<{
 		ownerUrl: '/user/1',
 		ownerProfileUrl:
 			'https://images.unsplash.com/photo-1595290293434-555d42427e84?ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&q=80&w=687',
+		ownerId: 5,
 		date: '2025-12-25'
 	}
 ];
@@ -131,7 +125,7 @@ export const load: PageServerLoad = async ({ url }) => {
 
 		if (!isNaN(userLat) && !isNaN(userLng)) {
 			events = events.filter((event) => {
-				const distance = getDistance(userLat, userLng, event.latitude, event.longitude);
+				const distance = calculateDistance(userLat, userLng, event.latitude, event.longitude);
 				return distance <= proximityKm;
 			});
 		}

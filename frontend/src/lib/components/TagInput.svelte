@@ -49,7 +49,7 @@
 	{#if tags.length > 0}
 		<div class="flex flex-wrap gap-2">
 			{#each tags as tag (tag)}
-				<div class="badge gap-2 badge-primary">
+				<div class="badge gap-2 badge-outline badge-accent">
 					{tag}
 					<button type="button" class="btn btn-ghost btn-xs" onclick={() => removeTag(tag)}>
 						<X class="h-3 w-3" />

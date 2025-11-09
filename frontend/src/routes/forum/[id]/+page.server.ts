@@ -1,6 +1,6 @@
 import { SERVER_URL } from '$lib/config';
-import { redirect, type Cookies } from '@sveltejs/kit';
-import { fetchWithAuth } from '$lib/utils/fetch';
+import { type Cookies } from '@sveltejs/kit';
+import { loadWithAuth } from '$lib/utils/fetch';
 
 type ThreadMessage = {
 	message: string;
@@ -9,12 +9,8 @@ type ThreadMessage = {
 };
 
 export const load = async ({ params, cookies }: { params: { id: string }; cookies: Cookies }) => {
-	const token = cookies.get('token');
-
 	console.log('Fetching thread:', `${SERVER_URL}/thread/${params.id}`);
-	const response = await fetchWithAuth(`${SERVER_URL}/thread/${params.id}`, token, cookies);
-
-	const thread = await response.json();
+	const thread = await loadWithAuth(`${SERVER_URL}/thread/${params.id}`, cookies);
 
 	// Transform the server response to match the expected format
 	const parsedPosts = thread.messages.map((msg: ThreadMessage, index: number) => {

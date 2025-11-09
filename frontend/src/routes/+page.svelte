@@ -2,10 +2,9 @@
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { page } from '$app/stores';
-	import { Funnel, Plus, Search } from '@lucide/svelte';
+	import { Funnel, Search } from '@lucide/svelte';
 	import MapOverview from '$lib/components/MapOverview.svelte';
 	import SearchResultCard from '$lib/components/SearchResultCard.svelte';
-	import CreatePostModal from '$lib/components/CreatePostModal.svelte';
 
 	let { data } = $props();
 
@@ -160,7 +159,7 @@
 								</span>
 							{/if}
 							{#each tags as tag (tag)}
-								<span class="badge gap-2 badge-secondary">
+								<span class="badge gap-2 badge-outline badge-accent">
 									Tag: {tag}
 									<button type="button" class="btn btn-ghost btn-xs" onclick={() => removeTag(tag)}
 										>×</button
@@ -210,7 +209,7 @@
 							tags={event.tags}
 							location={event.location}
 							participantCount={event.participantCount}
-							ownerProfileUrl={event.ownerProfileUrl}
+							ownerId={event.ownerId}
 							type={event.type}
 							eventId={event.id}
 						/>

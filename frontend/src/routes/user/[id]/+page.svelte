@@ -31,6 +31,9 @@
 	let activeTab = $state('offers');
 	let avatarBlobUrl = $state<string | null>(null);
 	let backgroundBlobUrl = $state<string | null>(null);
+	let showAll = $state(false);
+	let events = $state<EventData[]>([]);
+	let loading = $state(true);
 
 	async function uploadAsset(
 		file: File | undefined,
@@ -123,12 +126,76 @@
 		}
 	}
 
+	async function loadEvents() {
+		loading = true;
+		try {
+			const response = await fetch(
+				`${SERVER_URL}/event/owner/${$page.params.id}${showAll ? '?all=true' : ''}`,
+				{
+					headers: {
+						Authorization: `Bearer ${$auth.token}`
+					}
+				}
+			);
+			if (response.ok) {
+				events = await response.json();
+			} else {
+				console.error('Failed to load events');
+				events = [];
+			}
+		} catch (error) {
+			console.error('Error loading events:', error);
+			events = [];
+		} finally {
+			loading = false;
+		}
+	}
+
 	async function loadBackground() {
 		backgroundBlobUrl = await fetchAuthenticatedImage(
 			`${SERVER_URL}/assets/bg/${$page.params.id}`,
 			$auth.token!,
 			'/assets/bg.png'
 		);
+	}
+
+	let offers = $derived(events.filter((e) => e.type === 'OFFER').map(mapEvent));
+	let needs = $derived(events.filter((e) => e.type === 'NEED').map(mapEvent));
+
+	interface EventData {
+		id: number;
+		title: string;
+		location: { name: string };
+		type: 'OFFER' | 'NEED';
+		maxParticipants: number;
+		tagsList: string[];
+		ownerId: number;
+	}
+
+	interface MappedEvent {
+		id: string;
+		title: string;
+		description: string;
+		tags: string[];
+		location: string;
+		participantCount: number;
+		type: 'Offer' | 'Need';
+		eventId: string;
+		ownerId: number;
+	}
+
+	function mapEvent(event: EventData): MappedEvent {
+		return {
+			id: event.id.toString(),
+			title: event.title,
+			description: '',
+			tags: event.tagsList,
+			location: event.location.name,
+			participantCount: event.maxParticipants,
+			type: event.type === 'OFFER' ? 'Offer' : 'Need',
+			eventId: event.id.toString(),
+			ownerId: event.ownerId
+		};
 	}
 
 	// Load avatar and background when component mounts
@@ -147,6 +214,12 @@
 				URL.revokeObjectURL(backgroundBlobUrl);
 			}
 		};
+	});
+
+	$effect(() => {
+		if ($auth.token && $page.params.id) {
+			loadEvents();
+		}
 	});
 </script>
 
@@ -204,7 +277,7 @@
 						<div class="mt-4 flex items-center gap-4">
 							<div class="flex flex-wrap gap-2">
 								{#each interests as interest (interest)}
-									<span class="badge badge-outline badge-lg badge-primary">{interest}</span>
+									<span class="badge badge-outline badge-lg badge-accent">{interest}</span>
 								{/each}
 							</div>
 							<div class="flex items-center gap-2">
@@ -230,6 +303,12 @@
 	<div class="container mx-auto max-w-6xl px-4 py-8">
 		<div class="card bg-base-100 shadow-xl">
 			<div class="card-body">
+				<div class="mb-4 flex justify-end">
+					<label class="label cursor-pointer">
+						<span class="label-text mr-2">Show all events</span>
+						<input type="checkbox" class="toggle toggle-primary" bind:checked={showAll} />
+					</label>
+				</div>
 				<div class="tabs-bordered tabs">
 					<button
 						class="tab-active tab"
@@ -237,7 +316,7 @@
 						onclick={() => (activeTab = 'offers')}
 					>
 						<HeartHandshake class="h-5 w-5" />
-						Offers ({data?.offers?.length || 0})
+						Offers ({offers.length})
 					</button>
 					<button
 						class="tab"
@@ -245,55 +324,71 @@
 						onclick={() => (activeTab = 'needs')}
 					>
 						<HandHelping class="h-5 w-5" />
-						Needs ({data?.needs?.length || 0})
+						Needs ({needs.length})
 					</button>
 				</div>
 
 				<div class="mt-6">
 					{#if activeTab === 'offers'}
-						<div class="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-							{#if data?.offers?.length}
-								{#each data?.offers as card (card.id)}
-									<SearchResultCard
-										title={card.title}
-										description={card.description}
-										tags={card.tags}
-										location={card.location}
-										participantCount={card.participantCount}
-										type={card.type}
-										eventId={card.id}
-										ownerProfileUrl={`${SERVER_URL}/assets/profile/${$page.params.id}`}
-									/>
+						{#if loading}
+							<div class="grid grid-cols-1 gap-4">
+								{#each [0, 1, 2, 3, 4, 5] as i (i)}
+									<div class="h-32 w-full skeleton"></div>
 								{/each}
-							{:else}
-								<div class="col-span-full py-12 text-center">
-									<HeartHandshake class="mx-auto h-16 w-16 text-base-content/30" />
-									<p class="mt-4 text-lg text-base-content/60">No offers yet</p>
-								</div>
-							{/if}
-						</div>
+							</div>
+						{:else}
+							<div class="grid grid-cols-1 gap-4">
+								{#if offers.length}
+									{#each offers as card (card.id)}
+										<SearchResultCard
+											title={card.title}
+											description={card.description}
+											tags={card.tags}
+											location={card.location}
+											participantCount={card.participantCount}
+											type={card.type}
+											eventId={card.eventId}
+											ownerId={card.ownerId}
+										/>
+									{/each}
+								{:else}
+									<div class="col-span-full py-12 text-center">
+										<HeartHandshake class="mx-auto h-16 w-16 text-base-content/30" />
+										<p class="mt-4 text-lg text-base-content/60">No offers yet</p>
+									</div>
+								{/if}
+							</div>
+						{/if}
 					{:else if activeTab === 'needs'}
-						<div class="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-							{#if data?.needs?.length}
-								{#each data?.needs as card (card.id)}
-									<SearchResultCard
-										title={card.title}
-										description={card.description}
-										tags={card.tags}
-										location={card.location}
-										participantCount={card.participantCount}
-										type={card.type}
-										eventId={card.id}
-										ownerProfileUrl={`${SERVER_URL}/assets/profile/${$page.params.id}`}
-									/>
+						{#if loading}
+							<div class="grid grid-cols-1 gap-4">
+								{#each [0, 1, 2, 3, 4, 5] as i (i)}
+									<div class="h-32 w-full skeleton"></div>
 								{/each}
-							{:else}
-								<div class="col-span-full py-12 text-center">
-									<HandHelping class="mx-auto h-16 w-16 text-base-content/30" />
-									<p class="mt-4 text-lg text-base-content/60">No needs yet</p>
-								</div>
-							{/if}
-						</div>
+							</div>
+						{:else}
+							<div class="grid grid-cols-1 gap-4">
+								{#if needs.length}
+									{#each needs as card (card.id)}
+										<SearchResultCard
+											title={card.title}
+											description={card.description}
+											tags={card.tags}
+											location={card.location}
+											participantCount={card.participantCount}
+											type={card.type}
+											eventId={card.eventId}
+											ownerId={card.ownerId}
+										/>
+									{/each}
+								{:else}
+									<div class="col-span-full py-12 text-center">
+										<HandHelping class="mx-auto h-16 w-16 text-base-content/30" />
+										<p class="mt-4 text-lg text-base-content/60">No needs yet</p>
+									</div>
+								{/if}
+							</div>
+						{/if}
 					{/if}
 				</div>
 			</div>

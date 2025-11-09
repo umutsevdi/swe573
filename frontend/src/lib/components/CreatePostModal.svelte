@@ -6,14 +6,14 @@
 		Clock,
 		Users,
 		Tag,
-		X,
-		Plus,
 		HeartHandshake,
 		HandHelping,
 		Upload
 	} from '@lucide/svelte';
 	import LocationPicker from './LocationPicker.svelte';
 	import TagInput from './TagInput.svelte';
+	import BaseModal from './BaseModal.svelte';
+	import { createFilePreview } from '$lib/utils/file';
 
 	const dispatch = createEventDispatcher<{ submit: any; update: any }>();
 
@@ -27,11 +27,10 @@
 		mode?: 'create' | 'edit';
 	}>();
 
-	let modal: HTMLDialogElement;
 	let type = $state<'Offer' | 'Need'>('Offer');
 	let title = $state('');
 	let description = $state('');
-	let backgroundImage: File | null = $state(null);
+
 	let backgroundImagePreview = $state<string | null>(null);
 	let location = $state<{ lat: number; lng: number; name: string } | null>(null);
 	let userLat = $state<number>(41.0082); // Default to Istanbul
@@ -42,28 +41,18 @@
 	let tags = $state<string[]>([]);
 
 	function openModal() {
-		modal?.showModal();
 		open = true;
 	}
 
 	function closeModal() {
-		modal?.close();
 		open = false;
 		resetForm();
 	}
-
-	// Sync open prop with modal
-	$effect(() => {
-		if (open && modal) {
-			modal.showModal();
-		}
-	});
 
 	function resetForm() {
 		type = 'Offer';
 		title = '';
 		description = '';
-		backgroundImage = null;
 		backgroundImagePreview = null;
 		location = null;
 		eventDate = '';
@@ -72,16 +61,11 @@
 		tags = [];
 	}
 
-	function handleImageUpload(event: Event) {
+	async function handleImageUpload(event: Event) {
 		const target = event.target as HTMLInputElement;
 		const file = target.files?.[0];
 		if (file) {
-			backgroundImage = file;
-			const reader = new FileReader();
-			reader.onload = (e) => {
-				backgroundImagePreview = e.target?.result as string;
-			};
-			reader.readAsDataURL(file);
+			backgroundImagePreview = await createFilePreview(file);
 		}
 	}
 
@@ -115,6 +99,13 @@
 			capacity = editData.maxParticipants || 1;
 			eventDate = editData.targetDate || '';
 			duration = convertDurationForEdit(editData.duration);
+		}
+	});
+
+	// Reset form on close
+	$effect(() => {
+		if (!open) {
+			resetForm();
 		}
 	});
 
@@ -206,212 +197,207 @@
 	export { openModal };
 </script>
 
-<dialog bind:this={modal} class="modal" onclose={() => (open = false)}>
-	<div class="modal-box max-w-5xl">
-		<h3 class="mb-4 flex items-center gap-2 text-lg font-bold">
-			{mode === 'edit' ? 'Edit' : 'Create New'}
-			<div class="join">
-				<button
-					class="btn join-item btn-sm {type === 'Offer' ? 'btn-active' : ''}"
-					onclick={() => (type = 'Offer')}
-				>
-					<HeartHandshake class="h-4 w-4" />
-					Offer
-				</button>
-				<button
-					class="btn join-item btn-sm {type === 'Need' ? 'btn-active' : ''}"
-					onclick={() => (type = 'Need')}
-				>
-					<HandHelping class="h-4 w-4" />
-					Need
-				</button>
+<BaseModal bind:open size="max-w-5xl">
+	<h3 class="mb-4 flex items-center gap-2 text-lg font-bold">
+		{mode === 'edit' ? 'Edit' : 'Create New'}
+		<div class="join">
+			<button
+				class="btn join-item btn-sm btn-success {type === 'Offer' ? 'btn-active' : ''}"
+				onclick={() => (type = 'Offer')}
+			>
+				<HeartHandshake class="h-4 w-4" />
+				Offer
+			</button>
+			<button
+				class="btn join-item btn-sm btn-accent {type === 'Need' ? 'btn-active' : ''}"
+				onclick={() => (type = 'Need')}
+			>
+				<HandHelping class="h-4 w-4" />
+				Need
+			</button>
+		</div>
+	</h3>
+
+	<form onsubmit={submitPost} class="grid grid-cols-1 gap-6 lg:grid-cols-2">
+		<!-- Left Column: All Text Inputs -->
+		<div class="space-y-4">
+			<!-- Title -->
+			<div class="form-control">
+				<label class="label" for="title-input">
+					<span class="label-text">Title</span>
+				</label>
+				<input
+					id="title-input"
+					type="text"
+					placeholder="Enter a descriptive title"
+					class="input-bordered input w-full"
+					bind:value={title}
+					maxlength="256"
+					required
+				/>
+				<div class="mt-1 text-xs text-base-content/60">{title.length} / 256</div>
 			</div>
-		</h3>
 
-		<form onsubmit={submitPost} class="grid grid-cols-1 gap-6 lg:grid-cols-2">
-			<!-- Left Column: All Text Inputs -->
-			<div class="space-y-4">
-				<!-- Title -->
-				<div class="form-control">
-					<label class="label" for="title-input">
-						<span class="label-text">Title</span>
-					</label>
-					<input
-						id="title-input"
-						type="text"
-						placeholder="Enter a descriptive title"
-						class="input-bordered input w-full"
-						bind:value={title}
-						maxlength="256"
-						required
-					/>
-					<div class="mt-1 text-xs text-base-content/60">{title.length} / 256</div>
-				</div>
+			<!-- Description -->
+			<div class="form-control">
+				<label class="label" for="description-input">
+					<span class="label-text">Description</span>
+				</label>
+				<textarea
+					id="description-input"
+					placeholder="Describe your offer or need in detail"
+					class="textarea-bordered textarea h-24 w-full"
+					bind:value={description}
+					maxlength="1024"
+					required
+				></textarea>
+				<div class="mt-1 text-xs text-base-content/60">{description.length} / 1024</div>
+			</div>
 
-				<!-- Description -->
-				<div class="form-control">
-					<label class="label" for="description-input">
-						<span class="label-text">Description</span>
-					</label>
-					<textarea
-						id="description-input"
-						placeholder="Describe your offer or need in detail"
-						class="textarea-bordered textarea h-24 w-full"
-						bind:value={description}
-						maxlength="1024"
-						required
-					></textarea>
-					<div class="mt-1 text-xs text-base-content/60">{description.length} / 1024</div>
-				</div>
-
-				<!-- Background Image -->
-				<div class="form-control">
-					<label class="label">
-						<span class="label-text">Background Image</span>
-					</label>
-					<div class="flex items-center gap-4">
-						<div class="avatar">
-							<div class="w-16 rounded-full">
-								{#if backgroundImagePreview}
-									<img src={backgroundImagePreview} alt="Preview" />
-								{:else}
-									<div class="bg-neutral text-neutral-content">
-										<Upload class="h-8 w-8" />
-									</div>
-								{/if}
-							</div>
+			<!-- Background Image -->
+			<div class="form-control">
+				<label class="label">
+					<span class="label-text">Background Image</span>
+				</label>
+				<div class="flex items-center gap-4">
+					<div class="avatar">
+						<div class="w-16 rounded-full">
+							{#if backgroundImagePreview}
+								<img src={backgroundImagePreview} alt="Preview" />
+							{:else}
+								<div class="bg-neutral text-neutral-content">
+									<Upload class="h-8 w-8" />
+								</div>
+							{/if}
 						</div>
-						<label class="btn btn-outline btn-sm">
-							<Upload class="mr-2 h-4 w-4" />
-							Upload Image
-							<input type="file" accept="image/*" class="hidden" onchange={handleImageUpload} />
-						</label>
 					</div>
+					<label class="btn btn-outline btn-sm">
+						<Upload class="mr-2 h-4 w-4" />
+						Upload Image
+						<input type="file" accept="image/*" class="hidden" onchange={handleImageUpload} />
+					</label>
 				</div>
+			</div>
 
-				<!-- Date and Duration Row -->
-				<div class="grid grid-cols-1 gap-4 md:grid-cols-2">
-					<!-- Target Date -->
-					<div class="form-control">
-						<label class="label" for="date-input">
-							<span class="label-text flex items-center gap-2">
-								<Calendar class="h-4 w-4" />
-								Target Date
-							</span>
-						</label>
-						<input
-							id="date-input"
-							type="date"
-							class="input-bordered input"
-							bind:value={eventDate}
-							required
-						/>
-					</div>
-
-					<!-- Duration -->
-					<div class="form-control">
-						<label class="label" for="duration-select">
-							<span class="label-text flex items-center gap-2">
-								<Clock class="h-4 w-4" />
-								Duration
-							</span>
-						</label>
-						<select
-							id="duration-select"
-							class="select-bordered select"
-							bind:value={duration}
-							required
-						>
-							<option value="" disabled selected>Select duration</option>
-							<option value="1 hour">1 hour</option>
-							<option value="2 hours">2 hours</option>
-							<option value="3 hours">3 hours</option>
-							<option value="4 hours">4 hours</option>
-							<option value="1 day">1 day</option>
-							<option value="2 days">2 days</option>
-							<option value="3 days">3 days</option>
-							<option value="1 week">1 week</option>
-							<option value="2 weeks">2 weeks</option>
-							<option value="1 month">1 month</option>
-							<option value="Ongoing">Ongoing</option>
-						</select>
-					</div>
-				</div>
-
-				<!-- Capacity -->
+			<!-- Date and Duration Row -->
+			<div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+				<!-- Target Date -->
 				<div class="form-control">
-					<label class="label" for="capacity-input">
+					<label class="label" for="date-input">
 						<span class="label-text flex items-center gap-2">
-							<Users class="h-4 w-4" />
-							Capacity
+							<Calendar class="h-4 w-4" />
+							Target Date
 						</span>
 					</label>
 					<input
-						id="capacity-input"
-						type="number"
-						min="1"
-						max="100"
+						id="date-input"
+						type="date"
 						class="input-bordered input"
-						bind:value={capacity}
+						bind:value={eventDate}
 						required
 					/>
 				</div>
 
-				<!-- Tags -->
+				<!-- Duration -->
 				<div class="form-control">
-					<label class="label">
+					<label class="label" for="duration-select">
 						<span class="label-text flex items-center gap-2">
-							<Tag class="h-4 w-4" />
-							Tags
+							<Clock class="h-4 w-4" />
+							Duration
 						</span>
 					</label>
-					<TagInput bind:tags />
+					<select
+						id="duration-select"
+						class="select-bordered select"
+						bind:value={duration}
+						required
+					>
+						<option value="" disabled selected>Select duration</option>
+						<option value="1 hour">1 hour</option>
+						<option value="2 hours">2 hours</option>
+						<option value="3 hours">3 hours</option>
+						<option value="4 hours">4 hours</option>
+						<option value="1 day">1 day</option>
+						<option value="2 days">2 days</option>
+						<option value="3 days">3 days</option>
+						<option value="1 week">1 week</option>
+						<option value="2 weeks">2 weeks</option>
+						<option value="1 month">1 month</option>
+						<option value="Ongoing">Ongoing</option>
+					</select>
 				</div>
 			</div>
 
-			<!-- Right Column: Location Map -->
-			<div class="space-y-4">
-				<!-- Location -->
-				<div class="form-control">
-					<label class="label">
-						<span class="label-text flex items-center gap-2">
-							<MapPin class="h-4 w-4" />
-							Location
-						</span>
-					</label>
-					<div class="rounded-lg border border-base-300 p-2">
-						<LocationPicker
-							initialLat={mode === 'edit' && editData?.coordinates
-								? editData.coordinates.lat
-								: userLat}
-							initialLng={mode === 'edit' && editData?.coordinates
-								? editData.coordinates.lng
-								: userLng}
-							height="h-96"
-							onLocationChange={(newLocation) => {
-								location = newLocation;
-							}}
-						/>
-					</div>
-					{#if location}
-						<p class="mt-2 text-sm text-base-content/70">
-							Selected location: <strong>{location.name}</strong>
-						</p>
-					{/if}
-				</div>
+			<!-- Capacity -->
+			<div class="form-control">
+				<label class="label" for="capacity-input">
+					<span class="label-text flex items-center gap-2">
+						<Users class="h-4 w-4" />
+						Capacity
+					</span>
+				</label>
+				<input
+					id="capacity-input"
+					type="number"
+					min="1"
+					max="100"
+					class="input-bordered input"
+					bind:value={capacity}
+					required
+				/>
 			</div>
 
-			<!-- Action Buttons (spans both columns) -->
-			<div class="modal-action lg:col-span-2">
-				<button type="button" class="btn" onclick={closeModal}>Cancel</button>
-				<button type="submit" class="btn btn-primary">
-					{mode === 'edit' ? 'Save' : 'Post'}
-					{type}
-				</button>
+			<!-- Tags -->
+			<div class="form-control">
+				<label class="label">
+					<span class="label-text flex items-center gap-2">
+						<Tag class="h-4 w-4" />
+						Tags
+					</span>
+				</label>
+				<TagInput bind:tags />
 			</div>
-		</form>
-	</div>
-	<form method="dialog" class="modal-backdrop">
-		<button onclick={closeModal}>close</button>
+		</div>
+
+		<!-- Right Column: Location Map -->
+		<div class="space-y-4">
+			<!-- Location -->
+			<div class="form-control">
+				<label class="label">
+					<span class="label-text flex items-center gap-2">
+						<MapPin class="h-4 w-4" />
+						Location
+					</span>
+				</label>
+				<div class="rounded-lg border border-base-300 p-2">
+					<LocationPicker
+						initialLat={mode === 'edit' && editData?.coordinates
+							? editData.coordinates.lat
+							: userLat}
+						initialLng={mode === 'edit' && editData?.coordinates
+							? editData.coordinates.lng
+							: userLng}
+						height="h-96"
+						onLocationChange={(newLocation) => {
+							location = newLocation;
+						}}
+					/>
+				</div>
+				{#if location}
+					<p class="mt-2 text-sm text-base-content/70">
+						Selected location: <strong>{location.name}</strong>
+					</p>
+				{/if}
+			</div>
+		</div>
+
+		<!-- Action Buttons (spans both columns) -->
+		<div class="modal-action lg:col-span-2">
+			<button type="button" class="btn" onclick={closeModal}>Cancel</button>
+			<button type="submit" class="btn btn-primary">
+				{mode === 'edit' ? 'Save' : 'Post'}
+				{type}
+			</button>
+		</div>
 	</form>
-</dialog>
+</BaseModal>

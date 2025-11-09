@@ -1,20 +1,21 @@
 package com.hive.app.events.controller;
 
 import com.hive.app.account.model.UserDTO;
+import com.hive.app.events.model.EventListView;
 import com.hive.app.events.model.EventRequest;
 import com.hive.app.events.model.EventResponse;
 import com.hive.app.events.service.EventService;
 import com.hive.config.exceptions.NotFoundException;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.log4j.Log4j2;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/event")
-@Log4j2
 public class EventController {
     private final EventService service;
 
@@ -25,11 +26,15 @@ public class EventController {
         return ResponseEntity.ok(service.newEvent(request, self));
     }
 
+    @GetMapping("/owner/{id}")
+    ResponseEntity<List<EventListView>> getUserEvents(@PathVariable Long id, @RequestParam(value = "all", required =
+            false, defaultValue = "false") boolean all) {
+        return ResponseEntity.ok(service.getUserEvents(id, all));
+    }
+
     @GetMapping("/{id}")
     ResponseEntity<EventResponse> getEvent(@PathVariable Long id) throws NotFoundException {
-        EventResponse response = service.getEvent(id);
-        log.info("responding: {}",response);
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(service.getEvent(id));
     }
 
     @PutMapping("/{id}")

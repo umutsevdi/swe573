@@ -189,7 +189,7 @@
 	let chatMessages = $state(event.chatMessages);
 	let negotiationMessages = $state<ChatMessage[]>([]);
 	let newNegotiationMessage = $state('');
-	let backgroundLoaded = $state(false);
+
 	let backgroundBlobUrl = $state<string | null>(null);
 
 	// Use default event image when no background is loaded
@@ -315,7 +315,6 @@
 			$auth.token!,
 			'/assets/event.png'
 		);
-		backgroundLoaded = backgroundBlobUrl !== null;
 	}
 
 	// User location functionality
@@ -477,7 +476,7 @@
 						</h1>
 						<div class="flex flex-wrap gap-2">
 							{#each event.tags as tag (tag)}
-								<span class="badge badge-outline badge-lg badge-primary">{tag}</span>
+								<span class="badge badge-outline badge-lg badge-accent">{tag}</span>
 							{/each}
 						</div>
 					</div>

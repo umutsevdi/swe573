@@ -99,7 +99,7 @@
 								{#if thread.tags.length > 0}
 									<div class="flex flex-1 flex-wrap gap-2">
 										{#each thread.tags as tag (tag)}
-											<div class="badge gap-2 badge-primary">{tag}</div>
+											<div class="badge gap-2 badge-outline badge-accent">{tag}</div>
 										{/each}
 									</div>
 								{/if}

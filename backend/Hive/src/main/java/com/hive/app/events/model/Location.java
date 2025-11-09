@@ -9,6 +9,6 @@ public class Location {
     private Double latitude;
     @JsonProperty("lon")
     private Double longitude;
-    @JsonProperty("location")
+    @JsonProperty("name")
     private String name;
 }

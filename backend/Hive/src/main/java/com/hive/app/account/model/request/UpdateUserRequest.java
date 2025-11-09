@@ -6,6 +6,6 @@ import java.util.List;
 
 @Data
 public class UpdateUserRequest {
-    private String bio;
+    private String biography;
     private List<String> interests;
 }

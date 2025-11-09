@@ -123,6 +123,7 @@
 								placeholder="Enter username"
 								class="input-bordered input w-full"
 								bind:value={loginUsername}
+								maxlength="256"
 								required
 							/>
 						</div>
@@ -137,6 +138,7 @@
 								placeholder="Enter password"
 								class="input-bordered input w-full"
 								bind:value={loginPassword}
+								maxlength="20"
 								required
 							/>
 						</div>
@@ -163,6 +165,7 @@
 								placeholder="Enter username"
 								class="input-bordered input w-full"
 								bind:value={registerUsername}
+								maxlength="256"
 								required
 							/>
 						</div>
@@ -177,6 +180,7 @@
 								placeholder="Enter email"
 								class="input-bordered input w-full"
 								bind:value={registerEmail}
+								maxlength="256"
 								required
 							/>
 						</div>
@@ -191,6 +195,7 @@
 								placeholder="Enter full name"
 								class="input-bordered input w-full"
 								bind:value={registerFullName}
+								maxlength="256"
 								required
 							/>
 						</div>
@@ -204,8 +209,10 @@
 								placeholder="Tell us about yourself"
 								class="textarea-bordered textarea h-24 w-full"
 								bind:value={registerBiography}
+								maxlength="1024"
 								required
 							></textarea>
+							<div class="mt-1 text-xs text-base-content/60">{registerBiography.length} / 1024</div>
 						</div>
 
 						<div class="form-control">
@@ -258,6 +265,7 @@
 								placeholder="Enter password"
 								class="input-bordered input w-full"
 								bind:value={registerPassword}
+								maxlength="20"
 								required
 							/>
 						</div>

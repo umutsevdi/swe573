@@ -1,9 +1,9 @@
 <script lang="ts">
 	import { Annoyed, Frown, Meh, Smile } from '@lucide/svelte';
-	import { type UserCardData } from '$lib/stores/user';
+	import { type UserCard } from '$lib/stores/user';
 
 	let { userData } = $props<{
-		userData: UserCardData;
+		userData: UserCard;
 	}>();
 
 	const badgeColors = ['text-success', 'text-warning', 'text-error'];

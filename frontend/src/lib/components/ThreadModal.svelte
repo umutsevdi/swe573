@@ -1,19 +1,30 @@
 <script lang="ts">
 	import { createEventDispatcher } from 'svelte';
-	import { Tag, X, Plus } from '@lucide/svelte';
+	import { Tag } from '@lucide/svelte';
+	import TagInput from './TagInput.svelte';
 
 	const dispatch = createEventDispatcher<{
 		submit: { title: string; description: string; tags: string[] };
+		update: { title: string; description: string; tags: string[] };
 	}>();
 
-	let { open = $bindable(false) } = $props<{
+	let {
+		mode,
+		open = $bindable(false),
+		currentTitle = '',
+		currentDescription = '',
+		currentTags = []
+	} = $props<{
+		mode: 'create' | 'edit';
 		open: boolean;
+		currentTitle?: string;
+		currentDescription?: string;
+		currentTags?: string[];
 	}>();
 
 	let modal: HTMLDialogElement;
 	let title = $state('');
 	let description = $state('');
-	let tagInput = $state('');
 	let tags = $state<string[]>([]);
 
 	function openModal() {
@@ -35,28 +46,14 @@
 	});
 
 	function resetForm() {
-		title = '';
-		description = '';
-		tagInput = '';
-		tags = [];
-	}
-
-	function addTag() {
-		const trimmedTag = tagInput.trim().toLowerCase();
-		if (trimmedTag && !tags.includes(trimmedTag)) {
-			tags = [...tags, trimmedTag];
-			tagInput = '';
-		}
-	}
-
-	function removeTag(tagToRemove: string) {
-		tags = tags.filter((tag) => tag !== tagToRemove);
-	}
-
-	function handleKeydown(event: KeyboardEvent) {
-		if (event.key === 'Enter') {
-			event.preventDefault();
-			addTag();
+		if (mode === 'edit') {
+			title = currentTitle;
+			description = currentDescription;
+			tags = [...currentTags];
+		} else {
+			title = '';
+			description = '';
+			tags = [];
 		}
 	}
 
@@ -66,9 +63,17 @@
 			return;
 		}
 
-		dispatch('submit', { title: title.trim(), description: description.trim(), tags });
+		const data = { title: title.trim(), description: description, tags };
+		dispatch(mode === 'edit' ? 'update' : 'submit', data);
 		closeModal();
 	}
+
+	// Initialize form on mode change or open
+	$effect(() => {
+		if (open) {
+			resetForm();
+		}
+	});
 
 	// Export function for parent component access
 	export { openModal };
@@ -76,7 +81,9 @@
 
 <dialog bind:this={modal} class="modal" onclose={() => (open = false)}>
 	<div class="modal-box max-w-2xl">
-		<h3 class="mb-4 text-lg font-bold">Create New Thread</h3>
+		<h3 class="mb-4 text-lg font-bold">
+			{mode === 'edit' ? 'Edit Thread' : 'Create New Thread'}
+		</h3>
 
 		<form onsubmit={submitThread} class="space-y-4">
 			<!-- Title -->
@@ -90,8 +97,10 @@
 					placeholder="Enter thread title"
 					class="input-bordered input w-full"
 					bind:value={title}
+					maxlength="256"
 					required
 				/>
+				<div class="mt-1 text-xs text-base-content/60">{title.length} / 256</div>
 			</div>
 
 			<!-- Description -->
@@ -104,49 +113,29 @@
 					placeholder="Describe your thread"
 					class="textarea-bordered textarea h-24 w-full"
 					bind:value={description}
+					maxlength="1024"
 					required
 				></textarea>
+				<div class="mt-1 text-xs text-base-content/60">{description.length} / 1024</div>
 			</div>
 
 			<!-- Tags -->
 			<div class="form-control">
-				<label class="label" for="tag-input">
+				<label class="label">
 					<span class="label-text flex items-center gap-2">
 						<Tag class="h-4 w-4" />
 						Tags
 					</span>
 				</label>
-				<div class="mb-2 flex gap-2">
-					<input
-						id="tag-input"
-						type="text"
-						placeholder="Add a tag (press Enter)"
-						class="input-bordered input flex-1"
-						bind:value={tagInput}
-						onkeydown={handleKeydown}
-					/>
-					<button type="button" class="btn btn-outline" onclick={addTag}>
-						<Plus class="h-4 w-4" />
-					</button>
-				</div>
-				{#if tags.length > 0}
-					<div class="flex flex-wrap gap-2">
-						{#each tags as tag (tag)}
-							<div class="badge gap-2 badge-primary">
-								{tag}
-								<button type="button" class="btn btn-ghost btn-xs" onclick={() => removeTag(tag)}>
-									<X class="h-3 w-3" />
-								</button>
-							</div>
-						{/each}
-					</div>
-				{/if}
+				<TagInput bind:tags />
 			</div>
 
 			<!-- Action Buttons -->
 			<div class="modal-action">
 				<button type="button" class="btn" onclick={closeModal}>Cancel</button>
-				<button type="submit" class="btn btn-primary">Create Thread</button>
+				<button type="submit" class="btn btn-primary">
+					{mode === 'edit' ? 'Update' : 'Create Thread'}
+				</button>
 			</div>
 		</form>
 	</div>

@@ -1,6 +1,6 @@
 import { writable } from 'svelte/store';
 
-export type UserCardData = {
+export type UserCard = {
 	id: number;
 	fullName: string;
 	biography: string;
@@ -9,11 +9,11 @@ export type UserCardData = {
 };
 
 // Global cache for user card data
-export const userCardCache = writable<Map<number, UserCardData>>(new Map());
+export const userCardCache = writable<Map<number, UserCard>>(new Map());
 
 // Pending promises to prevent duplicate fetches
-export const userDataPromises = writable<Map<number, Promise<UserCardData>>>(new Map());
-export const avatarPromises = writable<Map<number, Promise<Blob>>>(new Map());
+export const userDataPromises = writable<Map<number, Promise<UserCard>>>(new Map());
+export const avatarPromises = writable<Map<number, Promise<string>>>(new Map());
 
-// Cached avatar blobs
-export const avatarBlobs = writable<Map<number, Blob>>(new Map());
+// Cached avatar URLs (blob URLs or static paths)
+export const avatarUrls = writable<Map<number, string>>(new Map());

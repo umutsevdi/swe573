@@ -2,7 +2,7 @@ package com.hive.app.events.model;
 
 import lombok.Data;
 
-import java.time.LocalDateTime;
+import java.time.LocalDate;
 import java.util.List;
 
 @Data
@@ -14,4 +14,5 @@ public class EventRequest {
     private Integer maxParticipants;
     private EventType type;
     private Integer duration;
+    private LocalDate eventDate;
 }

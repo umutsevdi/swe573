@@ -10,7 +10,6 @@ import com.hive.config.exceptions.NotFoundException;
 import com.hive.config.exceptions.PermissionDeniedException;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.log4j.Log4j2;
 import org.apache.logging.log4j.util.Strings;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
@@ -22,7 +21,6 @@ import java.util.List;
 
 @Service
 @RequiredArgsConstructor
-@Log4j2
 public class ThreadService {
 
     private final ThreadRepository threads;
@@ -50,7 +48,6 @@ public class ThreadService {
     })
     @Transactional
     public ThreadDTO updateThread(UserDTO user, Long threadId, ThreadRequest request) throws NotFoundException {
-        log.info("received {}", request);
         ThreadEntity entity = threads.findById(threadId).orElseThrow(NotFoundException::new);
         if (!(entity.isActive() && entity.getOwner().getId().equals(user.getId()))) {
             throw new PermissionDeniedException();

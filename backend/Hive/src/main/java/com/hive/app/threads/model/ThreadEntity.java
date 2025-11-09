@@ -22,11 +22,11 @@ public class ThreadEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-    @Column
+    @Column(length = 256)
     private String title;
-    @Column
+    @Column(length = 1024)
     String description;
-    @Column
+    @Column(length = 512)
     private String tags;
     @Column
     private boolean active;

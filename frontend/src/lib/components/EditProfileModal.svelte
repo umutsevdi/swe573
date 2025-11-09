@@ -1,29 +1,29 @@
 <script lang="ts">
 	import { createEventDispatcher } from 'svelte';
 	import { X, Upload, User, Tag, Plus } from '@lucide/svelte';
+	import TagInput from './TagInput.svelte';
 
 	const dispatch = createEventDispatcher<{
-		update: { bio: string; interests: string[]; avatar?: File; background?: File };
+		update: { biography: string; interests: string[]; avatar?: File; background?: File };
 	}>();
 
 	let {
 		open = $bindable(false),
-		currentBio = '',
+		currentBiography = '',
 		currentInterests = [],
 		currentAvatar,
 		currentBackground
 	} = $props<{
 		open: boolean;
-		currentBio: string;
+		currentBiography: string;
 		currentInterests: string[];
-		currentAvatar?: string;
-		currentBackground?: string;
+		currentAvatar?: string | null;
+		currentBackground?: string | null;
 	}>();
 
 	let modal: HTMLDialogElement | undefined;
-	let bio = $state(currentBio);
+	let biography = $state(currentBiography);
 	let interests = $state(currentInterests);
-	let interestInput = $state('');
 	let avatarFile = $state<File | null>(null);
 	let avatarPreview = $state<string | null>(currentAvatar || null);
 	let backgroundFile = $state<File | null>(null);
@@ -73,28 +73,9 @@
 		}
 	}
 
-	function addInterest() {
-		const trimmedInterest = interestInput.trim().toLowerCase();
-		if (trimmedInterest && !interests.includes(trimmedInterest)) {
-			interests = [...interests, trimmedInterest];
-			interestInput = '';
-		}
-	}
-
-	function removeInterest(interestToRemove: string) {
-		interests = interests.filter((interest: string) => interest !== interestToRemove);
-	}
-
-	function handleKeydown(event: KeyboardEvent) {
-		if (event.key === 'Enter') {
-			event.preventDefault();
-			addInterest();
-		}
-	}
-
 	function submit() {
 		dispatch('update', {
-			bio,
+			biography,
 			interests,
 			avatar: avatarFile || undefined,
 			background: backgroundFile || undefined
@@ -103,9 +84,8 @@
 	}
 
 	function reset() {
-		bio = currentBio;
+		biography = currentBiography;
 		interests = currentInterests;
-		interestInput = '';
 		avatarFile = null;
 		avatarPreview = currentAvatar || null;
 		backgroundFile = null;
@@ -179,55 +159,29 @@
 				</div>
 			</div>
 
-			<!-- Bio -->
+			<!-- Biography -->
 			<div class="form-control">
 				<label class="label">
-					<span class="label-text">Bio</span>
+					<span class="label-text">Biography</span>
 				</label>
 				<textarea
 					class="textarea-bordered textarea h-24 w-full"
 					placeholder="Tell us about yourself..."
-					bind:value={bio}
+					bind:value={biography}
+					maxlength="1024"
 				></textarea>
+				<div class="mt-1 text-xs text-base-content/60">{biography.length} / 1024</div>
 			</div>
 
 			<!-- Interests -->
 			<div class="form-control">
-				<label class="label" for="interest-input">
+				<label class="label">
 					<span class="label-text flex items-center gap-2">
 						<Tag class="h-4 w-4" />
 						Interests
 					</span>
 				</label>
-				<div class="mb-2 flex gap-2">
-					<input
-						id="interest-input"
-						type="text"
-						placeholder="Add an interest (press Enter)"
-						class="input-bordered input flex-1"
-						bind:value={interestInput}
-						onkeydown={handleKeydown}
-					/>
-					<button type="button" class="btn btn-outline" onclick={addInterest}>
-						<Plus class="h-4 w-4" />
-					</button>
-				</div>
-				{#if interests.length > 0}
-					<div class="flex flex-wrap gap-2">
-						{#each interests as interest (interest)}
-							<div class="badge gap-2 badge-primary">
-								{interest}
-								<button
-									type="button"
-									class="btn btn-ghost btn-xs"
-									onclick={() => removeInterest(interest)}
-								>
-									<X class="h-3 w-3" />
-								</button>
-							</div>
-						{/each}
-					</div>
-				{/if}
+				<TagInput bind:tags={interests} placeholder="Add an interest (press Enter)" />
 			</div>
 		</div>
 

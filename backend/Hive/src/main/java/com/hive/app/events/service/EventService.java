@@ -1,26 +1,31 @@
 package com.hive.app.events.service;
 
+import com.hive.app.account.mapper.UserMapper;
 import com.hive.app.account.model.UserDTO;
 import com.hive.app.events.mapper.EventMapper;
 import com.hive.app.events.model.EventDTO;
+import com.hive.app.events.model.EventEntity;
 import com.hive.app.events.model.EventRequest;
 import com.hive.app.events.model.EventResponse;
 import com.hive.app.events.repository.EventRepository;
 import com.hive.config.exceptions.NotFoundException;
 import com.hive.config.exceptions.PermissionDeniedException;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.log4j.Log4j2;
 import org.springframework.stereotype.Service;
 
 @Service
+@Log4j2
 @RequiredArgsConstructor
 public class EventService {
     private final EventRepository repository;
     private final EventMapper mapper;
+    private final UserMapper userMapper;
 
     public EventResponse newEvent(EventRequest request, UserDTO userDTO) {
-        EventDTO dto = mapper.requestToDto(request);
-        dto.setOwner(userDTO);
-        return mapper.entityToResponse(repository.save(mapper.dtoToEntity(dto)));
+        EventEntity entity = mapper.requestToEntity(request);
+        entity.setOwner(userMapper.dtoToEntity(userDTO));
+        return mapper.entityToResponse(repository.save(entity));
     }
 
     public EventResponse updateEvent(Long id, EventRequest request, UserDTO userDTO) throws NotFoundException {
@@ -30,6 +35,7 @@ public class EventService {
         if (!event.getOwner().getId().equals(userDTO.getId())) {
             throw new PermissionDeniedException();
         }
+        log.info("{}", request);
         if (request.getTitle() != null) {
             event.setTitle(request.getTitle());
         }
@@ -57,12 +63,6 @@ public class EventService {
     public EventResponse getEvent(Long id) throws NotFoundException {
         return repository.findById(id)
                 .map(mapper::entityToResponse)
-                .orElseThrow(NotFoundException::new);
-    }
-
-    public EventDTO findById(Long id) throws NotFoundException {
-        return repository.findById(id)
-                .map(mapper::entityToDTO)
                 .orElseThrow(NotFoundException::new);
     }
 }

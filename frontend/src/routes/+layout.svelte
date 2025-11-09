@@ -35,9 +35,30 @@
 		createPostModal?.openModal();
 	}
 
-	function handlePostSubmit(event: CustomEvent) {
-		console.log('New post submitted:', event.detail);
-		// TODO: Handle the post submission (send to API, etc.)
+	async function handlePostSubmit(event: CustomEvent) {
+		try {
+			const response = await fetch(`${SERVER_URL}/event`, {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+					Authorization: `Bearer ${$auth.token}`
+				},
+				body: JSON.stringify(event.detail)
+			});
+
+			if (!response.ok) {
+				throw new Error(`Failed to create event: ${response.statusText}`);
+			}
+
+			const result = await response.json();
+			console.log('Event created:', result);
+
+			// Navigate to the new event page
+			goto(`/event/${result.id}`);
+		} catch (error) {
+			console.error('Error creating event:', error);
+			alert('Failed to create event. Please try again.');
+		}
 	}
 
 	async function loadNavbarAvatar() {
@@ -53,6 +74,8 @@
 			if (response.ok) {
 				const blob = await response.blob();
 				navbarAvatarUrl = URL.createObjectURL(blob);
+			} else if (response.status === 404) {
+				navbarAvatarUrl = '/assets/profile.png';
 			} else if (response.status === 401) {
 				// Token invalid, logout
 				auth.logout();
@@ -74,9 +97,9 @@
 			loadNavbarAvatar();
 		}
 
-		// Cleanup blob URL on unmount
+		// Cleanup blob URL on unmount (only if it's a blob URL)
 		return () => {
-			if (navbarAvatarUrl) {
+			if (navbarAvatarUrl && navbarAvatarUrl.startsWith('blob:')) {
 				URL.revokeObjectURL(navbarAvatarUrl);
 			}
 		};

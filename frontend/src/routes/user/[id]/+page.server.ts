@@ -66,16 +66,14 @@ export const load: PageServerLoad = async ({ params, cookies }) => {
 	const mappedData = {
 		fullName: userData.fullName,
 		username: userData.username,
-		bio: userData.biography,
+		biography: userData.biography,
 		interests: userData.interests,
-		profileUrl: `${SERVER_URL}/assets/profile/${id}`,
-		backgroundUrl: `${SERVER_URL}/assets/bg/${id}`,
 		isSelf: currentUserId === id,
 		offers: [] as OfferNeedItem[], // API doesn't return offers/needs yet
 		needs: [] as OfferNeedItem[], // API doesn't return offers/needs yet
 		timeBank: userData.timeBank || 0, // Default to 0 if not available
 		userScore: userData.userScore
 	};
-    console.log(mappedData)
+	console.log(mappedData);
 	return mappedData;
 };

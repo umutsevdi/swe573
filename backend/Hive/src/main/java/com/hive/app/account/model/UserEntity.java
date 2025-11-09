@@ -23,9 +23,9 @@ public class UserEntity {
     private String email;
     @Column(nullable = false)
     private String fullName;
-    @Column(nullable = false)
+    @Column(nullable = false, length = 1024)
     private String biography;
-    @Column(nullable = false)
+    @Column(nullable = false, length = 512)
     private String interests;
     @Column(nullable = false)
     @Enumerated(EnumType.ORDINAL)

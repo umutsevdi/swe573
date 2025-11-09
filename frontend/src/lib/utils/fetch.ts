@@ -34,7 +34,11 @@ export async function fetchWithAuth(
 	return response;
 }
 
-export async function fetchAuthenticatedImage(url: string, token: string): Promise<string | null> {
+export async function fetchAuthenticatedImage(
+	url: string,
+	token: string,
+	fallback?: string
+): Promise<string | null> {
 	try {
 		const response = await fetch(url, {
 			headers: {
@@ -45,6 +49,8 @@ export async function fetchAuthenticatedImage(url: string, token: string): Promi
 		if (response.ok) {
 			const blob = await response.blob();
 			return URL.createObjectURL(blob);
+		} else if (response.status === 404 && fallback) {
+			return fallback;
 		} else {
 			console.error(`Failed to load image: ${url} - ${response.status}`);
 			return null;

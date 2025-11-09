@@ -16,6 +16,7 @@
 	import UserAvatar from '$lib/components/UserAvatar.svelte';
 	import { SERVER_URL } from '$lib/config';
 	import { auth } from '$lib/stores/auth';
+	import { toast } from '$lib/stores/toast';
 	import { page } from '$app/stores';
 	import { fetchAuthenticatedImage } from '$lib/utils/fetch';
 
@@ -36,21 +37,25 @@
 	};
 
 	type EventData = {
-		id: string;
+		id: number;
 		title: string;
 		description: string;
-		ownerId: number;
 		tags: string[];
-		backgroundImage: string;
 		location: string;
-		coordinates: { lat: number; lng: number };
-		type: 'Offer' | 'Need';
-		participantCount: number;
-		maxParticipants?: number;
+		maxParticipants: number;
+		type: 'OFFER' | 'NEED';
+		duration: string;
+		targetDate?: string;
 		createdAt: string;
-		userParticipationStatus: 'none' | 'pending' | 'accepted' | 'rejected';
-		participationRequests: ParticipationRequest[];
-		chatMessages: ChatMessage[];
+		updatedAt: string;
+		ownerId: number;
+		// Additional fields for full event view
+
+		coordinates?: { lat: number; lng: number };
+		participantCount?: number;
+		userParticipationStatus?: 'none' | 'pending' | 'accepted' | 'rejected';
+		participationRequests?: ParticipationRequest[];
+		chatMessages?: ChatMessage[];
 	};
 
 	let { data } = $props<{ event: EventData; isOwner: boolean }>();
@@ -60,12 +65,122 @@
 	let showEditModal = $state(false);
 	let showParticipationModal = $state(false);
 
-	function updateEvent(data: unknown) {
-		// In real app, API call to update
-		console.log('Update event:', data);
-		showEditModal = false;
-		// For demo, reload to see changes if any
-		window.location.reload();
+	async function updateEvent(data: any) {
+		try {
+			const eventId = $page.params.id;
+			const originalEvent = event;
+
+			// Map modal data to server format
+			const serverData = {
+				title: data.title,
+				description: data.description,
+				tags: data.tags,
+				location: data.location
+					? {
+							lat: data.location.coordinates.lat,
+							lon: data.location.coordinates.lng,
+							name: data.location.name
+						}
+					: {
+							lat: event.coordinates?.lat || 0,
+							lon: event.coordinates?.lng || 0,
+							name: event.location
+						},
+				maxParticipants: data.capacity,
+				type: data.type === 'Offer' ? 'OFFER' : 'NEED',
+				duration: parseDuration(data.duration),
+				eventDate: data.eventDate
+			};
+
+			// Compare with original and send all fields, null for unchanged
+			const updateData: any = {};
+
+			// Helper to check if arrays are equal
+			const arraysEqual = (a: string[] | undefined, b: string[] | undefined) => {
+				const aArr = a || [];
+				const bArr = b || [];
+				if (aArr.length !== bArr.length) return false;
+				return aArr.every((val, index) => val === bArr[index]);
+			};
+
+			// Helper to check if locations are equal
+			const locationsEqual = (a: any, b: any) => {
+				return a.lat === b.lat && a.lon === b.lon && a.name === b.name;
+			};
+
+			updateData.title = serverData.title !== originalEvent.title ? serverData.title : null;
+			updateData.description =
+				serverData.description !== originalEvent.description ? serverData.description : null;
+			updateData.tags = !arraysEqual(serverData.tags, originalEvent.tags) ? serverData.tags : null;
+			updateData.location = !locationsEqual(serverData.location, {
+				lat: originalEvent.coordinates.lat,
+				lon: originalEvent.coordinates.lng,
+				name: originalEvent.location
+			})
+				? serverData.location
+				: null;
+			updateData.maxParticipants =
+				serverData.maxParticipants !== originalEvent.maxParticipants
+					? serverData.maxParticipants
+					: null;
+			updateData.type =
+				serverData.type !== (originalEvent.type === 'Offer' ? 'OFFER' : 'NEED')
+					? serverData.type
+					: null;
+			updateData.duration =
+				serverData.duration !== parseDuration(originalEvent.duration) ? serverData.duration : null;
+			updateData.eventDate =
+				serverData.eventDate !== originalEvent.targetDate ? serverData.eventDate : null;
+
+			// If no changes, do nothing
+			const hasChanges = Object.values(updateData).some((value) => value !== null);
+			if (!hasChanges) {
+				showEditModal = false;
+				return;
+			}
+
+			// Make API call
+			const response = await fetch(`${SERVER_URL}/event/${eventId}`, {
+				method: 'PUT',
+				headers: {
+					'Content-Type': 'application/json',
+					Authorization: `Bearer ${$auth.token}`
+				},
+				body: JSON.stringify(updateData)
+			});
+
+			if (!response.ok) {
+				throw new Error(`Failed to update event: ${response.statusText}`);
+			}
+
+			showEditModal = false;
+			toast.success('Event updated successfully!');
+			// Reload to see changes
+			window.location.reload();
+		} catch (error) {
+			console.error('Error updating event:', error);
+			toast.error('Failed to update event. Please try again.');
+		}
+	}
+
+	function parseDuration(durationStr: string): number {
+		if (!durationStr) return 0;
+		const match = durationStr.match(/^(\d+)\s*(hour|day|week|month)/i);
+		if (!match) return 0;
+		const num = parseInt(match[1]);
+		const unit = match[2].toLowerCase();
+		switch (unit) {
+			case 'hour':
+				return num;
+			case 'day':
+				return num * 24;
+			case 'week':
+				return num * 24 * 7;
+			case 'month':
+				return num * 24 * 30; // approximate
+			default:
+				return num;
+		}
 	}
 
 	// Chat functionality
@@ -76,6 +191,9 @@
 	let newNegotiationMessage = $state('');
 	let backgroundLoaded = $state(false);
 	let backgroundBlobUrl = $state<string | null>(null);
+
+	// Use default event image when no background is loaded
+	let backgroundImageSrc = $derived(backgroundBlobUrl || '/assets/event.png');
 
 	function sendMessage() {
 		if (newMessage.trim()) {
@@ -194,7 +312,8 @@
 	async function loadBackground() {
 		backgroundBlobUrl = await fetchAuthenticatedImage(
 			`${SERVER_URL}/assets/event/${$page.params.id}`,
-			$auth.token!
+			$auth.token!,
+			'/assets/event.png'
 		);
 		backgroundLoaded = backgroundBlobUrl !== null;
 	}
@@ -273,8 +392,8 @@
 					const dist = calculateDistance(
 						userLocation.lat,
 						userLocation.lng,
-						data.event.coordinates.lat,
-						data.event.coordinates.lng
+						data.event.coordinates?.lat || data.event.location.lat,
+						data.event.coordinates?.lng || data.event.location.lon
 					);
 					distance = dist < 1 ? `${Math.round(dist * 1000)}m` : `${dist.toFixed(1)}km`;
 				},
@@ -295,13 +414,13 @@
 
 	// Load background when component mounts
 	$effect(() => {
-		if ($auth.token && $page.params.id) {
+		if ($auth.token && $page.params.id && data.event) {
 			loadBackground();
 		}
 
-		// Cleanup blob URL on unmount
+		// Cleanup blob URL on unmount (only if it's a blob URL)
 		return () => {
-			if (backgroundBlobUrl) {
+			if (backgroundBlobUrl && backgroundBlobUrl.startsWith('blob:')) {
 				URL.revokeObjectURL(backgroundBlobUrl);
 			}
 		};
@@ -331,11 +450,7 @@
 		<!-- Hero Section -->
 		<div class="relative h-64 md:h-80 lg:h-96">
 			<div class="absolute inset-0">
-				<img
-					src={backgroundBlobUrl || event.backgroundImage}
-					alt={event.title}
-					class="h-full w-full object-cover"
-				/>
+				<img src={backgroundImageSrc} alt={event.title} class="h-full w-full object-cover" />
 				<div class="absolute inset-0 bg-black/40"></div>
 			</div>
 			<div class="relative flex h-full items-end p-6 text-white">
@@ -347,9 +462,9 @@
 						</a>
 						<div class="mb-2 flex items-center gap-3">
 							<div
-								class="badge badge-lg {event.type === 'Offer' ? 'badge-primary' : 'badge-accent'}"
+								class="badge badge-lg {event.type === 'OFFER' ? 'badge-primary' : 'badge-accent'}"
 							>
-								{#if event.type === 'Offer'}
+								{#if event.type === 'OFFER'}
 									<HeartHandshake class="h-4 w-4" />
 								{:else}
 									<HandHelping class="h-4 w-4" />
@@ -531,6 +646,9 @@
 									<div class="flex items-center gap-1">
 										<Calendar class="h-4 w-4" />
 										{event.createdAt}
+										{#if event.updatedAt}
+											<i class="text-xs italic opacity-60">Edited</i>
+										{/if}
 									</div>
 									<div class="flex items-center gap-1">
 										<Users class="h-4 w-4" />
@@ -538,20 +656,23 @@
 									</div>
 								</div>
 							</div>
-							<p class="text-base leading-relaxed">{event.description}</p>
-							<div class="mt-4 grid grid-cols-1 gap-2 md:grid-cols-3">
-								{#if event.targetDate}
-									<div class="flex items-center gap-2">
-										<Calendar class="h-4 w-4 text-primary" />
-										<span class="text-sm font-medium">Date: {event.targetDate}</span>
-									</div>
-								{/if}
-								{#if event.duration}
-									<div class="flex items-center gap-2">
-										<Clock class="h-4 w-4 text-primary" />
-										<span class="text-sm font-medium">Duration: {event.duration}</span>
-									</div>
-								{/if}
+							<p class="text-base leading-relaxed whitespace-pre-wrap">{event.description}</p>
+							<div class="divider"></div>
+							<div class="mt-4 flex flex-wrap gap-4">
+								<div class="flex items-center gap-4">
+									{#if event.targetDate}
+										<div class="flex items-center gap-2">
+											<Calendar class="h-4 w-4 text-primary" />
+											<span class="text-sm font-medium">Event Date: {event.targetDate}</span>
+										</div>
+									{/if}
+									{#if event.duration}
+										<div class="flex items-center gap-2">
+											<Clock class="h-4 w-4 text-primary" />
+											<span class="text-sm font-medium">Duration: {event.duration}</span>
+										</div>
+									{/if}
+								</div>
 								{#if event.maxParticipants}
 									<div class="flex items-center gap-2">
 										<Users class="h-4 w-4 text-primary" />
@@ -589,8 +710,8 @@
 								</div>
 							{/if}
 							<MapComponent
-								latitude={event.coordinates.lat}
-								longitude={event.coordinates.lng}
+								latitude={event.coordinates?.lat}
+								longitude={event.coordinates?.lng}
 								locationName={event.location}
 								{userLatitude}
 								{userLongitude}

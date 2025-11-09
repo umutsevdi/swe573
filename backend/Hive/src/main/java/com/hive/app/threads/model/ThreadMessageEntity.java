@@ -22,7 +22,7 @@ public class ThreadMessageEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-    @Column
+    @Column(length = 400)
     private String message;
 
     @CreationTimestamp

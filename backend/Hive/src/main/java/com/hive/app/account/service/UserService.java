@@ -7,6 +7,7 @@ import com.hive.app.account.model.request.RegisterRequest;
 import com.hive.app.account.model.request.UpdateUserRequest;
 import com.hive.app.account.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.log4j.Log4j2;
 import org.hibernate.PropertyValueException;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
@@ -18,6 +19,7 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDateTime;
 import java.util.Optional;
 
+@Log4j2
 @Service
 @RequiredArgsConstructor
 public class UserService implements UserDetailsService {
@@ -57,10 +59,11 @@ public class UserService implements UserDetailsService {
 
     @CacheEvict(cacheNames = {"usersById", "usersByUsername"}, allEntries = true)
     public UserDTO updateUser(UserDTO dto, UpdateUserRequest request) throws UsernameNotFoundException {
+        log.info("{}",request);
         boolean changed = false;
-        if (request.getBio() != null && !request.getBio().isBlank() && !request.getBio().equals(dto.getBiography())) {
+        if (request.getBiography() != null && !request.getBiography().isBlank() && !request.getBiography().equals(dto.getBiography())) {
             changed = true;
-            dto.setBiography(request.getBio());
+            dto.setBiography(request.getBiography());
         }
         if (request.getInterests() != null && !request.getInterests().isEmpty() && !request.getInterests().equals(dto.getInterests())) {
             changed = true;

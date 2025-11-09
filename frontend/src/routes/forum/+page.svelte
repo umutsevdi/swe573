@@ -4,7 +4,7 @@
 	import { resolve } from '$app/paths';
 	import { enhance } from '$app/forms';
 	import UserAvatar from '$lib/components/UserAvatar.svelte';
-	import CreateThreadModal from '$lib/components/CreateThreadModal.svelte';
+	import ThreadModal from '$lib/components/ThreadModal.svelte';
 
 	type ForumThread = {
 		id: number;
@@ -81,7 +81,12 @@
 							<!-- Description row with date on right -->
 							<div class="flex items-start gap-3">
 								<div class="flex-1">
-									<p class="line-clamp-2 text-sm text-base-content/70">{thread.description}</p>
+									<p
+										class="line-clamp-2 text-sm text-base-content/70"
+										style="white-space: pre-wrap;"
+									>
+										{thread.description}
+									</p>
 								</div>
 								<div class="flex shrink-0 items-center gap-1 text-sm opacity-70">
 									<Calendar class="h-4 w-4" />
@@ -120,7 +125,7 @@
 				<input type="hidden" name="tags" />
 			</form>
 
-			<CreateThreadModal bind:open={modalOpen} on:submit={handleCreateSubmit} />
+			<ThreadModal mode="create" bind:open={modalOpen} on:submit={handleCreateSubmit} />
 		</div>
 	</div>
 </div>

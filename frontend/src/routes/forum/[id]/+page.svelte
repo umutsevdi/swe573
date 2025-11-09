@@ -5,7 +5,7 @@
 	import { invalidateAll } from '$app/navigation';
 	import ForumPost from '$lib/components/ForumPost.svelte';
 	import UserAvatar from '$lib/components/UserAvatar.svelte';
-	import EditThreadModal from '$lib/components/EditThreadModal.svelte';
+	import ThreadModal from '$lib/components/ThreadModal.svelte';
 	import { auth } from '$lib/stores/auth';
 
 	type ForumPostData = {
@@ -97,7 +97,9 @@
 				<div class="card mb-6 bg-base-100 shadow-xl">
 					<div class="card-body">
 						<h1 class="mb-2 card-title text-3xl">{topic.title}</h1>
-						<p class="mb-4 text-base-content/70">{topic.description}</p>
+						<p class="mb-4 text-base-content/70" style="white-space: pre-wrap;">
+							{topic.description}
+						</p>
 						<div class="mb-4 flex items-center gap-3">
 							<UserAvatar userId={topic.userId} />
 							<div class="flex items-center gap-2 text-sm opacity-70">
@@ -136,7 +138,6 @@
 					<div class="mt-8">
 						<div class="card bg-base-100 shadow-sm">
 							<div class="card-body p-4">
-								<h3 class="mb-4 card-title text-lg">Add New Message</h3>
 								<form
 									method="POST"
 									action="?/reply"
@@ -151,12 +152,16 @@
 								>
 									<input type="hidden" name="message" bind:value={newMessageContent} />
 									<textarea
-										class="textarea-bordered textarea mb-4 w-full"
+										class="textarea-bordered textarea mb-2 w-full"
 										placeholder="Write your message..."
 										rows="3"
 										bind:value={newMessageContent}
+										maxlength="400"
 										required
 									></textarea>
+									<div class="mb-4 text-xs text-base-content/60">
+										{newMessageContent.length} / 400
+									</div>
 									<div class="flex justify-end gap-2">
 										{#if replyingTo}
 											<button class="btn btn-ghost" type="button" onclick={cancelReply}>
@@ -176,7 +181,8 @@
 			</div>
 		</div>
 	</div>
-	<EditThreadModal
+	<ThreadModal
+		mode="edit"
 		bind:open={editModalOpen}
 		currentTitle={topic.title}
 		currentDescription={topic.description}

@@ -1,13 +1,6 @@
 import { writable } from 'svelte/store';
 import { browser } from '$app/environment';
-
-export interface UserCard {
-	id: number;
-	fullName: string;
-	bio: string;
-	interests: string[];
-	userScore: number;
-}
+import { type UserCard } from './user';
 
 export interface AuthState {
 	token: string | null;
@@ -63,7 +56,6 @@ function createAuthStore() {
 				expires.setDate(expires.getDate() + 7);
 				const cookieValue = `token=${encodeURIComponent(token)}; expires=${expires.toUTCString()}; path=/; SameSite=Lax`;
 				document.cookie = cookieValue;
-				console.log('Setting cookie:', cookieValue);
 			}
 
 			set({ token, userCard, isLoggedIn: true });

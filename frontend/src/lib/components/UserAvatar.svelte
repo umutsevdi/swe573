@@ -7,8 +7,8 @@
 		userCardCache,
 		userDataPromises,
 		avatarPromises,
-		avatarBlobs,
-		type UserCardData
+		avatarUrls,
+		type UserCard
 	} from '$lib/stores/user';
 	import UserTooltipCard from './UserTooltipCard.svelte';
 
@@ -17,27 +17,26 @@
 	}>();
 
 	let loading = $state(false);
-	let avatarError = $state(false);
 	let avatarBlobUrl = $state<string | null>(null);
 
 	let userData = $derived($userCardCache.has(userId) ? $userCardCache.get(userId)! : null);
-	let avatarBlob = $derived($avatarBlobs.has(userId) ? $avatarBlobs.get(userId)! : null);
+	let avatarUrl = $derived($avatarUrls.has(userId) ? $avatarUrls.get(userId)! : null);
 
 	// Load user data and avatar
 	$effect(() => {
 		if (userId && !userData && !$userDataPromises.has(userId)) {
 			loadUserData(userId);
 		}
-		if (userId && $auth.token && !avatarBlob && !$avatarPromises.has(userId)) {
+		if (userId && $auth.token && !avatarUrl && !$avatarPromises.has(userId)) {
 			loadAvatar(userId);
 		}
-		if (avatarBlob && !avatarBlobUrl) {
-			avatarBlobUrl = URL.createObjectURL(avatarBlob);
+		if (avatarUrl && !avatarBlobUrl) {
+			avatarBlobUrl = avatarUrl;
 		}
 
-		// Cleanup blob URL on unmount
+		// Cleanup blob URL on unmount (only if it's a blob URL)
 		return () => {
-			if (avatarBlobUrl) {
+			if (avatarBlobUrl && avatarBlobUrl.startsWith('blob:')) {
 				URL.revokeObjectURL(avatarBlobUrl);
 			}
 		};
@@ -63,7 +62,7 @@
 				}
 
 				const data: any = await response.json();
-				const userCardData: UserCardData = {
+				const userCardData: UserCard = {
 					id,
 					fullName: data.fullName || 'Unknown User',
 					biography: data.biography || '',
@@ -100,7 +99,7 @@
 				return;
 			}
 
-			const promise = (async () => {
+			const promise = (async (): Promise<string> => {
 				const response = await fetch(`${SERVER_URL}/assets/profile/${id}`, {
 					headers: {
 						Authorization: `Bearer ${$auth.token}`
@@ -109,8 +108,13 @@
 
 				if (response.ok) {
 					const blob = await response.blob();
-					avatarBlobs.update((m) => new Map(m).set(id, blob));
-					return blob;
+					const blobUrl = URL.createObjectURL(blob);
+					avatarUrls.update((m) => new Map(m).set(id, blobUrl));
+					return blobUrl;
+				} else if (response.status === 404) {
+					const fallbackUrl = '/assets/profile.png';
+					avatarUrls.update((m) => new Map(m).set(id, fallbackUrl));
+					return fallbackUrl;
 				} else {
 					throw new Error('Failed to load avatar');
 				}
@@ -119,10 +123,8 @@
 			avatarPromises.update((m) => new Map(m).set(id, promise));
 
 			await promise;
-			avatarError = false;
 		} catch (error) {
 			console.error('Failed to load avatar:', error);
-			avatarError = true;
 		} finally {
 			avatarPromises.update((m) => {
 				const newM = new Map(m);
@@ -170,12 +172,8 @@
 	>
 		<div class="avatar">
 			<div class="w-10 rounded-full">
-				{#if avatarBlobUrl && !avatarError}
-					<img
-						src={avatarBlobUrl}
-						alt={userData?.fullName || 'Unknown User'}
-						onerror={() => (avatarError = true)}
-					/>
+				{#if avatarBlobUrl}
+					<img src={avatarBlobUrl} alt={userData?.fullName || 'Unknown User'} />
 				{:else}
 					<div class="avatar avatar-placeholder">
 						<div class="w-24 rounded-full bg-neutral text-neutral-content">

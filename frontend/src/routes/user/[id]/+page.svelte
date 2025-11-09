@@ -20,7 +20,7 @@
 
 	let { data }: PageProps = $props();
 
-	let bio = $state(data?.bio || '');
+	let biography = $state(data?.biography || '');
 	let interests = $state(data?.interests || []);
 	let editModalOpen = $state(false);
 
@@ -58,42 +58,39 @@
 	}
 
 	async function handleProfileUpdate(
-		event: CustomEvent<{ bio: string; interests: string[]; avatar?: File; background?: File }>
+		event: CustomEvent<{ biography: string; interests: string[]; avatar?: File; background?: File }>
 	) {
 		const {
-			bio: newBio,
+			biography: newBiography,
 			interests: newInterests,
 			avatar: newAvatar,
 			background: newBackground
 		} = event.detail;
 
 		try {
-			// Prepare update data - only send changed fields
-			const updateData: { bio?: string; interests?: string[] } = {};
-			if (newBio !== bio) updateData.bio = newBio;
-			if (JSON.stringify(newInterests) !== JSON.stringify(interests))
-				updateData.interests = newInterests;
+			// Always send both biography and interests as per API spec
+			const updateData = {
+				biography: newBiography,
+				interests: newInterests
+			};
 
-			// If there are changes to bio or interests, send PUT request
-			if (Object.keys(updateData).length > 0) {
-				const response = await fetch(`${SERVER_URL}/user`, {
-					method: 'PUT',
-					headers: {
-						'Content-Type': 'application/json',
-						Authorization: `Bearer ${$auth.token}`
-					},
-					body: JSON.stringify(updateData)
-				});
+			const response = await fetch(`${SERVER_URL}/user`, {
+				method: 'PUT',
+				headers: {
+					'Content-Type': 'application/json',
+					Authorization: `Bearer ${$auth.token}`
+				},
+				body: JSON.stringify(updateData)
+			});
 
-				if (!response.ok) {
-					throw new Error('Failed to update profile');
-				}
-
-				const updatedData = await response.json();
-				// Update local state with server response
-				bio = updatedData.biography || updatedData.bio || bio;
-				interests = updatedData.interests || interests;
+			if (!response.ok) {
+				throw new Error('Failed to update profile');
 			}
+
+			const updatedData = await response.json();
+			// Update local state with server response
+			biography = updatedData.biography;
+			interests = updatedData.interests;
 
 			// Upload assets if changed
 			await uploadAsset(newAvatar, 'profile', loadAvatar);
@@ -118,6 +115,8 @@
 			if (response.ok) {
 				const blob = await response.blob();
 				avatarBlobUrl = URL.createObjectURL(blob);
+			} else if (response.status === 404) {
+				avatarBlobUrl = '/assets/profile.png';
 			}
 		} catch (error) {
 			console.error('Failed to load avatar:', error);
@@ -127,7 +126,8 @@
 	async function loadBackground() {
 		backgroundBlobUrl = await fetchAuthenticatedImage(
 			`${SERVER_URL}/assets/bg/${$page.params.id}`,
-			$auth.token!
+			$auth.token!,
+			'/assets/bg.png'
 		);
 	}
 
@@ -138,12 +138,12 @@
 			loadBackground();
 		}
 
-		// Cleanup blob URLs on unmount
+		// Cleanup blob URLs on unmount (only if they are blob URLs)
 		return () => {
-			if (avatarBlobUrl) {
+			if (avatarBlobUrl && avatarBlobUrl.startsWith('blob:')) {
 				URL.revokeObjectURL(avatarBlobUrl);
 			}
-			if (backgroundBlobUrl) {
+			if (backgroundBlobUrl && backgroundBlobUrl.startsWith('blob:')) {
 				URL.revokeObjectURL(backgroundBlobUrl);
 			}
 		};
@@ -154,11 +154,7 @@
 	<!-- Hero Section -->
 	<div class="relative h-64 md:h-80 lg:h-96">
 		<div class="absolute inset-0">
-			<img
-				src={backgroundBlobUrl || data?.backgroundUrl}
-				alt="background"
-				class="h-full w-full object-cover"
-			/>
+			<img src={backgroundBlobUrl} alt="background" class="h-full w-full object-cover" />
 			<div class="absolute inset-0 bg-black/40"></div>
 		</div>
 		<div class="relative flex h-full items-end p-6 text-white">
@@ -168,7 +164,7 @@
 					<div class="flex flex-col items-center">
 						<div class="avatar">
 							<div class="w-32 rounded-full ring ring-primary ring-offset-2 ring-offset-base-100">
-								<img src={avatarBlobUrl || data?.profileUrl} alt={`${data?.fullName} avatar`} />
+								<img src={avatarBlobUrl} alt={`${data?.fullName} avatar`} />
 							</div>
 						</div>
 					</div>
@@ -203,7 +199,7 @@
 							@{data?.username}
 						</p>
 						<p class="mt-2 text-lg opacity-80">
-							{bio}
+							{biography}
 						</p>
 						<div class="mt-4 flex items-center gap-4">
 							<div class="flex flex-wrap gap-2">
@@ -266,7 +262,7 @@
 										participantCount={card.participantCount}
 										type={card.type}
 										eventId={card.id}
-										ownerProfileUrl={data?.profileUrl}
+										ownerProfileUrl={`${SERVER_URL}/assets/profile/${$page.params.id}`}
 									/>
 								{/each}
 							{:else}
@@ -288,7 +284,7 @@
 										participantCount={card.participantCount}
 										type={card.type}
 										eventId={card.id}
-										ownerProfileUrl={data?.profileUrl}
+										ownerProfileUrl={`${SERVER_URL}/assets/profile/${$page.params.id}`}
 									/>
 								{/each}
 							{:else}
@@ -307,9 +303,9 @@
 
 <EditProfileModal
 	bind:open={editModalOpen}
-	currentBio={bio}
+	currentBiography={biography}
 	currentInterests={interests}
-	currentAvatar={avatarBlobUrl || data?.profileUrl}
-	currentBackground={backgroundBlobUrl || data?.backgroundUrl}
+	currentAvatar={avatarBlobUrl}
+	currentBackground={backgroundBlobUrl}
 	on:update={handleProfileUpdate}
 />

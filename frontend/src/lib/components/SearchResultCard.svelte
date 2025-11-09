@@ -51,7 +51,7 @@
 		<!-- Description row with participants/owner on right -->
 		<div class="flex items-start gap-3">
 			<div class="flex-1">
-				<p class="line-clamp-2 text-sm text-base-content/70">{description}</p>
+				<p class="line-clamp-2 text-sm whitespace-pre-wrap text-base-content/70">{description}</p>
 			</div>
 			<!-- Header with location -->
 			<div class="mb-3 flex items-center justify-between">

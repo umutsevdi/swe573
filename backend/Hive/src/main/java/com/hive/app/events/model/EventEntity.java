@@ -6,6 +6,7 @@ import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import org.hibernate.annotations.CreationTimestamp;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Data
@@ -20,11 +21,11 @@ public class EventEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-    @Column
+    @Column(length = 256)
     private String title;
-    @Column
+    @Column(length = 1024)
     private String description;
-    @Column
+    @Column(length = 512)
     private String tags;
     @Column
     private Double latitude;
@@ -39,6 +40,8 @@ public class EventEntity {
     private EventType type;
     @Column
     private Integer duration;
+    @Column
+    private LocalDate eventDate;
     @CreationTimestamp
     @Column(updatable = false)
     private LocalDateTime createdAt;

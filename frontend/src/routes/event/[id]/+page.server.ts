@@ -25,13 +25,13 @@ type EventData = {
 	description: string;
 	ownerId: number;
 	tags: string[];
-	backgroundImage: string;
 	location: string;
 	coordinates: { lat: number; lng: number };
 	type: 'Offer' | 'Need';
 	participantCount: number;
 	maxParticipants?: number;
 	createdAt: string;
+	updatedAt: string;
 	targetDate?: string;
 	duration?: string;
 	capacity?: number;
@@ -48,13 +48,14 @@ interface EventApiResponse {
 	location: {
 		lat: number;
 		lon: number;
-		location: string;
+		name: string;
 	};
 	maxParticipants: number;
 	type: string;
 	duration: number;
+	eventDate: string;
 	createdAt: string;
-	updatedAt: string | null;
+	updatedAt: string;
 	ownerId: number;
 }
 
@@ -97,14 +98,14 @@ export const load: PageServerLoad = async ({ params, cookies }) => {
 		description: serverData.description,
 		ownerId: serverData.ownerId,
 		tags: serverData.tags,
-		backgroundImage: `${SERVER_URL}/assets/event/${serverData.id}`, // Assuming event background asset exists
-		location: serverData.location.location,
+		location: serverData.location.name,
 		coordinates: { lat: serverData.location.lat, lng: serverData.location.lon },
 		type: serverData.type === 'OFFER' ? 'Offer' : 'Need',
 		participantCount: 0, // Default, as not provided in server response
 		maxParticipants: serverData.maxParticipants,
 		createdAt: new Date(serverData.createdAt).toLocaleDateString(),
-		targetDate: undefined, // Not provided in server response
+		updatedAt: serverData.updatedAt ? new Date(serverData.updatedAt).toLocaleDateString() : '',
+		targetDate: serverData.eventDate,
 		duration: serverData.duration ? `${serverData.duration} hour(s)` : undefined,
 		capacity: serverData.maxParticipants,
 		userParticipationStatus: 'none', // Default

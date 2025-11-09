@@ -2,6 +2,7 @@
 	import { goto } from '$app/navigation';
 	import { SERVER_URL } from '$lib/config';
 	import { auth } from '$lib/stores/auth';
+	import { toast } from '$lib/stores/toast';
 	import { Plus, X } from '@lucide/svelte';
 
 	let activeTab = $state('login');
@@ -9,7 +10,6 @@
 	// Login form
 	let loginUsername = $state('');
 	let loginPassword = $state('');
-	let loginError = $state('');
 
 	// Register form
 	let registerUsername = $state('');
@@ -19,7 +19,6 @@
 	let registerBiography = $state('');
 	let registerInterests = $state<string[]>([]);
 	let registerInterestInput = $state('');
-	let registerError = $state('');
 
 	async function handleLogin(event: Event) {
 		event.preventDefault();
@@ -39,16 +38,16 @@
 
 			const data = await response.json();
 			auth.login(data.token, data.card);
+			toast.success('Login successful!');
 			goto(resolve('/'));
 		} catch (error) {
 			console.error('Login error:', error);
-			loginError = error instanceof Error ? error.message : 'Login failed. Please try again.';
+			toast.error(error instanceof Error ? error.message : 'Login failed. Please try again.');
 		}
 	}
 
 	async function handleRegister(event: Event) {
 		event.preventDefault();
-		registerError = '';
 
 		try {
 			const response = await fetch(`${SERVER_URL}/auth/register`, {
@@ -68,12 +67,13 @@
 				throw new Error('Registration failed');
 			}
 
+			toast.success('Registration successful! Please log in.');
 			// After successful registration, switch to login tab
 			activeTab = 'login';
 			loginUsername = registerUsername;
 			loginPassword = registerPassword;
 		} catch (error) {
-			registerError = 'Registration failed. Please try again.';
+			toast.error('Registration failed. Please try again.');
 		}
 	}
 
@@ -142,12 +142,6 @@
 								required
 							/>
 						</div>
-
-						{#if loginError}
-							<div class="mt-4 alert alert-error">
-								<span>{loginError}</span>
-							</div>
-						{/if}
 
 						<div class="form-control mt-6">
 							<button type="submit" class="btn btn-primary">Login</button>
@@ -269,12 +263,6 @@
 								required
 							/>
 						</div>
-
-						{#if registerError}
-							<div class="mt-4 alert alert-error">
-								<span>{registerError}</span>
-							</div>
-						{/if}
 
 						<div class="form-control mt-6">
 							<button type="submit" class="btn btn-primary">Register</button>

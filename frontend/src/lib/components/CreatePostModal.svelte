@@ -14,6 +14,7 @@
 	import TagInput from './TagInput.svelte';
 	import BaseModal from './BaseModal.svelte';
 	import { createFilePreview } from '$lib/utils/file';
+	import { toast } from '$lib/stores/toast';
 
 	const dispatch = createEventDispatcher<{ submit: any; update: any }>();
 
@@ -111,7 +112,7 @@
 
 	function submitPost() {
 		if (!location) {
-			alert('Please select a location on the map');
+			toast.error('Please select a location on the map');
 			return;
 		}
 

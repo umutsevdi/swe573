@@ -3,6 +3,7 @@
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { enhance } from '$app/forms';
+	import { toast } from '$lib/stores/toast';
 	import UserAvatar from '$lib/components/UserAvatar.svelte';
 	import ThreadModal from '$lib/components/ThreadModal.svelte';
 
@@ -119,7 +120,23 @@
 			{/if}
 
 			<!-- Hidden form for creating thread -->
-			<form bind:this={createForm} method="POST" action="?/create" use:enhance={() => {}}>
+			<form
+				bind:this={createForm}
+				method="POST"
+				action="?/create"
+				use:enhance={({ result }) => {
+					if (result.type === 'success') {
+						const data = result.data;
+						if (data.success) {
+							toast.success('Thread created successfully!');
+						} else {
+							toast.error(data.error);
+						}
+					} else {
+						toast.error('Failed to create thread');
+					}
+				}}
+			>
 				<input type="hidden" name="title" />
 				<input type="hidden" name="description" />
 				<input type="hidden" name="tags" />

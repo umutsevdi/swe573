@@ -7,6 +7,7 @@
 	import UserAvatar from '$lib/components/UserAvatar.svelte';
 	import ThreadModal from '$lib/components/ThreadModal.svelte';
 	import { auth } from '$lib/stores/auth';
+	import { toast } from '$lib/stores/toast';
 
 	type ForumPostData = {
 		content: string;
@@ -56,10 +57,14 @@
 				}
 			});
 			if (response.ok) {
+				toast.success('Thread closed successfully!');
 				invalidateAll();
+			} else {
+				toast.error('Failed to close thread');
 			}
 		} catch (error) {
 			console.error('Failed to close thread:', error);
+			toast.error('Failed to close thread');
 		}
 	}
 
@@ -76,12 +81,14 @@
 			});
 			console.log('Response status:', response.status);
 			if (response.ok) {
+				toast.success('Thread updated successfully!');
 				invalidateAll();
 			} else {
-				console.log('Response text:', await response.text());
+				toast.error('Failed to update thread');
 			}
 		} catch (error) {
 			console.error('Failed to update thread:', error);
+			toast.error('Failed to update thread');
 		}
 	}
 </script>

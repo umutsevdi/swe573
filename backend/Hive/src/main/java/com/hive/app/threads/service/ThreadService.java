@@ -72,6 +72,10 @@ public class ThreadService {
     }
 
 
+    @Caching(evict = {
+            @CacheEvict(cacheNames = "threadById", key = "#threadId"),
+            @CacheEvict(cacheNames = "threadList", allEntries = true)
+    })
     @Transactional
     public ThreadMessageProjection newReply(UserDTO user, Long threadId, String message) throws NotFoundException {
         ThreadMessageEntity entity = new ThreadMessageEntity();

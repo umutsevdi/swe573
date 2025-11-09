@@ -16,6 +16,7 @@
 		Bell
 	} from '@lucide/svelte';
 	import { auth } from '$lib/stores/auth';
+	import { toast } from '$lib/stores/toast';
 	import { goto } from '$app/navigation';
 	import { SERVER_URL } from '$lib/config';
 
@@ -45,13 +46,15 @@
 			}
 
 			const result = await response.json();
-			console.log('Event created:', result);
+			toast.success('Event created successfully!');
 
 			// Navigate to the new event page
 			goto(resolve(`/event/${result.id}`));
 		} catch (error) {
 			console.error('Error creating event:', error);
-			alert('Failed to create event. Please try again.');
+			toast.error(
+				error instanceof Error ? error.message : 'Failed to create event. Please try again.'
+			);
 		}
 	}
 

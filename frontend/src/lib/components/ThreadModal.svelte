@@ -3,6 +3,7 @@
 	import { Tag } from '@lucide/svelte';
 	import TagInput from './TagInput.svelte';
 	import BaseModal from './BaseModal.svelte';
+	import { toast } from '$lib/stores/toast';
 
 	const dispatch = createEventDispatcher<{
 		submit: { title: string; description: string; tags: string[] };
@@ -49,7 +50,7 @@
 
 	function submitThread() {
 		if (!title.trim() || !description.trim()) {
-			alert('Title and description are required');
+			toast.error('Title and description are required');
 			return;
 		}
 

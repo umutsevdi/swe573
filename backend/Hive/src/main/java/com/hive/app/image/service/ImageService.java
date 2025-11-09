@@ -3,7 +3,7 @@ package com.hive.app.image.service;
 import com.hive.app.events.service.EventService;
 import com.hive.app.image.model.ImageEntity;
 import com.hive.app.image.repository.ImageRepository;
-import com.hive.config.AuthenticationFailureException;
+import com.hive.config.exceptions.PermissionDeniedException;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import org.springframework.core.io.Resource;
@@ -24,7 +24,7 @@ public class ImageService {
     private final ImageRepository repo;
     private final EventService eventService;
 
-    private Map<ImageEntity.AssetType, ImageEntity> images = new HashMap<>();
+    private final Map<ImageEntity.AssetType, ImageEntity> images = new HashMap<>();
 
     @PostConstruct
     private void init() throws IOException {
@@ -37,8 +37,9 @@ public class ImageService {
             ImageEntity.AssetType type =
                     ImageEntity.AssetType.valueOf(filename.replaceFirst("(?i)\\.png$", "").toUpperCase());
             images.put(type, new ImageEntity(
-                    type,
                     null,
+                    null,
+                    type,
                     "images/png",
                     r.contentLength(),
                     r.getContentAsByteArray()));
@@ -52,7 +53,7 @@ public class ImageService {
                                Long userId
     ) throws HttpMediaTypeNotAcceptableException {
         if (!userId.equals(id)) {
-            throw new AuthenticationFailureException();
+            throw new PermissionDeniedException();
         }
         try {
             validate(file);
@@ -76,12 +77,13 @@ public class ImageService {
     ) throws HttpMediaTypeNotAcceptableException {
         eventService.findById(id)
                 .filter(event -> event.getOwner().getId().equals(userId))
-                .orElseThrow(AuthenticationFailureException::new);
+                .orElseThrow(PermissionDeniedException::new);
         try {
             validate(file);
             repo.save(new ImageEntity(
-                    ImageEntity.AssetType.EVENT,
+                    repo.findByParentIdAndAssetType(userId, ImageEntity.AssetType.EVENT).map(ImageEntity::getId).orElse(null),
                     id,
+                    ImageEntity.AssetType.EVENT,
                     file.getContentType(),
                     file.getSize(),
                     file.getBytes()

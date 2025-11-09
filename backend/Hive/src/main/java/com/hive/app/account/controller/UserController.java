@@ -6,7 +6,7 @@ import com.hive.app.account.model.request.UpdateUserRequest;
 import com.hive.app.account.model.response.UserCardResponse;
 import com.hive.app.account.model.response.UserProfileResponse;
 import com.hive.app.account.service.UserService;
-import com.hive.config.UserNotFoundException;
+import com.hive.config.exceptions.UserNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -44,16 +44,14 @@ public class UserController {
 
 
     @PutMapping
-    public ResponseEntity<UserProfileResponse> updateUser(@RequestHeader(value = "Authorization") String
-                                                                  authHeader,
-                                                          UpdateUserRequest request) {
+    public ResponseEntity<UserProfileResponse> updateUser(UpdateUserRequest request) {
         UserDTO self = (UserDTO) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
         return ResponseEntity.ok(mapper.dtoToUserProfileResponse(service.updateUser(self, request)));
     }
 
 
     @DeleteMapping
-    public ResponseEntity<Void> deleteUser(@RequestHeader(value = "Authorization") String authHeader) {
+    public ResponseEntity<Void> deleteUser() {
         service.deactivateUser((UserDTO) SecurityContextHolder.getContext().getAuthentication().getPrincipal());
         return ResponseEntity.ok().build();
     }

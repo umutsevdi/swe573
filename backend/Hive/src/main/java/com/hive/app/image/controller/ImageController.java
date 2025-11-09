@@ -1,11 +1,8 @@
 package com.hive.app.image.controller;
 
 import com.hive.app.account.model.UserDTO;
-import com.hive.app.account.service.UserService;
 import com.hive.app.image.model.ImageEntity;
 import com.hive.app.image.service.ImageService;
-import com.hive.config.NotFoundException;
-import com.hive.util.JwtUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.core.io.Resource;
@@ -25,8 +22,6 @@ import java.net.URI;
 @RequestMapping("/assets/")
 public class ImageController {
     private final ImageService service;
-    private final JwtUtil jwtUtil;
-    private final UserService userService;
 
     @PostMapping(path = "/{type}/{id}",
             consumes = MediaType.MULTIPART_FORM_DATA_VALUE)

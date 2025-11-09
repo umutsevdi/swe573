@@ -5,7 +5,7 @@ import com.hive.app.account.model.UserDTO;
 import com.hive.app.account.model.request.RegisterRequest;
 import com.hive.app.account.model.response.UserCardResponse;
 import com.hive.app.account.service.UserService;
-import com.hive.config.UserNotFoundException;
+import com.hive.config.exceptions.UserNotFoundException;
 import com.hive.util.JwtPayload;
 import com.hive.util.JwtUtil;
 import lombok.RequiredArgsConstructor;

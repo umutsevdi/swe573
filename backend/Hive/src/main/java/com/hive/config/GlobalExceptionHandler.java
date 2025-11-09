@@ -1,5 +1,9 @@
 package com.hive.config;
 
+import com.hive.config.exceptions.AuthenticationFailureException;
+import com.hive.config.exceptions.NotFoundException;
+import com.hive.config.exceptions.PermissionDeniedException;
+import com.hive.config.exceptions.UserNotFoundException;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.log4j.Log4j2;
@@ -84,7 +88,9 @@ public class GlobalExceptionHandler {
                 HttpStatus.NOT_FOUND);
     }
 
-    @ExceptionHandler(AccessDeniedException.class)
+    @ExceptionHandler({
+            AccessDeniedException.class, PermissionDeniedException.class
+    })
     public ResponseEntity<ApiError> handleAccessDenied(
             AccessDeniedException ex,
             HttpServletRequest request) {

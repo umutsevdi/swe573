@@ -6,7 +6,8 @@ import com.hive.app.threads.mapper.ThreadMapper;
 import com.hive.app.threads.model.*;
 import com.hive.app.threads.repository.ThreadMessageRepository;
 import com.hive.app.threads.repository.ThreadRepository;
-import com.hive.config.NotFoundException;
+import com.hive.config.exceptions.NotFoundException;
+import com.hive.config.exceptions.PermissionDeniedException;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
@@ -42,8 +43,10 @@ public class ThreadService {
     @Transactional
     public ThreadDTO updateThread(UserDTO user, Long threadId, ThreadRequest request) throws NotFoundException {
         log.info("received {}", request);
-        ThreadEntity entity =
-                threads.findByIdAndOwnerIdAndActive(threadId, user.getId(), true).orElseThrow(NotFoundException::new);
+        ThreadEntity entity = threads.findById(threadId).orElseThrow(NotFoundException::new);
+        if (!(entity.isActive() && entity.getOwner().getId().equals(user.getId()))) {
+            throw new PermissionDeniedException();
+        }
         boolean updated = false;
         if (request.getTags() != null) {
             entity.setTags(Strings.join(request.getTags(), ','));
@@ -67,7 +70,11 @@ public class ThreadService {
     @Transactional
     public ThreadMessageProjection newReply(UserDTO user, Long threadId, String message) throws NotFoundException {
         ThreadMessageEntity entity = new ThreadMessageEntity();
-        entity.setThread(threads.findByIdAndActive(threadId, true).orElseThrow(NotFoundException::new));
+        ThreadEntity thread = threads.findById(threadId).orElseThrow(NotFoundException::new);
+        if (!thread.isActive()) {
+            throw new PermissionDeniedException();
+        }
+        entity.setThread(thread);
         entity.setOwner(userMapper.dtoToEntity(user));
         entity.setMessage(message);
         entity.setCreatedAt(LocalDateTime.now());
@@ -86,8 +93,11 @@ public class ThreadService {
     }
 
     public void closeThread(Long threadId, Long userId) throws NotFoundException {
-        ThreadEntity entity = threads.findByIdAndOwnerIdAndActive(threadId, userId, true).
-                orElseThrow(NotFoundException::new);
+        ThreadEntity entity = threads.findById(threadId).orElseThrow(NotFoundException::new);
+        if (!(entity.isActive() && entity.getOwner().getId().equals(userId))) {
+            throw new PermissionDeniedException();
+        }
+        entity.setUpdatedAt(LocalDateTime.now());
         entity.setActive(false);
         threads.save(entity);
     }

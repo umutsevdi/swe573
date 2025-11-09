@@ -1,4 +1,4 @@
-package com.hive.config;
+package com.hive.config.exceptions;
 
 import jakarta.servlet.ServletException;
 

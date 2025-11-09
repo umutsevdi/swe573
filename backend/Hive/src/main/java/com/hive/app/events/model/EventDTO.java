@@ -12,7 +12,6 @@ public class EventDTO {
     private String title;
     private String description;
     private List<String> tags;
-    private String backgroundImage;
     private Location location;
     private Integer maxParticipants;
     private EventType type;

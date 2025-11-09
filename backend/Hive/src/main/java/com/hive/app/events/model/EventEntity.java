@@ -27,8 +27,6 @@ public class EventEntity {
     @Column
     private String tags;
     @Column
-    private String backgroundImage;
-    @Column
     private Double latitude;
     @Column
     private Double longitude;

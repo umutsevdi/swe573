@@ -3,19 +3,17 @@ package com.hive.app.events.mapper;
 import com.hive.app.account.mapper.UserMapper;
 import com.hive.app.events.model.EventDTO;
 import com.hive.app.events.model.EventEntity;
+import com.hive.app.events.model.EventRequest;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.MappingConstants;
 import org.mapstruct.Named;
-import org.mapstruct.factory.Mappers;
 
 import java.util.ArrayList;
 import java.util.List;
 
 @Mapper(componentModel = MappingConstants.ComponentModel.SPRING, uses = {UserMapper.class})
 public interface EventMapper {
-    EventMapper INSTANCE = Mappers.getMapper(EventMapper.class);
-
     @Mapping(source = "locationName", target = "location.name")
     @Mapping(source = "latitude", target = "location.latitude")
     @Mapping(source = "longitude", target = "location.longitude")
@@ -28,6 +26,10 @@ public interface EventMapper {
     @Mapping(target = "tags", source = "tags", qualifiedByName = "entityTag")
     EventEntity dtoToEntity(EventDTO dto);
 
+
+    EventRequest dtoToRequest(EventDTO dto);
+
+    EventDTO requestToDto(EventRequest dto);
 
     @Named("entityTag")
     default String serializeTags(List<String> tags) {

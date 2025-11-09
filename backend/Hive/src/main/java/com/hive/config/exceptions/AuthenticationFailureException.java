@@ -1,4 +1,4 @@
-package com.hive.config;
+package com.hive.config.exceptions;
 
 import org.springframework.security.authentication.BadCredentialsException;
 

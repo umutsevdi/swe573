@@ -6,7 +6,7 @@ import com.hive.app.threads.model.ThreadInfo;
 import com.hive.app.threads.model.ThreadMessageProjection;
 import com.hive.app.threads.model.ThreadRequest;
 import com.hive.app.threads.service.ThreadService;
-import com.hive.config.NotFoundException;
+import com.hive.config.exceptions.NotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -28,7 +28,7 @@ public class ThreadController {
         return ResponseEntity.ok(service.newForum(request, self));
     }
 
-    @GetMapping()
+    @GetMapping
     ResponseEntity<List<ThreadInfo>> getAllThreads(@RequestParam(value = "show", required = false)
                                                    Boolean show) {
         return ResponseEntity.ok(service.getThreads(show));

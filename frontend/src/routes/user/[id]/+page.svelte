@@ -16,22 +16,12 @@
 	import { auth } from '$lib/stores/auth';
 	import { page } from '$app/stores';
 	import { toast } from '$lib';
+	import { fetchAuthenticatedImage } from '$lib/utils/fetch';
 
 	let { data }: PageProps = $props();
-	const dataObj = data || {};
-	let {
-		fullName,
-		username,
-		bio,
-		interests = [],
-		profileUrl,
-		backgroundUrl,
-		isSelf,
-		offers = [],
-		needs = [],
-		timeBank,
-		userScore
-	} = $state(dataObj);
+
+	let bio = $state(data?.bio || '');
+	let interests = $state(data?.interests || []);
 	let editModalOpen = $state(false);
 
 	const badgeColors = ['text-success', 'text-warning', 'text-error'];
@@ -39,7 +29,6 @@
 		i > 70 ? badgeColors[0] : i > 49 ? badgeColors[1] : badgeColors[2];
 
 	let activeTab = $state('offers');
-	let backgroundLoaded = $state(false);
 	let avatarBlobUrl = $state<string | null>(null);
 	let backgroundBlobUrl = $state<string | null>(null);
 
@@ -136,24 +125,10 @@
 	}
 
 	async function loadBackground() {
-		try {
-			const response = await fetch(`${SERVER_URL}/assets/bg/${$page.params.id}`, {
-				headers: {
-					Authorization: `Bearer ${$auth.token}`
-				}
-			});
-
-			if (response.ok) {
-				const blob = await response.blob();
-				backgroundBlobUrl = URL.createObjectURL(blob);
-				backgroundLoaded = true;
-			} else {
-				backgroundLoaded = false;
-			}
-		} catch (error) {
-			console.error('Failed to load background:', error);
-			backgroundLoaded = false;
-		}
+		backgroundBlobUrl = await fetchAuthenticatedImage(
+			`${SERVER_URL}/assets/bg/${$page.params.id}`,
+			$auth.token!
+		);
 	}
 
 	// Load avatar and background when component mounts
@@ -180,7 +155,7 @@
 	<div class="relative h-64 md:h-80 lg:h-96">
 		<div class="absolute inset-0">
 			<img
-				src={backgroundBlobUrl || backgroundUrl}
+				src={backgroundBlobUrl || data?.backgroundUrl}
 				alt="background"
 				class="h-full w-full object-cover"
 			/>
@@ -193,7 +168,7 @@
 					<div class="flex flex-col items-center">
 						<div class="avatar">
 							<div class="w-32 rounded-full ring ring-primary ring-offset-2 ring-offset-base-100">
-								<img src={avatarBlobUrl || profileUrl} alt={`${fullName} avatar`} />
+								<img src={avatarBlobUrl || data?.profileUrl} alt={`${data?.fullName} avatar`} />
 							</div>
 						</div>
 					</div>
@@ -202,21 +177,21 @@
 					<div class="flex-1 text-center md:text-left">
 						<div class="flex items-center justify-center gap-2 md:justify-start">
 							<h1 class="text-3xl font-bold">
-								{fullName}
+								{data?.fullName}
 							</h1>
-							{#if isSelf}
+							{#if data?.isSelf}
 								<span class="badge badge-primary">You</span>
 							{/if}
 							<div
 								class="tooltip avatar tooltip-bottom avatar-placeholder h-12 w-12"
-								data-tip={`User behavior score: ${userScore}%`}
+								data-tip={`User behavior score: ${data?.userScore}%`}
 							>
-								<div class={`w-12 rounded-full ${bgColor(userScore)}`}>
-									{#if userScore > 70}
+								<div class={`w-12 rounded-full ${bgColor(data?.userScore)}`}>
+									{#if data?.userScore > 70}
 										<Smile class="h-6 w-6" />
-									{:else if userScore > 49}
+									{:else if data?.userScore > 49}
 										<Meh class="h-6 w-6" />
-									{:else if userScore > 20}
+									{:else if data?.userScore > 20}
 										<Frown class="h-6 w-6" />
 									{:else}
 										<Annoyed class="h-6 w-6" />
@@ -225,7 +200,7 @@
 							</div>
 						</div>
 						<p class="text-sm italic opacity-70">
-							@{username}
+							@{data?.username}
 						</p>
 						<p class="mt-2 text-lg opacity-80">
 							{bio}
@@ -238,12 +213,12 @@
 							</div>
 							<div class="flex items-center gap-2">
 								<Hourglass class="h-4 w-4" />
-								<span class="text-sm font-medium">{timeBank} Hours</span>
+								<span class="text-sm font-medium">{data?.timeBank} Hours</span>
 							</div>
 						</div>
 					</div>
 				</div>
-				{#if isSelf}
+				{#if data?.isSelf}
 					<div class="mt-4">
 						<button class="btn btn-primary" onclick={() => (editModalOpen = true)}>
 							<Edit class="mr-2 h-4 w-4" />
@@ -266,7 +241,7 @@
 						onclick={() => (activeTab = 'offers')}
 					>
 						<HeartHandshake class="h-5 w-5" />
-						Offers ({offers.length})
+						Offers ({data?.offers?.length || 0})
 					</button>
 					<button
 						class="tab"
@@ -274,15 +249,15 @@
 						onclick={() => (activeTab = 'needs')}
 					>
 						<HandHelping class="h-5 w-5" />
-						Needs ({needs.length})
+						Needs ({data?.needs?.length || 0})
 					</button>
 				</div>
 
 				<div class="mt-6">
 					{#if activeTab === 'offers'}
 						<div class="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-							{#if offers.length}
-								{#each offers as card (card.id)}
+							{#if data?.offers?.length}
+								{#each data?.offers as card (card.id)}
 									<SearchResultCard
 										title={card.title}
 										description={card.description}
@@ -291,7 +266,7 @@
 										participantCount={card.participantCount}
 										type={card.type}
 										eventId={card.id}
-										ownerProfileUrl={profileUrl}
+										ownerProfileUrl={data?.profileUrl}
 									/>
 								{/each}
 							{:else}
@@ -303,8 +278,8 @@
 						</div>
 					{:else if activeTab === 'needs'}
 						<div class="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-							{#if needs.length}
-								{#each needs as card (card.id)}
+							{#if data?.needs?.length}
+								{#each data?.needs as card (card.id)}
 									<SearchResultCard
 										title={card.title}
 										description={card.description}
@@ -313,7 +288,7 @@
 										participantCount={card.participantCount}
 										type={card.type}
 										eventId={card.id}
-										ownerProfileUrl={profileUrl}
+										ownerProfileUrl={data?.profileUrl}
 									/>
 								{/each}
 							{:else}
@@ -334,7 +309,7 @@
 	bind:open={editModalOpen}
 	currentBio={bio}
 	currentInterests={interests}
-	currentAvatar={avatarBlobUrl || profileUrl}
-	currentBackground={backgroundBlobUrl || backgroundUrl}
+	currentAvatar={avatarBlobUrl || data?.profileUrl}
+	currentBackground={backgroundBlobUrl || data?.backgroundUrl}
 	on:update={handleProfileUpdate}
 />

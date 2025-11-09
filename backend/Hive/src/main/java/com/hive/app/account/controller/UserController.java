@@ -8,6 +8,7 @@ import com.hive.app.account.model.response.UserProfileResponse;
 import com.hive.app.account.service.UserService;
 import com.hive.config.exceptions.UserNotFoundException;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.log4j.Log4j2;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
@@ -15,6 +16,7 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequestMapping("/user")
 @RequiredArgsConstructor
+@Log4j2
 public class UserController {
     private final UserService service;
     private final UserMapper mapper;
@@ -22,19 +24,20 @@ public class UserController {
     @GetMapping("/{id}")
     public ResponseEntity<UserProfileResponse> getUserById(@PathVariable Long id) throws UserNotFoundException {
         UserDTO self = (UserDTO) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
-        var user = service.findById(id)
-                .map(mapper::dtoToUserProfileResponse)
-                .orElseThrow(UserNotFoundException::new);
+        var user = mapper.dtoToUserProfileResponse(self.getId().equals(id) ? self :
+                service.findById(id).orElseThrow(UserNotFoundException::new)
+        );
         user.setSelf(id.equals(self.getId()));
         return ResponseEntity.ok(user);
     }
 
     @GetMapping("/{id}/card")
     public ResponseEntity<UserCardResponse> getUserByIdCard(@PathVariable Long id) throws UserNotFoundException {
-        var user = service.findById(id)
-                .map(mapper::dtoToCard)
-                .orElseThrow(UserNotFoundException::new);
-        return ResponseEntity.ok(user);
+        UserDTO self = (UserDTO) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        return ResponseEntity.ok(mapper.dtoToCard(
+                self.getId().equals(id) ? self :
+                        service.findById(id).orElseThrow(UserNotFoundException::new)
+        ));
     }
 
     @GetMapping

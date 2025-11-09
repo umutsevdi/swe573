@@ -37,6 +37,7 @@ public class JwtRequestFilter extends OncePerRequestFilter {
             try {
                 final JwtPayload payload = jwtUtil.parseToken(authHeader);
                 String username = payload.username();
+                log.info("Authenticate {} for {} {}", username, request.getMethod(), request.getRequestURI());
                 if (username != null) {
                     UserDetails userDetails = userDetailsService.loadUserByUsername(username);
                     if (payload.isValid(userDetails) && userDetails.isAccountNonLocked()) {

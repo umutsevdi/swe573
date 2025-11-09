@@ -8,6 +8,8 @@ import com.hive.app.account.model.request.UpdateUserRequest;
 import com.hive.app.account.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.hibernate.PropertyValueException;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
@@ -22,10 +24,12 @@ public class UserService implements UserDetailsService {
     private final UserRepository repository;
     private final UserMapper mapper;
 
+    @Cacheable(cacheNames = "usersById", key = "#id")
     public Optional<UserDTO> findById(Long id) {
         return repository.findByIdAndIsActiveTrue(id).map(mapper::entityToDto);
     }
 
+    @Cacheable(cacheNames = "usersByUsername", key = "#username")
     public Optional<UserDTO> findByUsername(String username) {
         return repository.findByUsernameAndIsActiveTrue(username)
                 .map(mapper::entityToDto);
@@ -42,6 +46,7 @@ public class UserService implements UserDetailsService {
         repository.save(mapper.dtoToEntity(dto));
     }
 
+    @Cacheable(cacheNames = "usersByUsername", key = "#username")
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
         return repository.findByUsernameAndIsActiveTrue(username)
@@ -50,6 +55,7 @@ public class UserService implements UserDetailsService {
                         "found"));
     }
 
+    @CacheEvict(cacheNames = {"usersById", "usersByUsername"}, allEntries = true)
     public UserDTO updateUser(UserDTO dto, UpdateUserRequest request) throws UsernameNotFoundException {
         boolean changed = false;
         if (request.getBio() != null && !request.getBio().isBlank() && !request.getBio().equals(dto.getBiography())) {
@@ -66,6 +72,7 @@ public class UserService implements UserDetailsService {
         return dto;
     }
 
+    @CacheEvict(cacheNames = {"usersById", "usersByUsername"}, allEntries = true)
     public void deactivateUser(UserDTO dto) {
         dto.setActive(false);
         repository.save(mapper.dtoToEntity(dto));

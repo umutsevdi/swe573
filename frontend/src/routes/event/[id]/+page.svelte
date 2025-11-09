@@ -14,6 +14,10 @@
 	import MapComponent from '$lib/components/MapComponent.svelte';
 	import CreatePostModal from '$lib/components/CreatePostModal.svelte';
 	import UserAvatar from '$lib/components/UserAvatar.svelte';
+	import { SERVER_URL } from '$lib/config';
+	import { auth } from '$lib/stores/auth';
+	import { page } from '$app/stores';
+	import { fetchAuthenticatedImage } from '$lib/utils/fetch';
 
 	type ChatMessage = {
 		id: string;
@@ -23,12 +27,19 @@
 		timestamp: string;
 	};
 
+	type ParticipationRequest = {
+		id: string;
+		userId: string;
+		userName: string;
+		message: string;
+		status: 'CREATED' | 'PENDING' | 'ACCEPTED' | 'REJECTED';
+	};
+
 	type EventData = {
 		id: string;
 		title: string;
 		description: string;
-		author: string;
-		authorAvatar: string;
+		ownerId: number;
 		tags: string[];
 		backgroundImage: string;
 		location: string;
@@ -38,13 +49,7 @@
 		maxParticipants?: number;
 		createdAt: string;
 		userParticipationStatus: 'none' | 'pending' | 'accepted' | 'rejected';
-		participationRequests: {
-			id: string;
-			userId: string;
-			userName: string;
-			message: string;
-			status: 'CREATED' | 'PENDING' | 'ACCEPTED' | 'REJECTED';
-		}[];
+		participationRequests: ParticipationRequest[];
 		chatMessages: ChatMessage[];
 	};
 
@@ -69,6 +74,8 @@
 	let chatMessages = $state(event.chatMessages);
 	let negotiationMessages = $state<ChatMessage[]>([]);
 	let newNegotiationMessage = $state('');
+	let backgroundLoaded = $state(false);
+	let backgroundBlobUrl = $state<string | null>(null);
 
 	function sendMessage() {
 		if (newMessage.trim()) {
@@ -136,16 +143,18 @@
 	function leaveEvent() {
 		userParticipationStatus = 'none';
 		// Remove user's request
-		participationRequests = participationRequests.filter((req) => req.userId !== 'currentUser');
+		participationRequests = participationRequests.filter(
+			(req: ParticipationRequest) => req.userId !== 'currentUser'
+		);
 		// In real app, API call
 	}
 
 	function acceptRequest(requestId: string) {
-		participationRequests = participationRequests.map((req) =>
+		participationRequests = participationRequests.map((req: ParticipationRequest) =>
 			req.id === requestId ? { ...req, status: 'ACCEPTED' } : req
 		);
 		// Update user status if it's their request
-		const request = participationRequests.find((r) => r.id === requestId);
+		const request = participationRequests.find((r: ParticipationRequest) => r.id === requestId);
 		if (request?.userId === 'currentUser') {
 			userParticipationStatus = 'accepted';
 		}
@@ -153,10 +162,10 @@
 	}
 
 	function rejectRequest(requestId: string) {
-		participationRequests = participationRequests.map((req) =>
+		participationRequests = participationRequests.map((req: ParticipationRequest) =>
 			req.id === requestId ? { ...req, status: 'REJECTED' } : req
 		);
-		const request = participationRequests.find((r) => r.id === requestId);
+		const request = participationRequests.find((r: ParticipationRequest) => r.id === requestId);
 		if (request?.userId === 'currentUser') {
 			userParticipationStatus = 'rejected';
 		}
@@ -164,10 +173,10 @@
 	}
 
 	function removeParticipant(requestId: string) {
-		participationRequests = participationRequests.map((req) =>
+		participationRequests = participationRequests.map((req: ParticipationRequest) =>
 			req.id === requestId ? { ...req, status: 'REJECTED' } : req
 		);
-		const request = participationRequests.find((r) => r.id === requestId);
+		const request = participationRequests.find((r: ParticipationRequest) => r.id === requestId);
 		if (request?.userId === 'currentUser') {
 			userParticipationStatus = 'rejected';
 		}
@@ -175,9 +184,19 @@
 	}
 
 	function withdrawRequest() {
-		participationRequests = participationRequests.filter((req) => req.userId !== 'currentUser');
+		participationRequests = participationRequests.filter(
+			(req: ParticipationRequest) => req.userId !== 'currentUser'
+		);
 		userParticipationStatus = 'none';
 		// In real app, API call
+	}
+
+	async function loadBackground() {
+		backgroundBlobUrl = await fetchAuthenticatedImage(
+			`${SERVER_URL}/assets/event/${$page.params.id}`,
+			$auth.token!
+		);
+		backgroundLoaded = backgroundBlobUrl !== null;
 	}
 
 	// User location functionality
@@ -274,6 +293,20 @@
 		getUserLocation();
 	});
 
+	// Load background when component mounts
+	$effect(() => {
+		if ($auth.token && $page.params.id) {
+			loadBackground();
+		}
+
+		// Cleanup blob URL on unmount
+		return () => {
+			if (backgroundBlobUrl) {
+				URL.revokeObjectURL(backgroundBlobUrl);
+			}
+		};
+	});
+
 	// Scroll to bottom of chat when new messages arrive
 	let chatContainer: HTMLElement;
 	let negotiationContainer: HTMLElement;
@@ -298,7 +331,11 @@
 		<!-- Hero Section -->
 		<div class="relative h-64 md:h-80 lg:h-96">
 			<div class="absolute inset-0">
-				<img src={event.backgroundImage} alt={event.title} class="h-full w-full object-cover" />
+				<img
+					src={backgroundBlobUrl || event.backgroundImage}
+					alt={event.title}
+					class="h-full w-full object-cover"
+				/>
 				<div class="absolute inset-0 bg-black/40"></div>
 			</div>
 			<div class="relative flex h-full items-end p-6 text-white">
@@ -401,11 +438,11 @@
 							<h3 class="card-title">
 								<Users class="h-5 w-5" />
 								Pending Participation Requests ({participationRequests.filter(
-									(r) => r.status === 'PENDING'
+									(r: ParticipationRequest) => r.status === 'PENDING'
 								).length})
 							</h3>
-							{#if participationRequests.some((r) => r.status === 'PENDING')}
-								{#each participationRequests.filter((r) => r.status === 'PENDING') as request (request.id)}
+							{#if participationRequests.some((r: ParticipationRequest) => r.status === 'PENDING')}
+								{#each participationRequests.filter((r: ParticipationRequest) => r.status === 'PENDING') as request (request.id)}
 									<div
 										class="mb-4 border-b border-base-300 pb-4 last:mb-0 last:border-b-0 last:pb-0"
 									>
@@ -444,11 +481,12 @@
 						<div class="card-body">
 							<h3 class="card-title">
 								<Users class="h-5 w-5" />
-								Accepted Participants ({participationRequests.filter((r) => r.status === 'ACCEPTED')
-									.length})
+								Accepted Participants ({participationRequests.filter(
+									(r: ParticipationRequest) => r.status === 'ACCEPTED'
+								).length})
 							</h3>
-							{#if participationRequests.some((r) => r.status === 'ACCEPTED')}
-								{#each participationRequests.filter((r) => r.status === 'ACCEPTED') as request (request.id)}
+							{#if participationRequests.some((r: ParticipationRequest) => r.status === 'ACCEPTED')}
+								{#each participationRequests.filter((r: ParticipationRequest) => r.status === 'ACCEPTED') as request (request.id)}
 									<div
 										class="mb-4 border-b border-base-300 pb-4 last:mb-0 last:border-b-0 last:pb-0"
 									>
@@ -487,19 +525,16 @@
 					<!-- Event Description -->
 					<div class="card bg-base-100 shadow-xl">
 						<div class="card-body">
-							<div class="mb-4 flex items-start gap-4">
-								<UserAvatar userId={1} />
-								<div class="flex-1">
-									<h3 class="text-lg font-semibold">{event.author}</h3>
-									<div class="flex items-center gap-4 text-sm opacity-70">
-										<div class="flex items-center gap-1">
-											<Calendar class="h-4 w-4" />
-											{event.createdAt}
-										</div>
-										<div class="flex items-center gap-1">
-											<Users class="h-4 w-4" />
-											{event.participantCount} participants
-										</div>
+							<div class="mb-4 flex items-center gap-4">
+								<UserAvatar userId={event.ownerId} />
+								<div class="flex items-center gap-4 text-sm opacity-70">
+									<div class="flex items-center gap-1">
+										<Calendar class="h-4 w-4" />
+										{event.createdAt}
+									</div>
+									<div class="flex items-center gap-1">
+										<Users class="h-4 w-4" />
+										{event.participantCount} participants
 									</div>
 								</div>
 							</div>

@@ -3,6 +3,7 @@ package com.hive.app.image.controller;
 import com.hive.app.account.model.UserDTO;
 import com.hive.app.image.model.ImageEntity;
 import com.hive.app.image.service.ImageService;
+import com.hive.config.exceptions.NotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.core.io.Resource;
@@ -28,7 +29,7 @@ public class ImageController {
     public ResponseEntity<Void> uploadProfilePhoto(@RequestPart("file") MultipartFile file,
                                                    @PathVariable ImageEntity.AssetType type,
                                                    @PathVariable Long id
-    ) throws HttpMediaTypeNotAcceptableException {
+    ) throws HttpMediaTypeNotAcceptableException, NotFoundException {
         Long userId = ((UserDTO) SecurityContextHolder.getContext().getAuthentication().getPrincipal()).getId();
         switch (type) {
             case EVENT -> service.storeEvent(file, userId, id);

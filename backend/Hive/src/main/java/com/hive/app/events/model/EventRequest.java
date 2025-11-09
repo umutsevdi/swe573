@@ -14,6 +14,4 @@ public class EventRequest {
     private Integer maxParticipants;
     private EventType type;
     private Integer duration;
-    private LocalDateTime createdAt;
-    private LocalDateTime updatedAt;
 }

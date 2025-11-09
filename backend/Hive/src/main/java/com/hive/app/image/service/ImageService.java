@@ -1,8 +1,10 @@
 package com.hive.app.image.service;
 
+import com.hive.app.events.model.EventDTO;
 import com.hive.app.events.service.EventService;
 import com.hive.app.image.model.ImageEntity;
 import com.hive.app.image.repository.ImageRepository;
+import com.hive.config.exceptions.NotFoundException;
 import com.hive.config.exceptions.PermissionDeniedException;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
@@ -74,10 +76,11 @@ public class ImageService {
     public void storeEvent(MultipartFile file,
                            Long id,
                            Long userId
-    ) throws HttpMediaTypeNotAcceptableException {
-        eventService.findById(id)
-                .filter(event -> event.getOwner().getId().equals(userId))
-                .orElseThrow(PermissionDeniedException::new);
+    ) throws HttpMediaTypeNotAcceptableException, NotFoundException {
+        EventDTO event = eventService.findById(id);
+        if (event.getOwner().getId().equals(userId)) {
+            throw new PermissionDeniedException();
+        }
         try {
             validate(file);
             repo.save(new ImageEntity(

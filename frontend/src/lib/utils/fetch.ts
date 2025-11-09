@@ -33,3 +33,24 @@ export async function fetchWithAuth(
 
 	return response;
 }
+
+export async function fetchAuthenticatedImage(url: string, token: string): Promise<string | null> {
+	try {
+		const response = await fetch(url, {
+			headers: {
+				Authorization: `Bearer ${token}`
+			}
+		});
+
+		if (response.ok) {
+			const blob = await response.blob();
+			return URL.createObjectURL(blob);
+		} else {
+			console.error(`Failed to load image: ${url} - ${response.status}`);
+			return null;
+		}
+	} catch (error) {
+		console.error('Failed to load image:', error);
+		return null;
+	}
+}

@@ -4,6 +4,7 @@ import com.hive.app.account.mapper.UserMapper;
 import com.hive.app.events.model.EventDTO;
 import com.hive.app.events.model.EventEntity;
 import com.hive.app.events.model.EventRequest;
+import com.hive.app.events.model.EventResponse;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.MappingConstants;
@@ -25,6 +26,15 @@ public interface EventMapper {
     @Mapping(target = "longitude", source = "location.longitude")
     @Mapping(target = "tags", source = "tags", qualifiedByName = "entityTag")
     EventEntity dtoToEntity(EventDTO dto);
+
+    EventResponse dtoToResponse(EventDTO dto);
+
+    @Mapping(source = "locationName", target = "location.name")
+    @Mapping(source = "latitude", target = "location.latitude")
+    @Mapping(source = "longitude", target = "location.longitude")
+    @Mapping(source = "tags", target = "tags", qualifiedByName = "dtoTag")
+    @Mapping(source = "owner.id", target = "ownerId")
+    EventResponse entityToResponse(EventEntity dto);
 
 
     EventRequest dtoToRequest(EventDTO dto);

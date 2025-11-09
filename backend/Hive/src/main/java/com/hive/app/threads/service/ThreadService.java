@@ -12,6 +12,9 @@ import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.apache.logging.log4j.util.Strings;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -27,6 +30,7 @@ public class ThreadService {
     private final ThreadMapper mapper;
     private final UserMapper userMapper;
 
+    @Caching(evict = {@CacheEvict(cacheNames = "threadList", allEntries = true)})
     @Transactional
     public ThreadDTO newForum(ThreadRequest request, UserDTO user) {
         ThreadEntity entity = new ThreadEntity();
@@ -40,6 +44,10 @@ public class ThreadService {
         return mapper.entityToDto(threads.save(entity));
     }
 
+    @Caching(evict = {
+            @CacheEvict(cacheNames = "threadById", key = "#threadId"),
+            @CacheEvict(cacheNames = "threadList", allEntries = true)
+    })
     @Transactional
     public ThreadDTO updateThread(UserDTO user, Long threadId, ThreadRequest request) throws NotFoundException {
         log.info("received {}", request);
@@ -81,10 +89,13 @@ public class ThreadService {
         return mapper.entityToDto(messages.save(entity));
     }
 
+    @Cacheable(cacheNames = "threadById", key = "#threadId")
     public ThreadDTO getThread(Long threadId) throws NotFoundException {
         return mapper.entityToDto(threads.findById(threadId).orElseThrow(NotFoundException::new));
     }
 
+    @Cacheable(cacheNames = "threadList",
+            key = "#show == null ? 'all' : ('active:' + #show)")
     public List<ThreadInfo> getThreads(Boolean show) {
         if (show == null) {
             return threads.findAllProjectedBy();
@@ -92,6 +103,10 @@ public class ThreadService {
         return threads.findAllByActive(show);
     }
 
+    @Caching(evict = {
+            @CacheEvict(cacheNames = "threadById", key = "#threadId"),
+            @CacheEvict(cacheNames = "threadList", allEntries = true)
+    })
     public void closeThread(Long threadId, Long userId) throws NotFoundException {
         ThreadEntity entity = threads.findById(threadId).orElseThrow(NotFoundException::new);
         if (!(entity.isActive() && entity.getOwner().getId().equals(userId))) {

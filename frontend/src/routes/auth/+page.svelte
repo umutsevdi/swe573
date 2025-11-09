@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
+	import { resolve } from '$app/paths';
 	import { SERVER_URL } from '$lib/config';
 	import { auth } from '$lib/stores/auth';
 	import { toast } from '$lib/stores/toast';
@@ -22,7 +23,6 @@
 
 	async function handleLogin(event: Event) {
 		event.preventDefault();
-		loginError = '';
 
 		try {
 			const response = await fetch(`${SERVER_URL}/auth/login`, {

@@ -37,6 +37,7 @@ public class UserService implements UserDetailsService {
                 .map(mapper::entityToDto);
     }
 
+    @CacheEvict(cacheNames = {"usersById", "usersByUsername"}, allEntries = true)
     public void create(RegisterRequest request) throws PropertyValueException {
         var dto = mapper.requestToDto(request);
         dto.setCreatedAt(LocalDateTime.now());

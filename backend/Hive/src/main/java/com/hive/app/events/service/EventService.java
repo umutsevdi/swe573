@@ -5,10 +5,12 @@ import com.hive.app.account.model.UserDTO;
 import com.hive.app.events.mapper.EventMapper;
 import com.hive.app.events.model.*;
 import com.hive.app.events.repository.EventRepository;
+import com.hive.app.events.repository.EventSpecifications;
 import com.hive.config.exceptions.NotFoundException;
 import com.hive.config.exceptions.PermissionDeniedException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
@@ -28,6 +30,23 @@ public class EventService {
         }
         return repository.findByOwner_IdAndEventDateAfter(userId, LocalDate.now().minusDays(1));
     }
+
+    public List<EventResponse> getAllEventsBy(EventQueryOptions options) {
+        if (options.getStartDate() == null) {
+            options.setStartDate(LocalDate.now().minusDays(1));
+        }
+        Specification<EventEntity> spec = Specification.allOf(
+                EventSpecifications.hasText(options.getTextSearch()),
+                EventSpecifications.hasText(options.getTextSearch()),
+                EventSpecifications.isWithinProximity(options.getUserLocation(), options.getProximity()),
+                EventSpecifications.isAfter(options.getStartDate()),
+                EventSpecifications.isBefore(options.getEndDate()),
+                EventSpecifications.hasTags(options.getTags())
+        );
+
+        return repository.findAll(spec).stream().map(mapper::entityToResponse).toList();
+    }
+
 
     public EventResponse newEvent(EventRequest request, UserDTO userDTO) {
         request.setTags(request.getTags().stream().map(String::toLowerCase).toList());

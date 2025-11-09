@@ -1,0 +1,16 @@
+services:
+  frontend:
+    build:
+      context: .
+    ports:
+      - '3000:3000'
+    environment:
+      - VITE_SERVER_URL=http://host.docker.internal:8080
+    extra_hosts:
+      - 'host.docker.internal:host-gateway'
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge

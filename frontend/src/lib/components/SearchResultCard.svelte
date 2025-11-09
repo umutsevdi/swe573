@@ -79,7 +79,7 @@
 					<Users class="h-4 w-4 opacity-60" />
 					<span class="text-sm opacity-70">{participantCount}</span>
 				</div>
-				<UserAvatar userId={ownerId} />
+				<UserAvatar userId={ownerId} hideText={true} />
 			</div>
 		</div>
 	</div>

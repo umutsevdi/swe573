@@ -13,8 +13,9 @@
 	} from '$lib/stores/user';
 	import UserTooltipCard from './UserTooltipCard.svelte';
 
-	let { userId } = $props<{
+	let { userId, hideText = false } = $props<{
 		userId: number;
+		hideText?: boolean;
 	}>();
 
 	let loading = $state(false);
@@ -150,7 +151,9 @@
 				</div>
 			</div>
 		</div>
-		<span class="font-semibold">Loading...</span>
+		{#if !hideText}
+			<span class="font-semibold">Loading...</span>
+		{/if}
 	</div>
 {:else if userData}
 	<a
@@ -177,9 +180,11 @@
 				{/if}
 			</div>
 		</div>
-		<span class="font-semibold">{userData?.fullName || 'Unknown User'}</span>
+		{#if !hideText}
+			<span class="font-semibold">{userData?.fullName || 'Unknown User'}</span>
+		{/if}
 		{#if showTooltip}
-			<div class="absolute top-full left-0 z-50 mt-2">
+			<div class="absolute top-full left-0 z-[999] mt-2">
 				<UserTooltipCard {userData} />
 			</div>
 		{/if}
@@ -193,6 +198,8 @@
 				</div>
 			</div>
 		</div>
-		<span class="font-semibold">Unknown User</span>
+		{#if !hideText}
+			<span class="font-semibold">Unknown User</span>
+		{/if}
 	</div>
 {/if}

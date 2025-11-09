@@ -61,8 +61,8 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration cfg = new CorsConfiguration();
-        cfg.addAllowedOriginPattern("http://localhost:**");
-        cfg.addAllowedOriginPattern("https://*.umutsevdi.com");
+        cfg.addAllowedOriginPattern("http://localhost:*");
+        cfg.addAllowedOriginPattern("https://*.umutsevdi.com:*");
         cfg.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         cfg.setAllowedHeaders(List.of(
                 "Authorization", "Cache-Control", "Content-Type", "X-Requested-With"));

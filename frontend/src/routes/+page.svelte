@@ -13,7 +13,7 @@
 	let tagInput = $state('');
 	let start = $state('');
 	let end = $state('');
-	let proximity = $state(50);
+	let proximity = $state(0);
 	let userLat = $state<number | null>(null);
 	let userLng = $state<number | null>(null);
 
@@ -70,7 +70,7 @@
 			params.set('user_lng', userLng.toString());
 			params.set('proximity', proximity.toString());
 		}
-		goto(resolve(`?${params.toString()}`));
+		goto(`?${params.toString()}`);
 	}
 </script>
 

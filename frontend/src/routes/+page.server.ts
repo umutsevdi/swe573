@@ -1,150 +1,128 @@
 import type { PageServerLoad } from './$types';
+import { SERVER_URL } from '$lib/config';
+import { fetchWithAuth } from '$lib/utils/fetch';
+import type { Cookies } from '@sveltejs/kit';
 
-import { calculateDistance } from '$lib/utils/geo';
+interface EventFilterRequest {
+	textSearch?: string;
+	tags?: string[];
+	userLocation?: {
+		lat: number;
+		lon: number;
+	};
+	proximity?: number;
+	startDate?: string;
+	endDate?: string;
+}
 
-const EVENTS: Array<{
+interface ApiEvent {
+	id: number;
+	title: string;
+	description: string;
+	tags: string[];
+	location: {
+		lat: number;
+		lon: number;
+		name: string;
+	};
+	maxParticipants: number;
+	type: 'OFFER' | 'NEED';
+	duration: number;
+	eventDate: string;
+	createdAt: string;
+	updatedAt: string;
+	ownerId: number;
+}
+
+interface MappedEvent {
 	id: string;
 	title: string;
 	description: string;
-	ownerUrl: string;
-	ownerProfileUrl: string;
-	ownerId: number;
 	tags: string[];
+	location: string;
 	latitude: number;
 	longitude: number;
-	location: string;
 	participantCount: number;
-	date: string;
 	type: 'Offer' | 'Need';
-}> = [
-	{
-		id: '1',
-		title: 'Free bike for anyone',
-		description: 'Free bike for anyone',
-		tags: ['bike', 'free', 'outdoor'],
-		location: 'Berlin, DE',
-		latitude: 52.52,
-		longitude: 13.405,
-		type: 'Offer' as const,
-		ownerUrl: 'https://img.daisyui.com/images/stock/photo-1534528741775-53994a69daeb.webp',
-		ownerProfileUrl: 'https://img.daisyui.com/images/stock/photo-1534528741775-53994a69daeb.webp',
-		ownerId: 1,
-		participantCount: 4,
-		date: '2024-12-15'
-	},
-	{
-		id: '2',
-		title: 'Need a tutor for calculus',
-		description: 'Free bike for anyone',
-		tags: ['tutoring', 'math', 'college'],
-		location: 'Munich, DE',
-		latitude: 48.1351,
-		ownerId: 2,
-		longitude: 11.582,
-		type: 'Need' as const,
-		ownerUrl: 'https://img.daisyui.com/images/stock/photo-1534528741775-53994a69daeb.webp',
-		ownerProfileUrl: 'https://img.daisyui.com/images/stock/photo-1534528741775-53994a69daeb.webp',
-		participantCount: 0,
-		date: '2024-12-20'
-	},
-	{
-		id: '3',
-		title: 'Need a tutor for english',
-		description: 'Free bike for anyone',
-		tags: ['tutoring', 'english', 'college'],
-		location: 'Turkey, TR',
-		latitude: 39.9334,
-		longitude: 32.8597,
-		type: 'Need' as const,
-		ownerUrl: 'https://img.daisyui.com/images/stock/photo-1534528741775-53994a69daeb.webp',
-		ownerProfileUrl: 'https://img.daisyui.com/images/stock/photo-1534528741775-53994a69daeb.webp',
-		ownerId: 3,
-		participantCount: 0,
-		date: '2024-12-25'
-	},
-	{
-		id: '4',
-		title: 'Free bookshelf donation',
-		description: 'Solid wood bookshelf, 5 shelves, no scratches. Pick‑up only.',
-		tags: ['furniture', 'free', 'bookshelf'],
-		location: 'Turkey, TR',
-		type: 'Offer',
-		participantCount: 0,
-		ownerUrl: '/user/1',
-		ownerProfileUrl:
-			'https://images.unsplash.com/photo-1595290293434-555d42427e84?ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&q=80&w=687',
-		ownerId: 4,
-		latitude: 39.9334,
-		longitude: 32.8597,
-		date: '2025-12-25'
-	},
-	{
-		id: '5',
-		title: 'Garden tools giveaway',
-		description:
-			'Hand tools (shovel, rake, pruning shears) in good condition, free to anyone interested.',
-		tags: ['garden', 'tools', 'free'],
-		location: 'Hamburg, DE',
-		latitude: 49.1351,
-		longitude: 12.582,
-		type: 'Offer',
-		participantCount: 2,
-		ownerUrl: '/user/1',
-		ownerProfileUrl:
-			'https://images.unsplash.com/photo-1595290293434-555d42427e84?ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&q=80&w=687',
-		ownerId: 5,
-		date: '2025-12-25'
-	}
-];
-export const load: PageServerLoad = async ({ url }) => {
-	let events = EVENTS;
+	date: string;
+	ownerId: number;
+}
+
+export const load: PageServerLoad = async ({ url, cookies }: { url: URL; cookies: Cookies }) => {
 	const searchParams = url.searchParams;
+	const requestBody: EventFilterRequest = {};
+
 	if (searchParams.has('q')) {
-		const text = searchParams.get('q')!.toLowerCase();
-		events = events.filter(
-			(e) => e.description.toLowerCase().includes(text) || e.title.toLowerCase().includes(text)
-		);
+		requestBody.textSearch = searchParams.get('q')!.trim();
 	}
 
 	if (searchParams.has('tags')) {
-		const tags: Array<string> = searchParams.get('tags')!.split(',').filter(Boolean);
-		events = events.filter((event) => tags.some((tag) => event.tags.includes(tag)));
+		requestBody.tags = searchParams.get('tags')!.split(',').filter(Boolean);
 	}
 
-	if (searchParams.has('type')) {
-		const type = searchParams.get('type');
-		if (type && type !== 'all') {
-			events = events.filter((event) => event.type === type);
-		}
+	if (searchParams.has('start')) {
+		requestBody.startDate = searchParams.get('start')!;
+	}
+
+	if (searchParams.has('end')) {
+		requestBody.endDate = searchParams.get('end')!;
 	}
 
 	if (searchParams.has('user_lat') && searchParams.has('user_lng')) {
 		const userLat = parseFloat(searchParams.get('user_lat') || '');
 		const userLng = parseFloat(searchParams.get('user_lng') || '');
-		const proximityKm = parseInt(searchParams.get('proximity') || '50');
-
 		if (!isNaN(userLat) && !isNaN(userLng)) {
-			events = events.filter((event) => {
-				const distance = calculateDistance(userLat, userLng, event.latitude, event.longitude);
-				return distance <= proximityKm;
-			});
+			requestBody.userLocation = { lat: userLat, lon: userLng };
+			if (searchParams.has('proximity')) {
+				const proximity = parseInt(searchParams.get('proximity') || '0');
+				if (!isNaN(proximity) && proximity != 0) {
+					requestBody.proximity = proximity;
+				}
+			}
 		}
 	}
-	const start = searchParams.get('start');
-	const end = searchParams.get('end');
-	if (start || end) {
-		events = events.filter((event) => {
-			const eventDate = new Date(event.date);
-			if (start) {
-				const startDate = new Date(start);
-				if (eventDate < startDate) return false;
+
+	try {
+		console.log('Fetching events from:', `${SERVER_URL}/event/search`, 'with body:', requestBody);
+		const response = await fetchWithAuth(
+			`${SERVER_URL}/event/search`,
+			cookies.get('token')!,
+			cookies,
+			{
+				method: 'POST',
+				body: JSON.stringify(requestBody)
 			}
-			if (end) {
-				const endDate = new Date(end);
-				if (eventDate > endDate) return false;
+		);
+
+		const apiEvents: ApiEvent[] = await response.json();
+		console.log('Fetched events:', apiEvents.length);
+
+		let events: MappedEvent[] = apiEvents.map((event) => ({
+			id: event.id.toString(),
+			title: event.title,
+			description: event.description,
+			tags: event.tags,
+			location: event.location.name,
+			latitude: event.location.lat,
+			longitude: event.location.lon,
+			participantCount: event.maxParticipants,
+			type: event.type === 'OFFER' ? 'Offer' : 'Need',
+			date: event.eventDate,
+			ownerId: event.ownerId
+		}));
+
+		// Apply type filter if present (since API doesn't support it)
+		if (searchParams.has('type')) {
+			const type = searchParams.get('type');
+			if (type && type !== 'all') {
+				events = events.filter((event) => event.type === type);
 			}
-			return true;
-		});
+		}
+
+		return { events };
+	} catch (error) {
+		console.error('Error fetching events:', error);
+		// Fallback to empty array or mock data if needed
+		return { events: [] };
 	}
-	return { events };
 };

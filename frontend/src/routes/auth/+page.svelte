@@ -72,7 +72,7 @@
 			activeTab = 'login';
 			loginUsername = registerUsername;
 			loginPassword = registerPassword;
-		} catch (error) {
+		} catch {
 			toast.error('Registration failed. Please try again.');
 		}
 	}

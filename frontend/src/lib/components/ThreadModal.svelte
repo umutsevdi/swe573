@@ -112,7 +112,7 @@
 				bind:value={description}
 				maxlength="1024"
 				required
-			/>
+			></textarea>
 			<div class="mt-1 text-xs text-base-content/60">{description.length} / 1024</div>
 		</div>
 

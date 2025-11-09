@@ -1,11 +1,8 @@
 <script lang="ts">
-	import { Calendar, Plus } from '@lucide/svelte';
+	import { Calendar } from '@lucide/svelte';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
-	import { enhance } from '$app/forms';
-	import { toast } from '$lib/stores/toast';
 	import UserAvatar from '$lib/components/UserAvatar.svelte';
-	import ThreadModal from '$lib/components/ThreadModal.svelte';
 
 	type ForumThread = {
 		id: number;
@@ -19,43 +16,13 @@
 
 	let { data } = $props();
 	let threads = $derived(data.threads as ForumThread[]);
-
-	let modalOpen = $state(false);
-	let createForm: HTMLFormElement;
-
-	function openCreateModal() {
-		modalOpen = true;
-	}
-
-	function handleCreateSubmit(
-		event: CustomEvent<{ title: string; description: string; tags: string[] }>
-	) {
-		const { title, description, tags } = event.detail;
-
-		// Set hidden form values
-		const titleInput = createForm.querySelector('input[name="title"]') as HTMLInputElement;
-		const descInput = createForm.querySelector('input[name="description"]') as HTMLInputElement;
-		const tagsInput = createForm.querySelector('input[name="tags"]') as HTMLInputElement;
-
-		titleInput.value = title;
-		descInput.value = description;
-		tagsInput.value = JSON.stringify(tags);
-
-		// Submit the form
-		createForm.requestSubmit();
-	}
-	console.log(data.threads.forEach((e) => e.ownerId));
 </script>
 
 <div class="hero min-h-screen bg-base-200">
 	<div class="hero-content w-full max-w-4xl flex-col">
 		<div class="w-full">
-			<div class="mb-8 flex items-center justify-between">
+			<div class="mb-8">
 				<h1 class="text-4xl font-bold">Forum</h1>
-				<button class="btn btn-primary" onclick={openCreateModal}>
-					<Plus class="mr-2 h-4 w-4" />
-					Create Thread
-				</button>
 			</div>
 
 			<div class="space-y-4">
@@ -118,31 +85,6 @@
 					<p>No forum threads found.</p>
 				</div>
 			{/if}
-
-			<!-- Hidden form for creating thread -->
-			<form
-				bind:this={createForm}
-				method="POST"
-				action="?/create"
-				use:enhance={({ result }) => {
-					if (result.type === 'success') {
-						const data = result.data;
-						if (data.success) {
-							toast.success('Thread created successfully!');
-						} else {
-							toast.error(data.error);
-						}
-					} else {
-						toast.error('Failed to create thread');
-					}
-				}}
-			>
-				<input type="hidden" name="title" />
-				<input type="hidden" name="description" />
-				<input type="hidden" name="tags" />
-			</form>
-
-			<ThreadModal mode="create" bind:open={modalOpen} on:submit={handleCreateSubmit} />
 		</div>
 	</div>
 </div>

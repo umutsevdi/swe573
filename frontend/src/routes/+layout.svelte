@@ -1,7 +1,9 @@
 <script lang="ts">
 	import '../app.css';
 	import { resolve } from '$app/paths';
+	import { enhance } from '$app/forms';
 	import CreatePostModal from '$lib/components/CreatePostModal.svelte';
+	import ThreadModal from '$lib/components/ThreadModal.svelte';
 	import Toast from '$lib/components/Toast.svelte';
 	import favicon from '$lib/assets/favicon.svg';
 	import {
@@ -13,21 +15,57 @@
 		PanelRightOpen,
 		MapPinned,
 		Mails,
-		Bell
+		Bell,
+		MapPinPlus,
+		MailPlus
 	} from '@lucide/svelte';
 	import { auth } from '$lib/stores/auth';
 	import { toast } from '$lib/stores/toast';
-	import { goto } from '$app/navigation';
+	import { goto, invalidateAll } from '$app/navigation';
 	import { SERVER_URL } from '$lib/config';
 
 	let { children } = $props();
 
 	let createPostModal: unknown;
 	let modalOpen = $state(false);
+	let threadModalOpen = $state(false);
 	let navbarAvatarUrl = $state<string | null>(null);
 
 	function openCreatePostModal() {
 		createPostModal?.openModal();
+	}
+
+	async function handleCreateThreadSubmit(
+		event: CustomEvent<{ title: string; description: string; tags: string[] }>
+	) {
+		const { title, description, tags } = event.detail;
+
+		try {
+			const response = await fetch(`${SERVER_URL}/thread`, {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+					Authorization: `Bearer ${$auth.token}`
+				},
+				body: JSON.stringify({ title: title.trim(), description: description.trim(), tags })
+			});
+
+			if (!response.ok) {
+				throw new Error(`Failed to create thread: ${response.statusText}`);
+			}
+
+			const result = await response.json();
+			toast.success('Thread created successfully!');
+
+			// Navigate to the new thread page
+			goto(resolve(`/forum/${result.id}`));
+			threadModalOpen = false;
+		} catch (error) {
+			console.error('Error creating thread:', error);
+			toast.error(
+				error instanceof Error ? error.message : 'Failed to create thread. Please try again.'
+			);
+		}
 	}
 
 	async function handlePostSubmit(event: CustomEvent) {
@@ -105,6 +143,8 @@
 
 <CreatePostModal bind:this={createPostModal} bind:open={modalOpen} on:submit={handlePostSubmit} />
 
+<ThreadModal mode="create" bind:open={threadModalOpen} on:submit={handleCreateThreadSubmit} />
+
 <div class="drawer-open drawer">
 	<input id="my-drawer-4" type="checkbox" class="drawer-toggle" />
 	<div class="drawer-content">
@@ -141,15 +181,35 @@
 			</nav>
 		</footer>
 
-		<!-- Floating Action Button -->
+		<!-- Speed Dial FAB for Events and Threads -->
 		{#if $auth.isLoggedIn}
-			<button
-				class="tooltip btn fixed tooltip-left right-12 bottom-12 z-10 btn-circle btn-primary"
-				data-tip="Create a new Offer or Need"
-				onclick={openCreatePostModal}
-			>
-				<Plus class="h-6 w-6" />
-			</button>
+			<div class="fab fixed right-8 bottom-8 z-20 fab-flower">
+				<!-- Trigger button -->
+				<div tabindex="0" role="button" class="btn btn-circle btn-lg btn-info"><Plus /></div>
+				<div class="tooltip tooltip-left" data-tip="Close">
+					<div class="fab-close">
+						<span class="btn btn-circle btn-lg btn-error">✕</span>
+					</div>
+				</div>
+
+				<div class="tooltip tooltip-left" data-tip="Create a new Offer or Need">
+					<button
+						class="fab-main-action btn btn-circle btn-lg btn-primary"
+						onclick={openCreatePostModal}
+					>
+						<MapPinPlus />
+					</button>
+				</div>
+				<div></div>
+				<div class="tooltip tooltip-left" data-tip="Create new thread">
+					<button
+						class="btn btn-circle btn-lg btn-secondary"
+						onclick={() => (threadModalOpen = true)}
+					>
+						<MailPlus />
+					</button>
+				</div>
+			</div>
 		{/if}
 	</div>
 

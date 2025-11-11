@@ -27,7 +27,7 @@ type EventData = {
 	tags: string[];
 	location: string;
 	coordinates: { lat: number; lng: number };
-	type: 'Offer' | 'Need';
+	type: 'OFFER' | 'NEED';
 	participantCount: number;
 	maxParticipants?: number;
 	createdAt: string;
@@ -85,7 +85,7 @@ export const load: PageServerLoad = async ({ params, cookies }) => {
 		tags: serverData.tags,
 		location: serverData.location.name,
 		coordinates: { lat: serverData.location.lat, lng: serverData.location.lon },
-		type: serverData.type === 'OFFER' ? 'Offer' : 'Need',
+		type: serverData.type === 'OFFER' ? 'OFFER' : 'NEED',
 		participantCount: 0, // Default, as not provided in server response
 		maxParticipants: serverData.maxParticipants,
 		createdAt: new Date(serverData.createdAt).toLocaleDateString(),

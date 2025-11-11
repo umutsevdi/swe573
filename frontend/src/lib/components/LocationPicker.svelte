@@ -5,18 +5,28 @@
 	interface Props {
 		initialLat?: number;
 		initialLon?: number;
+		initialName?: string;
 		height?: string;
 		onLocationChange?: (location: { lat: number; lon: number; name: string }) => void;
 	}
 
-	let { initialLat, initialLon, height = 'h-48', onLocationChange }: Props = $props();
+	let { initialLat, initialLon, initialName, height = 'h-48', onLocationChange }: Props = $props();
 
 	let mapContainer: HTMLElement;
 	let map: any = null;
 	let marker: any = null;
 	let selectedLat = $state(initialLat ?? 41.0082); // Default to Istanbul
 	let selectedLon = $state(initialLon ?? 28.9784);
-	let locationName = $state('');
+	let locationName = $state(initialName || '');
+
+	// Call onLocationChange immediately with initial values
+	if (onLocationChange) {
+		onLocationChange({
+			lat: selectedLat,
+			lon: selectedLon,
+			name: locationName || `${selectedLat.toFixed(4)}, ${selectedLon.toFixed(4)}`
+		});
+	}
 
 	// Initialize map when component mounts
 	$effect(() => {
@@ -70,14 +80,6 @@
 						console.log('Could not get location name:', error);
 						locationName = `${selectedLat.toFixed(4)}, ${selectedLon.toFixed(4)}`;
 					}
-
-					if (onLocationChange) {
-						onLocationChange({
-							lat: selectedLat,
-							lon: selectedLon,
-							name: locationName
-						});
-					}
 				});
 
 				// Handle map click
@@ -101,14 +103,6 @@
 					} catch (error) {
 						console.log('Could not get location name:', error);
 						locationName = `${selectedLat.toFixed(4)}, ${selectedLon.toFixed(4)}`;
-					}
-
-					if (onLocationChange) {
-						onLocationChange({
-							lat: selectedLat,
-							lon: selectedLon,
-							name: locationName
-						});
 					}
 				});
 
@@ -146,6 +140,17 @@
 
 			// Reverse geocode the initial location
 			reverseGeocode(selectedLat, selectedLon);
+		}
+	});
+
+	// Notify parent when location changes
+	$effect(() => {
+		if (onLocationChange && selectedLat !== undefined && selectedLon !== undefined) {
+			onLocationChange({
+				lat: selectedLat,
+				lon: selectedLon,
+				name: locationName || `${selectedLat.toFixed(4)}, ${selectedLon.toFixed(4)}`
+			});
 		}
 	});
 

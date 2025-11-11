@@ -179,7 +179,7 @@
 		tags: string[];
 		location: string;
 		participantCount: number;
-		type: 'Offer' | 'Need';
+		type: 'OFFER' | 'NEED';
 		eventId: string;
 		ownerId: number;
 	}
@@ -192,7 +192,7 @@
 			tags: event.tagsList,
 			location: event.location.name,
 			participantCount: event.maxParticipants,
-			type: event.type === 'OFFER' ? 'Offer' : 'Need',
+			type: event.type === 'OFFER' ? 'OFFER' : 'NEED',
 			eventId: event.id.toString(),
 			ownerId: event.ownerId
 		};

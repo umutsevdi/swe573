@@ -43,7 +43,7 @@ interface MappedEvent {
 	latitude: number;
 	longitude: number;
 	participantCount: number;
-	type: 'Offer' | 'Need';
+	type: 'OFFER' | 'NEED';
 	date: string;
 	ownerId: number;
 }
@@ -106,7 +106,7 @@ export const load: PageServerLoad = async ({ url, cookies }: { url: URL; cookies
 			latitude: event.location.lat,
 			longitude: event.location.lon,
 			participantCount: event.maxParticipants,
-			type: event.type === 'OFFER' ? 'Offer' : 'Need',
+			type: event.type === 'OFFER' ? 'OFFER' : 'NEED',
 			date: event.eventDate,
 			ownerId: event.ownerId
 		}));

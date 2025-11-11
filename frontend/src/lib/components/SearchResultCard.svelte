@@ -10,7 +10,7 @@
 	export let location: string;
 	export let participantCount: number;
 	export let ownerId: number;
-	export let type: 'Offer' | 'Need' = 'Offer';
+	export let type: 'OFFER' | 'NEED' = 'OFFER';
 	export let eventId: string;
 
 	let badgeColor = (cond: boolean) => (cond ? 'badge-success' : 'badge-accent');
@@ -39,8 +39,8 @@
 		<!-- Title with type badge -->
 		<div class="flex items-center">
 			<h2 class="card-title flex-1">{title}</h2>
-			<div class={`badge font-semibold uppercase ${badgeColor(type === 'Offer')} shrink-0 `}>
-				{#if type === 'Offer'}
+			<div class={`badge font-semibold uppercase ${badgeColor(type === 'OFFER')} shrink-0 `}>
+				{#if type === 'OFFER'}
 					<HeartHandshake class="h-3 w-3" />
 				{:else}
 					<HandHelping class="h-3 w-3" />

@@ -141,7 +141,12 @@
 	});
 </script>
 
-<CreatePostModal bind:this={createPostModal} bind:open={modalOpen} on:submit={handlePostSubmit} />
+<CreatePostModal
+	mode="create"
+	bind:this={createPostModal}
+	bind:open={modalOpen}
+	on:submit={handlePostSubmit}
+/>
 
 <ThreadModal mode="create" bind:open={threadModalOpen} on:submit={handleCreateThreadSubmit} />
 

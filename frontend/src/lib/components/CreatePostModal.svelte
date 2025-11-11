@@ -1,45 +1,66 @@
 <script lang="ts">
 	import { createEventDispatcher } from 'svelte';
-	import {
-		MapPin,
-		Calendar,
-		Clock,
-		Users,
-		Tag,
-		HeartHandshake,
-		HandHelping,
-		Upload
-	} from '@lucide/svelte';
-	import LocationPicker from './LocationPicker.svelte';
+	import { Tag, MapPin } from '@lucide/svelte';
 	import TagInput from './TagInput.svelte';
 	import BaseModal from './BaseModal.svelte';
-	import { createFilePreview } from '$lib/utils/file';
+	import LocationPicker from './LocationPicker.svelte';
 	import { toast } from '$lib/stores/toast';
 
-	const dispatch = createEventDispatcher<{ submit: any; update: any }>();
-
-	let {
-		open = $bindable(false),
-		editData,
-		mode = 'create'
-	} = $props<{
-		open: boolean;
-		editData?: any;
-		mode?: 'create' | 'edit';
+	const dispatch = createEventDispatcher<{
+		submit: {
+			title: string;
+			description: string;
+			tags: string[];
+			location: { lat: number; lon: number; name: string };
+			maxParticipants: number;
+			type: 'OFFER' | 'NEED';
+			duration: number;
+			eventDate: string;
+		};
+		update: {
+			title: string;
+			description: string;
+			tags: string[];
+			location: { lat: number; lon: number; name: string };
+			maxParticipants: number;
+			type: 'OFFER' | 'NEED';
+			duration: number;
+			eventDate: string;
+		};
 	}>();
 
-	let type = $state<'Offer' | 'Need'>('Offer');
+	let {
+		mode,
+		open = $bindable(false),
+		currentTitle = '',
+		currentDescription = '',
+		currentTags = [],
+		currentLocation,
+		currentMaxParticipants = 0,
+		currentType = 'OFFER',
+		currentDuration = 0,
+		currentEventDate = ''
+	} = $props<{
+		mode: 'create' | 'edit';
+		open: boolean;
+		currentTitle?: string;
+		currentDescription?: string;
+		currentTags?: string[];
+		currentLocation?: { lat: number; lon: number; name: string };
+		currentMaxParticipants?: number;
+		currentType?: 'OFFER' | 'NEED';
+		currentDuration?: number;
+		currentEventDate?: string;
+	}>();
+
 	let title = $state('');
 	let description = $state('');
-
-	let backgroundImagePreview = $state<string | null>(null);
-	let location = $state<{ lat: number; lon: number; name: string } | null>(null);
-	let userLat = $state<number>(41.0082); // Default to Istanbul
-	let userLng = $state<number>(28.9784);
-	let eventDate = $state('');
-	let duration = $state('');
-	let capacity = $state(1);
 	let tags = $state<string[]>([]);
+	let location = $state({ lat: 41.0082, lon: 28.9784, name: 'Istanbul' });
+	let maxParticipants = $state(0);
+	let type = $state<'OFFER' | 'NEED'>('OFFER');
+	let duration = $state(1);
+	let eventDate = $state('');
 
 	function openModal() {
 		open = true;
@@ -47,59 +68,61 @@
 
 	function closeModal() {
 		open = false;
-		resetForm();
 	}
 
 	function resetForm() {
-		type = 'Offer';
-		title = '';
-		description = '';
-		backgroundImagePreview = null;
-		location = null;
-		eventDate = '';
-		duration = '';
-		capacity = 1;
-		tags = [];
-	}
-
-	async function handleImageUpload(event: Event) {
-		const target = event.target as HTMLInputElement;
-		const file = target.files?.[0];
-		if (file) {
-			backgroundImagePreview = await createFilePreview(file);
+		if (mode === 'edit') {
+			title = currentTitle || '';
+			description = currentDescription || '';
+			tags = currentTags ? [...currentTags] : [];
+			location = currentLocation
+				? { ...currentLocation }
+				: { lat: 41.0082, lon: 28.9784, name: 'Istanbul' };
+			maxParticipants = currentMaxParticipants || 0;
+			type = currentType || 'OFFER';
+			duration = currentDuration ? Math.floor(currentDuration / 60) : 1;
+			eventDate = currentEventDate || '';
+		} else {
+			title = '';
+			description = '';
+			tags = [];
+			location = { lat: 41.0082, lon: 28.9784, name: 'Istanbul' };
+			maxParticipants = 0;
+			type = 'OFFER';
+			duration = 1;
+			eventDate = new Date().toISOString().split('T')[0];
 		}
 	}
 
-	function convertDurationForEdit(duration: string | number | undefined): string {
-		if (!duration) return '';
-		const durationStr = typeof duration === 'number' ? `${duration} hour(s)` : duration;
-		// Convert from "2 hour(s)" to "2 hours"
-		const match = durationStr.match(/^(\d+)\s*hour\(s\)$/);
-		if (match) {
-			const num = parseInt(match[1]);
-			return num === 1 ? '1 hour' : `${num} hours`;
+	function submitEvent() {
+		if (!title.trim() || !description.trim()) {
+			toast.error('Title and description are required');
+			return;
 		}
-		return durationStr; // fallback
+
+		if (!location || !location.name) {
+			location = { lat: 41.0082, lon: 28.9784, name: 'Istanbul' };
+		}
+
+		const data = {
+			title: title.trim(),
+			description: description,
+			tags,
+			location,
+			maxParticipants,
+			type,
+			duration: duration,
+			eventDate
+		};
+		console.log(data);
+		dispatch(mode === 'edit' ? 'update' : 'submit', data);
+		closeModal();
 	}
 
-	// Prefill form for edit mode
+	// Initialize form on open
 	$effect(() => {
-		if (mode === 'edit' && editData && open) {
-			type = editData.type || 'Offer';
-			title = editData.title || '';
-			description = editData.description || '';
-			tags = editData.tags || [];
-			backgroundImagePreview = editData.backgroundImage || null;
-			if (editData.coordinates) {
-				location = {
-					lat: editData.coordinates.lat,
-					lon: editData.coordinates.lng,
-					name: editData.location
-				};
-			}
-			capacity = editData.maxParticipants || 1;
-			eventDate = editData.targetDate || '';
-			duration = convertDurationForEdit(editData.duration);
+		if (open) {
+			resetForm();
 		}
 	});
 
@@ -110,294 +133,134 @@
 		}
 	});
 
-	function submitPost() {
-		if (!location) {
-			toast.error('Please select a location on the map');
-			return;
-		}
-
-		// Parse duration string to hours
-		function parseDurationToHours(durationStr: string): number {
-			if (!durationStr) return 0;
-			const match = durationStr.match(/^(\d+)\s*(hour|day|week|month)/i);
-			if (!match) return 0;
-			const num = parseInt(match[1]);
-			const unit = match[2].toLowerCase();
-			switch (unit) {
-				case 'hour':
-					return num;
-				case 'day':
-					return num * 24;
-				case 'week':
-					return num * 24 * 7;
-				case 'month':
-					return num * 24 * 30; // approximate
-				default:
-					return num;
-			}
-		}
-
-		let postData: {
-			title: string;
-			description: string;
-			tags: string[];
-			location: { lat: number; lon: number; name: string };
-			maxParticipants: number;
-			type: string;
-			duration: number;
-			eventDate?: string;
-		} = {
-			title,
-			description,
-			tags,
-			location: {
-				lat: location.lat,
-				lon: location.lon,
-				name: location.name
-			},
-			maxParticipants: capacity,
-			type: type === 'Offer' ? 'OFFER' : 'NEED',
-			duration: parseDurationToHours(duration)
-		};
-
-		// Only include eventDate if it's not empty
-		if (eventDate && eventDate.trim()) {
-			postData.eventDate = eventDate;
-		}
-
-		dispatch(
-			mode === 'edit' ? 'update' : 'submit',
-			mode === 'edit' ? { id: editData.id, ...postData } : postData
-		);
-		closeModal();
-	}
-
-	// Get user's current location when component mounts
-	$effect(() => {
-		if (typeof navigator !== 'undefined' && navigator.geolocation) {
-			navigator.geolocation.getCurrentPosition(
-				(position) => {
-					userLat = position.coords.latitude;
-					userLng = position.coords.longitude;
-				},
-				(error) => {
-					console.log('Geolocation error:', error);
-					// Keep default Istanbul coordinates
-				},
-				{
-					enableHighAccuracy: true,
-					timeout: 10000,
-					maximumAge: 300000 // 5 minutes
-				}
-			);
-		}
-		// If geolocation not supported, keep default Istanbul coordinates
-	});
-
 	// Export function for parent component access
 	export { openModal };
 </script>
 
-<BaseModal bind:open size="max-w-5xl">
-	<h3 class="mb-4 flex items-center gap-2 text-lg font-bold">
-		{mode === 'edit' ? 'Edit' : 'Create New'}
-		<div class="join">
-			<button
-				class="btn join-item btn-sm btn-success {type === 'Offer' ? 'btn-active' : ''}"
-				onclick={() => (type = 'Offer')}
-			>
-				<HeartHandshake class="h-4 w-4" />
-				Offer
-			</button>
-			<button
-				class="btn join-item btn-sm btn-accent {type === 'Need' ? 'btn-active' : ''}"
-				onclick={() => (type = 'Need')}
-			>
-				<HandHelping class="h-4 w-4" />
-				Need
-			</button>
-		</div>
+<BaseModal bind:open size="max-w-2xl">
+	<h3 class="mb-4 text-lg font-bold">
+		{mode === 'edit' ? 'Edit Event' : 'Create New Event'}
 	</h3>
 
-	<form onsubmit={submitPost} class="grid grid-cols-1 gap-6 lg:grid-cols-2">
-		<!-- Left Column: All Text Inputs -->
-		<div class="space-y-4">
-			<!-- Title -->
-			<div class="form-control">
-				<label class="label" for="title-input">
-					<span class="label-text">Title</span>
-				</label>
-				<input
-					id="title-input"
-					type="text"
-					placeholder="Enter a descriptive title"
-					class="input-bordered input w-full"
-					bind:value={title}
-					maxlength="256"
-					required
-				/>
-				<div class="mt-1 text-xs text-base-content/60">{title.length} / 256</div>
-			</div>
-
-			<!-- Description -->
-			<div class="form-control">
-				<label class="label" for="description-input">
-					<span class="label-text">Description</span>
-				</label>
-				<textarea
-					id="description-input"
-					placeholder="Describe your offer or need in detail"
-					class="textarea-bordered textarea h-24 w-full"
-					bind:value={description}
-					maxlength="1024"
-					required
-				></textarea>
-				<div class="mt-1 text-xs text-base-content/60">{description.length} / 1024</div>
-			</div>
-
-			<!-- Background Image -->
-			<div class="form-control">
-				<label class="label">
-					<span class="label-text">Background Image</span>
-				</label>
-				<div class="flex items-center gap-4">
-					<div class="avatar">
-						<div class="w-16 rounded-full">
-							{#if backgroundImagePreview}
-								<img src={backgroundImagePreview} alt="Preview" />
-							{:else}
-								<div class="bg-neutral text-neutral-content">
-									<Upload class="h-8 w-8" />
-								</div>
-							{/if}
-						</div>
-					</div>
-					<label class="btn btn-outline btn-sm">
-						<Upload class="mr-2 h-4 w-4" />
-						Upload Image
-						<input type="file" accept="image/*" class="hidden" onchange={handleImageUpload} />
-					</label>
-				</div>
-			</div>
-
-			<!-- Date and Duration Row -->
-			<div class="grid grid-cols-1 gap-4 md:grid-cols-2">
-				<!-- Target Date -->
-				<div class="form-control">
-					<label class="label" for="date-input">
-						<span class="label-text flex items-center gap-2">
-							<Calendar class="h-4 w-4" />
-							Target Date
-						</span>
-					</label>
-					<input
-						id="date-input"
-						type="date"
-						class="input-bordered input"
-						bind:value={eventDate}
-						required
-					/>
-				</div>
-
-				<!-- Duration -->
-				<div class="form-control">
-					<label class="label" for="duration-select">
-						<span class="label-text flex items-center gap-2">
-							<Clock class="h-4 w-4" />
-							Duration
-						</span>
-					</label>
-					<select
-						id="duration-select"
-						class="select-bordered select"
-						bind:value={duration}
-						required
-					>
-						<option value="" disabled selected>Select duration</option>
-						<option value="1 hour">1 hour</option>
-						<option value="2 hours">2 hours</option>
-						<option value="3 hours">3 hours</option>
-						<option value="4 hours">4 hours</option>
-						<option value="1 day">1 day</option>
-						<option value="2 days">2 days</option>
-						<option value="3 days">3 days</option>
-						<option value="1 week">1 week</option>
-						<option value="2 weeks">2 weeks</option>
-						<option value="1 month">1 month</option>
-						<option value="Ongoing">Ongoing</option>
-					</select>
-				</div>
-			</div>
-
-			<!-- Capacity -->
-			<div class="form-control">
-				<label class="label" for="capacity-input">
-					<span class="label-text flex items-center gap-2">
-						<Users class="h-4 w-4" />
-						Capacity
-					</span>
-				</label>
-				<input
-					id="capacity-input"
-					type="number"
-					min="1"
-					max="100"
-					class="input-bordered input"
-					bind:value={capacity}
-					required
-				/>
-			</div>
-
-			<!-- Tags -->
-			<div class="form-control">
-				<label class="label">
-					<span class="label-text flex items-center gap-2">
-						<Tag class="h-4 w-4" />
-						Tags
-					</span>
-				</label>
-				<TagInput bind:tags />
-			</div>
+	<form onsubmit={submitEvent} class="space-y-4">
+		<!-- Title -->
+		<div class="form-control">
+			<label class="label" for="title-input">
+				<span class="label-text">Title</span>
+			</label>
+			<input
+				id="title-input"
+				type="text"
+				placeholder="Enter event title"
+				class="input-bordered input w-full"
+				bind:value={title}
+				maxlength="256"
+				required
+			/>
+			<div class="mt-1 text-xs text-base-content/60">{title.length} / 256</div>
 		</div>
 
-		<!-- Right Column: Location Map -->
-		<div class="space-y-4">
-			<!-- Location -->
-			<div class="form-control">
-				<label class="label">
-					<span class="label-text flex items-center gap-2">
-						<MapPin class="h-4 w-4" />
-						Location
-					</span>
-				</label>
-				<div class="rounded-lg border border-base-300 p-2">
-					<LocationPicker
-						initialLat={mode === 'edit' && editData?.coordinates
-							? editData.coordinates.lat
-							: userLat}
-						initialLon={mode === 'edit' && editData?.coordinates
-							? editData.coordinates.lng
-							: userLng}
-						height="h-96"
-						onLocationChange={(newLocation) => {
-							location = newLocation;
-						}}
-					/>
-				</div>
-				{#if location}
-					<p class="mt-2 text-sm text-base-content/70">
-						Selected location: <strong>{location.name}</strong>
-					</p>
-				{/if}
-			</div>
+		<!-- Description -->
+		<div class="form-control">
+			<label class="label" for="description-input">
+				<span class="label-text">Description</span>
+			</label>
+			<textarea
+				id="description-input"
+				placeholder="Describe your event"
+				class="textarea-bordered textarea h-24 w-full"
+				bind:value={description}
+				maxlength="1024"
+				required
+			></textarea>
+			<div class="mt-1 text-xs text-base-content/60">{description.length} / 1024</div>
 		</div>
 
-		<!-- Action Buttons (spans both columns) -->
-		<div class="modal-action lg:col-span-2">
+		<!-- Tags -->
+		<div class="form-control">
+			<label class="label">
+				<span class="label-text flex items-center gap-2">
+					<Tag class="h-4 w-4" />
+					Tags
+				</span>
+			</label>
+			<TagInput bind:tags />
+		</div>
+
+		<!-- Location -->
+		<div class="form-control">
+			<label class="label">
+				<span class="label-text flex items-center gap-2">
+					<MapPin class="h-4 w-4" />
+					Location
+				</span>
+			</label>
+			<LocationPicker
+				initialLat={mode === 'edit' && currentLocation ? currentLocation.lat : undefined}
+				initialLon={mode === 'edit' && currentLocation ? currentLocation.lon : undefined}
+				initialName={mode === 'edit' && currentLocation ? currentLocation.name : undefined}
+				onLocationChange={(loc) => (location = loc)}
+			/>
+		</div>
+
+		<!-- Max Participants -->
+		<div class="form-control">
+			<label class="label" for="max-participants">
+				<span class="label-text">Max Participants</span>
+			</label>
+			<input
+				id="max-participants"
+				type="number"
+				class="input-bordered input w-full"
+				bind:value={maxParticipants}
+				min="0"
+			/>
+		</div>
+
+		<!-- Type -->
+		<div class="form-control">
+			<label class="label" for="type">
+				<span class="label-text">Type</span>
+			</label>
+			<select id="type" class="select-bordered select w-full" bind:value={type}>
+				<option value="OFFER">OFFER</option>
+				<option value="NEED">NEED</option>
+			</select>
+		</div>
+
+		<!-- Duration -->
+		<div class="form-control">
+			<label class="label" for="duration">
+				<span class="label-text">Duration (hours)</span>
+			</label>
+			<input
+				id="duration"
+				type="number"
+				class="input-bordered input w-full"
+				bind:value={duration}
+				min="1"
+				max="12"
+			/>
+		</div>
+
+		<!-- Event Date -->
+		<div class="form-control">
+			<label class="label" for="event-date">
+				<span class="label-text">Event Date</span>
+			</label>
+			<input
+				id="event-date"
+				type="date"
+				class="input-bordered input w-full"
+				bind:value={eventDate}
+			/>
+		</div>
+
+		<!-- Action Buttons -->
+		<div class="modal-action">
 			<button type="button" class="btn" onclick={closeModal}>Cancel</button>
 			<button type="submit" class="btn btn-primary">
-				{mode === 'edit' ? 'Save' : 'Post'}
-				{type}
+				{mode === 'edit' ? 'Update' : 'Create Event'}
 			</button>
 		</div>
 	</form>

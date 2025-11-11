@@ -65,34 +65,44 @@
 	let showEditModal = $state(false);
 	let showParticipationModal = $state(false);
 
-	async function updateEvent(data: any) {
+	async function updateEvent(event: CustomEvent) {
+		const eventData = event.detail;
 		try {
 			const eventId = $page.params.id;
-			const originalEvent = event;
 
-			// Map modal data to server format
+			// Map the data to server format, full object with updated fields
 			const serverData = {
-				title: data.title,
-				description: data.description,
-				tags: data.tags,
-				location: data.location
-					? {
-							lat: data.location.lat,
-							lon: data.location.lon,
-							name: data.location.name
-						}
-					: {
-							lat: event.coordinates?.lat || 0,
-							lon: event.coordinates?.lng || 0,
-							name: event.location
-						},
-				maxParticipants: data.capacity,
-				type: data.type === 'Offer' ? 'OFFER' : 'NEED',
-				duration: parseDuration(data.duration),
-				eventDate: data.eventDate
+				title: eventData.title !== undefined ? eventData.title : data.event.title,
+				description:
+					eventData.description !== undefined ? eventData.description : data.event.description,
+				tags: eventData.tags !== undefined ? eventData.tags : data.event.tags,
+				location:
+					eventData.location !== undefined
+						? {
+								lat: eventData.location.lat,
+								lon: eventData.location.lon,
+								name: eventData.location.name
+							}
+						: data.event.coordinates
+							? {
+									lat: data.event.coordinates.lat,
+									lon: data.event.coordinates.lng,
+									name: data.event.location
+								}
+							: undefined,
+				maxParticipants:
+					eventData.maxParticipants !== undefined
+						? eventData.maxParticipants
+						: data.event.maxParticipants,
+				type: eventData.type || data.event.type,
+				duration:
+					eventData.duration !== undefined
+						? eventData.duration
+						: parseDuration(data.event.duration),
+				eventDate: eventData.eventDate !== undefined ? eventData.eventDate : data.event.targetDate
 			};
 
-			// Make API call with all data
+			// Make API call
 			const response = await fetch(`${CLIENT_BASE_URL}/event/${eventId}`, {
 				method: 'PUT',
 				headers: {
@@ -440,7 +450,7 @@
 									class="btn btn-lg btn-primary"
 									onclick={() => (showParticipationModal = true)}
 								>
-									{#if event.type === 'Offer'}
+									{#if event.type === 'OFFER'}
 										<HeartHandshake class="h-5 w-5" />
 									{:else}
 										<HandHelping class="h-5 w-5" />
@@ -457,7 +467,7 @@
 								</button>
 							{:else if userParticipationStatus === 'accepted'}
 								<button class="btn btn-outline btn-lg btn-primary" onclick={leaveEvent}>
-									{#if event.type === 'Offer'}
+									{#if event.type === 'OFFER'}
 										<HeartHandshake class="h-5 w-5" />
 									{:else}
 										<HandHelping class="h-5 w-5" />
@@ -852,8 +862,21 @@
 
 		<CreatePostModal
 			bind:open={showEditModal}
-			editData={data.event}
 			mode="edit"
+			currentTitle={data.event.title}
+			currentDescription={data.event.description}
+			currentTags={data.event.tags}
+			currentLocation={data.event.coordinates
+				? {
+						lat: data.event.coordinates.lat,
+						lon: data.event.coordinates.lng,
+						name: data.event.location
+					}
+				: undefined}
+			currentMaxParticipants={data.event.maxParticipants}
+			currentType={data.event.type}
+			currentDuration={data.event.duration ? parseInt(data.event.duration.split(' ')[0]) : 0}
+			currentEventDate={data.event.targetDate}
 			on:update={updateEvent}
 		/>
 	</div>

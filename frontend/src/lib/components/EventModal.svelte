@@ -142,122 +142,144 @@
 		{mode === 'edit' ? 'Edit Event' : 'Create New Event'}
 	</h3>
 
-	<form onsubmit={submitEvent} class="space-y-4">
-		<!-- Title -->
-		<div class="form-control">
-			<label class="label" for="title-input">
-				<span class="label-text">Title</span>
-			</label>
-			<input
-				id="title-input"
-				type="text"
-				placeholder="Enter event title"
-				class="input-bordered input w-full"
-				bind:value={title}
-				maxlength="256"
-				required
-			/>
-			<div class="mt-1 text-xs text-base-content/60">{title.length} / 256</div>
+	<form onsubmit={submitEvent}>
+		<!-- Top Section: Title, Description, Tags on left; Map on right -->
+		<div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
+			<!-- Left Column -->
+			<div class="space-y-4">
+				<!-- Title -->
+				<div class="form-control">
+					<label class="label" for="title-input">
+						<span class="label-text">Title</span>
+					</label>
+					<input
+						id="title-input"
+						type="text"
+						placeholder="Enter event title"
+						class="input-bordered input w-full"
+						bind:value={title}
+						maxlength="256"
+						required
+					/>
+					<div class="mt-1 text-xs text-base-content/60">{title.length} / 256</div>
+				</div>
+
+				<!-- Type -->
+				<div class="form-control">
+					<div class="join w-full">
+						<input
+							class="btn join-item {type === 'OFFER' ? 'btn-success' : 'btn-outline'}"
+							type="radio"
+							bind:group={type}
+							value="OFFER"
+							aria-label="OFFER"
+						/>
+						<input
+							class="btn join-item {type === 'NEED' ? 'btn-accent' : 'btn-outline'}"
+							type="radio"
+							bind:group={type}
+							value="NEED"
+							aria-label="NEED"
+						/>
+					</div>
+				</div>
+
+				<!-- Description -->
+				<div class="form-control">
+					<label class="label" for="description-input">
+						<span class="label-text">Description</span>
+					</label>
+					<textarea
+						id="description-input"
+						placeholder="Describe your event"
+						class="textarea-bordered textarea h-24 w-full"
+						bind:value={description}
+						maxlength="1024"
+						required
+					></textarea>
+					<div class="mt-1 text-xs text-base-content/60">{description.length} / 1024</div>
+				</div>
+
+				<!-- Tags -->
+				<div class="form-control">
+					<label class="label">
+						<span class="label-text flex items-center gap-2">
+							<Tag class="h-4 w-4" />
+							Tags
+						</span>
+					</label>
+					<TagInput bind:tags />
+				</div>
+			</div>
+
+			<!-- Right Column -->
+			<div>
+				<!-- Location -->
+				<div class="form-control">
+					<label class="label">
+						<span class="label-text flex items-center gap-2">
+							<MapPin class="h-4 w-4" />
+							Location
+						</span>
+					</label>
+					<LocationPicker
+						initialLat={mode === 'edit' && currentLocation ? currentLocation.lat : undefined}
+						initialLon={mode === 'edit' && currentLocation ? currentLocation.lon : undefined}
+						initialName={mode === 'edit' && currentLocation ? currentLocation.name : undefined}
+						height="h-96"
+						onLocationChange={(loc) => (location = loc)}
+					/>
+				</div>
+			</div>
 		</div>
 
-		<!-- Description -->
-		<div class="form-control">
-			<label class="label" for="description-input">
-				<span class="label-text">Description</span>
-			</label>
-			<textarea
-				id="description-input"
-				placeholder="Describe your event"
-				class="textarea-bordered textarea h-24 w-full"
-				bind:value={description}
-				maxlength="1024"
-				required
-			></textarea>
-			<div class="mt-1 text-xs text-base-content/60">{description.length} / 1024</div>
-		</div>
+		<!-- Bottom Row: Max Participants, Duration, Event Date -->
+		<div class="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-3">
+			<!-- Max Participants -->
+			<div class="form-control">
+				<label class="label" for="max-participants">
+					<span class="label-text">Max Participants</span>
+				</label>
+				<input
+					id="max-participants"
+					type="number"
+					class="input-bordered input w-full"
+					bind:value={maxParticipants}
+					min="0"
+				/>
+			</div>
 
-		<!-- Tags -->
-		<div class="form-control">
-			<label class="label">
-				<span class="label-text flex items-center gap-2">
-					<Tag class="h-4 w-4" />
-					Tags
-				</span>
-			</label>
-			<TagInput bind:tags />
-		</div>
+			<!-- Duration -->
+			<div class="form-control">
+				<label class="label" for="duration">
+					<span class="label-text">Duration (hours)</span>
+				</label>
+				<input
+					id="duration"
+					type="number"
+					class="input-bordered input w-full"
+					bind:value={duration}
+					min="1"
+					max="12"
+				/>
+			</div>
 
-		<!-- Location -->
-		<div class="form-control">
-			<label class="label">
-				<span class="label-text flex items-center gap-2">
-					<MapPin class="h-4 w-4" />
-					Location
-				</span>
-			</label>
-			<LocationPicker
-				initialLat={mode === 'edit' && currentLocation ? currentLocation.lat : undefined}
-				initialLon={mode === 'edit' && currentLocation ? currentLocation.lon : undefined}
-				initialName={mode === 'edit' && currentLocation ? currentLocation.name : undefined}
-				onLocationChange={(loc) => (location = loc)}
-			/>
-		</div>
-
-		<!-- Max Participants -->
-		<div class="form-control">
-			<label class="label" for="max-participants">
-				<span class="label-text">Max Participants</span>
-			</label>
-			<input
-				id="max-participants"
-				type="number"
-				class="input-bordered input w-full"
-				bind:value={maxParticipants}
-				min="0"
-			/>
-		</div>
-
-		<!-- Type -->
-		<div class="form-control">
-			<label class="label" for="type">
-				<span class="label-text">Type</span>
-			</label>
-			<select id="type" class="select-bordered select w-full" bind:value={type}>
-				<option value="OFFER">OFFER</option>
-				<option value="NEED">NEED</option>
-			</select>
-		</div>
-
-		<!-- Duration -->
-		<div class="form-control">
-			<label class="label" for="duration">
-				<span class="label-text">Duration (hours)</span>
-			</label>
-			<input
-				id="duration"
-				type="number"
-				class="input-bordered input w-full"
-				bind:value={duration}
-				min="1"
-				max="12"
-			/>
-		</div>
-
-		<!-- Event Date -->
-		<div class="form-control">
-			<label class="label" for="event-date">
-				<span class="label-text">Event Date</span>
-			</label>
-			<input
-				id="event-date"
-				type="date"
-				class="input-bordered input w-full"
-				bind:value={eventDate}
-			/>
+			<!-- Event Date -->
+			<div class="form-control">
+				<label class="label" for="event-date">
+					<span class="label-text">Event Date</span>
+				</label>
+				<input
+					id="event-date"
+					type="date"
+					class="input-bordered input w-full"
+					bind:value={eventDate}
+				/>
+			</div>
 		</div>
 
 		<!-- Action Buttons -->
-		<div class="modal-action">
+		<div class="modal-action mt-6">
 			<button type="button" class="btn" onclick={closeModal}>Cancel</button>
 			<button type="submit" class="btn btn-primary">
 				{mode === 'edit' ? 'Update' : 'Create Event'}

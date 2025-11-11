@@ -84,68 +84,82 @@
 			<div class="mb-4 bg-base-100 p-4">
 				<h2 class="mb-4 flex items-center gap-2 text-lg font-bold"><Funnel /> Filters</h2>
 				<form onsubmit={handleSubmit}>
-					<div class="flex flex-wrap items-center gap-4">
-						<!-- Search input -->
-						<div class="form-control flex-1">
-							<input
-								type="text"
-								placeholder="Search events..."
-								class="input-bordered input"
-								bind:value={q}
-							/>
-						</div>
-
-						<!-- Tags -->
-						<div class="form-control flex-1">
-							<div class="flex gap-2">
+					<!-- Top Grid -->
+					<div class="mb-4 grid grid-cols-1 gap-4 lg:grid-cols-2">
+						<!-- Left: Title and Tags -->
+						<div class="space-y-4">
+							<!-- Search input -->
+							<div class="form-control">
 								<input
 									type="text"
-									placeholder="Add tag..."
+									placeholder="Search events..."
 									class="input-bordered input"
-									bind:value={tagInput}
-									onkeydown={(e) => {
-										if (e.key === 'Enter') {
-											e.preventDefault();
-											addTag();
-										}
-									}}
+									bind:value={q}
 								/>
-								<button type="button" class="btn btn-outline" onclick={addTag}>+</button>
-							</div>
-						</div>
-						<!-- Start and End dates in one row -->
-						<div class="flex gap-4">
-							<div class="form-control">
-								<label class="label">
-									Start Date
-									<input type="date" class="input-bordered input" bind:value={start} />
-								</label>
 							</div>
 
+							<!-- Tags -->
 							<div class="form-control">
-								<label class="label">
-									End Date
-									<input type="date" class="input-bordered input" bind:value={end} />
-								</label>
+								<div class="flex gap-2">
+									<input
+										type="text"
+										placeholder="Add tag..."
+										class="input-bordered input"
+										bind:value={tagInput}
+										onkeydown={(e) => {
+											if (e.key === 'Enter') {
+												e.preventDefault();
+												addTag();
+											}
+										}}
+									/>
+									<button type="button" class="btn btn-outline" onclick={addTag}>+</button>
+								</div>
 							</div>
 						</div>
-						<!-- Proximity -->
-						<div class="form-control">
-							<div class="gap-4 lg:flex">
-								Proximity
-								<input
-									type="range"
-									min="0"
-									max="1000"
-									class="range flex-1"
-									bind:value={proximity}
-								/>
-								<span class="label-text">{proximity != 0 ? `${proximity}km` : 'No Filter'}</span>
+
+						<!-- Right: Dates -->
+						<div class="space-y-4">
+							<div class="flex items-center gap-4">
+								<!-- Start Date -->
+								<div class="form-control">
+									<label class="label">
+										Between
+										<input type="date" class="input-bordered input" bind:value={start} />
+									</label>
+								</div>
+
+								<!-- End Date -->
+								<div class="form-control">
+									<label class="label">
+										<input type="date" class="input-bordered input" bind:value={end} />
+									</label>
+								</div>
+							</div>
+
+							<div class="flex items-center gap-4">
+								<!-- Proximity -->
+								<div class="form-control flex-1">
+									<div class="flex items-center gap-4">
+										<span class="label-text">Proximity</span>
+										<input
+											type="range"
+											min="0"
+											max="1000"
+											class="range flex-1"
+											bind:value={proximity}
+										/>
+										<span class="label-text">{proximity != 0 ? `${proximity}km` : 'No Filter'}</span
+										>
+									</div>
+								</div>
+								<!-- Search button -->
+								<button type="submit" class="btn btn-primary"><Search /></button>
 							</div>
 						</div>
-						<!-- Search button -->
-						<button type="submit" class="btn btn-primary"><Search /></button>
 					</div>
+
+					<!-- Bottom: Proximity and Search -->
 
 					<!-- Active filters display -->
 					<div class="mt-4">
@@ -201,7 +215,7 @@
 				</div>
 
 				<!-- Right: List of cards -->
-				<div class="space-y-4">
+				<div class="h-[75vh] space-y-4 overflow-y-auto">
 					{#each data.events as event (event.id)}
 						<SearchResultCard
 							title={event.title}

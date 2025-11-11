@@ -27,7 +27,7 @@ public class EventService {
     private final EventMapper mapper;
     private final UserMapper userMapper;
 
-    @Cacheable(cacheNames = "getUserEvents", key = "#userId")
+    @Cacheable(cacheNames = "getUserEvents", key = "{#userId, #showInactive}")
     public List<EventListView> getUserEvents(Long userId, boolean showInactive) {
         if (showInactive) {
             return repository.findByOwner_Id(userId);

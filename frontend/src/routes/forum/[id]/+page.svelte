@@ -1,8 +1,7 @@
 <script lang="ts">
 	import { ArrowLeft, MessageSquare, Calendar } from '@lucide/svelte';
 	import { resolve } from '$app/paths';
-	import { enhance } from '$app/forms';
-	import { invalidateAll } from '$app/navigation';
+	import { goto } from '$app/navigation';
 	import ForumPost from '$lib/components/ForumPost.svelte';
 	import UserAvatar from '$lib/components/UserAvatar.svelte';
 	import ThreadModal from '$lib/components/ThreadModal.svelte';
@@ -29,7 +28,7 @@
 	};
 
 	let { data } = $props();
-	let topic = $derived(data as ForumTopicData);
+	let topic = $state(data as ForumTopicData);
 
 	let newMessageContent = $state('');
 	let replyingTo = $state<ForumPostData | null>(null);
@@ -92,6 +91,48 @@
 			toast.error('Failed to update thread');
 		}
 	}
+
+	async function handleSubmit(event: Event) {
+		event.preventDefault();
+		const message = newMessageContent.trim();
+		if (!message) {
+			toast.error('Message cannot be empty');
+			return;
+		}
+
+		try {
+			const response = await fetch(`${CLIENT_BASE_URL}/thread/${topic.id}/reply`, {
+				method: 'POST',
+				headers: {
+					Authorization: `Bearer ${$auth.token}`,
+					'Content-Type': 'application/json'
+				},
+				body: JSON.stringify({ message })
+			});
+
+			if (response.ok) {
+				const result = await response.json();
+				toast.success('Reply posted successfully!');
+				// Add the new reply to the posts array
+				topic.posts = [
+					...topic.posts,
+					{
+						content: result.message,
+						timestamp: new Date(result.createdAt).toLocaleString(),
+						userId: result.ownerId
+					}
+				];
+				topic.repliesCount += 1;
+				newMessageContent = '';
+				replyingTo = null;
+			} else {
+				toast.error('Failed to post reply');
+			}
+		} catch (error) {
+			console.error('Error posting reply:', error);
+			toast.error('Failed to post reply');
+		}
+	}
 </script>
 
 {#if topic}
@@ -146,19 +187,7 @@
 					<div class="mt-8">
 						<div class="card bg-base-100 shadow-sm">
 							<div class="card-body p-4">
-								<form
-									method="POST"
-									action="?/reply"
-									use:enhance={() => {
-										return async ({ result }) => {
-											if (result.type === 'success') {
-												newMessageContent = '';
-												invalidateAll();
-											}
-										};
-									}}
-								>
-									<input type="hidden" name="message" bind:value={newMessageContent} />
+								<form onsubmit={handleSubmit}>
 									<textarea
 										class="textarea-bordered textarea mb-2 w-full"
 										placeholder="Write your message..."

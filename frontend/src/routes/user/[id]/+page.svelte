@@ -11,7 +11,7 @@
 	} from '@lucide/svelte';
 	import type { PageProps } from './$types';
 	import SearchResultCard from '$lib/components/SearchResultCard.svelte';
-	import EditProfileModal from '$lib/components/EditProfileModal.svelte';
+	import ProfileModal from '$lib/components/ProfileModal.svelte';
 	import { CLIENT_BASE_URL } from '$lib/config';
 	import { auth } from '$lib/stores/auth';
 	import { page } from '$app/stores';
@@ -396,7 +396,7 @@
 	</div>
 </div>
 
-<EditProfileModal
+<ProfileModal
 	bind:open={editModalOpen}
 	currentBiography={biography}
 	currentInterests={interests}

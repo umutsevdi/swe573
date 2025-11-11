@@ -2,7 +2,7 @@
 	import '../app.css';
 	import { resolve } from '$app/paths';
 	import { enhance } from '$app/forms';
-	import CreatePostModal from '$lib/components/CreatePostModal.svelte';
+	import EventModal from '$lib/components/EventModal.svelte';
 	import ThreadModal from '$lib/components/ThreadModal.svelte';
 	import Toast from '$lib/components/Toast.svelte';
 	import favicon from '$lib/assets/favicon.svg';
@@ -22,6 +22,7 @@
 	import { auth } from '$lib/stores/auth';
 	import { toast } from '$lib/stores/toast';
 	import { goto, invalidateAll } from '$app/navigation';
+	import { page } from '$app/stores';
 	import { CLIENT_BASE_URL } from '$lib/config';
 
 	let { children } = $props();
@@ -30,6 +31,24 @@
 	let modalOpen = $state(false);
 	let threadModalOpen = $state(false);
 	let navbarAvatarUrl = $state<string | null>(null);
+
+	function getPageTitle(pathname: string): string {
+		if (pathname === '/') return 'Discover';
+		if (pathname.startsWith('/forum')) return 'Forum';
+		if (pathname.startsWith('/inbox')) return 'Inbox';
+		if (pathname.startsWith('/user/')) return 'Profile';
+		if (pathname.startsWith('/event/')) return 'Event';
+		if (pathname === '/auth') return 'Login';
+		return 'Hive';
+	}
+
+	let pageTitle = $derived(getPageTitle($page.url.pathname));
+	let title = $derived($auth.isLoggedIn ? `${pageTitle} | Hive` : 'Hive');
+
+	function isActive(path: string): boolean {
+		if (path === '/') return $page.url.pathname === '/';
+		return $page.url.pathname.startsWith(path);
+	}
 
 	function openCreatePostModal() {
 		(createPostModal as any)?.openModal();
@@ -141,7 +160,7 @@
 	});
 </script>
 
-<CreatePostModal
+<EventModal
 	mode="create"
 	bind:this={createPostModal}
 	bind:open={modalOpen}
@@ -229,7 +248,9 @@
 					<li>
 						<a
 							href={resolve('/')}
-							class="is-drawer-close:tooltip is-drawer-close:tooltip-right"
+							class="is-drawer-close:tooltip is-drawer-close:tooltip-right {isActive('/')
+								? 'bg-primary text-primary-content'
+								: ''}"
 							data-tip="Discover"
 							><MapPinned class="h-6 w-6" />
 							<span class="is-drawer-close:hidden">Discover</span>
@@ -238,7 +259,9 @@
 					<li>
 						<a
 							href={resolve('/forum')}
-							class="is-drawer-close:tooltip is-drawer-close:tooltip-right"
+							class="is-drawer-close:tooltip is-drawer-close:tooltip-right {isActive('/forum')
+								? 'bg-primary text-primary-content'
+								: ''}"
 							data-tip="Forum"
 							><Mails class="h-6 w-6" />
 							<span class="is-drawer-close:hidden">Forum</span>
@@ -247,7 +270,9 @@
 					<li>
 						<a
 							href={resolve('/inbox')}
-							class="is-drawer-close:tooltip is-drawer-close:tooltip-right"
+							class="is-drawer-close:tooltip is-drawer-close:tooltip-right {isActive('/inbox')
+								? 'bg-primary text-primary-content'
+								: ''}"
 							data-tip="Inbox"
 							><Bell class="h-6 w-6" />
 							<span class="is-drawer-close:hidden">Inbox</span>
@@ -256,7 +281,9 @@
 					<li>
 						<a
 							href={resolve(`/user/${$auth.userCard?.id}`)}
-							class="is-drawer-close:tooltip is-drawer-close:tooltip-right"
+							class="is-drawer-close:tooltip is-drawer-close:tooltip-right {isActive('/user')
+								? 'bg-primary text-primary-content'
+								: ''}"
 							data-tip="Profile"
 						>
 							<div class="avatar">
@@ -272,7 +299,9 @@
 					<li>
 						<a
 							href={resolve('/inbox')}
-							class="is-drawer-close:tooltip is-drawer-close:tooltip-right"
+							class="is-drawer-close:tooltip is-drawer-close:tooltip-right {isActive('/inbox')
+								? 'bg-primary text-primary-content'
+								: ''}"
 							data-tip="Settings"
 							><Settings class="h-6 w-6" />
 							<span class="is-drawer-close:hidden">Settings</span>
@@ -306,5 +335,6 @@
 	</div>
 </div>
 <svelte:head>
+	<title>{title}</title>
 	<link rel="icon" href={favicon} />
 </svelte:head>

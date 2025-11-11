@@ -12,7 +12,7 @@
 	} from '@lucide/svelte';
 	import { resolve } from '$app/paths';
 	import MapComponent from '$lib/components/MapComponent.svelte';
-	import CreatePostModal from '$lib/components/CreatePostModal.svelte';
+	import EventModal from '$lib/components/EventModal.svelte';
 	import UserAvatar from '$lib/components/UserAvatar.svelte';
 	import { CLIENT_BASE_URL } from '$lib/config';
 	import { auth } from '$lib/stores/auth';
@@ -424,7 +424,7 @@
 						</a>
 						<div class="mb-2 flex items-center gap-3">
 							<div
-								class="badge badge-lg {event.type === 'OFFER' ? 'badge-primary' : 'badge-accent'}"
+								class="badge badge-lg {event.type === 'OFFER' ? 'badge-success' : 'badge-accent'}"
 							>
 								{#if event.type === 'OFFER'}
 									<HeartHandshake class="h-4 w-4" />
@@ -860,7 +860,7 @@
 			></div>
 		</div>
 
-		<CreatePostModal
+		<EventModal
 			bind:open={showEditModal}
 			mode="edit"
 			currentTitle={data.event.title}

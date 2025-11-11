@@ -6,7 +6,7 @@ services:
   db:
     image: 'postgres:18-alpine'
     volumes:
-      - /hive/db/:/var/lib/postgresql/18/docker:Z
+      - ./db/:/var/lib/postgresql/18/docker:Z
     env_file:
       - ./prod.env
     networks:
@@ -28,8 +28,9 @@ services:
     ports:
       - '80:3000'
     environment:
-      - SERVER_URL=
-      - CLIENT_BASE_URL=
+      - SERVER_URL=http://backend:8080
+      - CLIENT_BASE_URL=http://localhost:8080
+      - ALLOWED_ORIGINS=localhost:*
     depends_on:
       - backend
     networks:

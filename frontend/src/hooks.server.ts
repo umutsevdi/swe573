@@ -8,5 +8,17 @@ export const handle: Handle = async ({ event, resolve }) => {
 		throw redirect(302, '/auth');
 	}
 
-	return resolve(event);
+	const response = await resolve(event);
+
+	if (response.headers.get('content-type')?.includes('text/html')) {
+		const body = await response.text();
+		const clientBaseUrl = process.env.CLIENT_BASE_URL || 'http://localhost:8080';
+		const modifiedBody = body.replace('%CLIENT_BASE_URL%', clientBaseUrl);
+		return new Response(modifiedBody, {
+			status: response.status,
+			headers: response.headers
+		});
+	}
+
+	return response;
 };

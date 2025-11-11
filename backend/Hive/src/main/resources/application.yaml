@@ -23,3 +23,5 @@ springdoc:
     path: /docs/openapi
   swagger-ui:
     path: /docs/swagger-ui.html
+origin:
+  allowed: ${ALLOWED_ORIGINS}

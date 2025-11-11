@@ -3,9 +3,7 @@ FROM node:25-alpine
 
 WORKDIR /app
 
-# Accept build arg for server URL
-ARG VITE_SERVER_URL=http://localhost:8080
-ENV VITE_SERVER_URL=$VITE_SERVER_URL
+
 
 # Copy package files
 COPY package*.json ./

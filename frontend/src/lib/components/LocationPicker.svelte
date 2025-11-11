@@ -4,18 +4,18 @@
 
 	interface Props {
 		initialLat?: number;
-		initialLng?: number;
+		initialLon?: number;
 		height?: string;
-		onLocationChange?: (location: { lat: number; lng: number; name: string }) => void;
+		onLocationChange?: (location: { lat: number; lon: number; name: string }) => void;
 	}
 
-	let { initialLat, initialLng, height = 'h-48', onLocationChange }: Props = $props();
+	let { initialLat, initialLon, height = 'h-48', onLocationChange }: Props = $props();
 
 	let mapContainer: HTMLElement;
 	let map: any = null;
 	let marker: any = null;
 	let selectedLat = $state(initialLat ?? 41.0082); // Default to Istanbul
-	let selectedLng = $state(initialLng ?? 28.9784);
+	let selectedLon = $state(initialLon ?? 28.9784);
 	let locationName = $state('');
 
 	// Initialize map when component mounts
@@ -34,7 +34,7 @@
 				});
 
 				// Initialize map
-				map = L.map(mapContainer).setView([selectedLat, selectedLng], 13);
+				map = L.map(mapContainer).setView([selectedLat, selectedLon], 13);
 
 				// Add Carto tiles based on theme
 				const theme = document.documentElement.getAttribute('data-theme') || 'light';
@@ -49,18 +49,18 @@
 				}).addTo(map);
 
 				// Add draggable marker
-				marker = L.marker([selectedLat, selectedLng], { draggable: true }).addTo(map);
+				marker = L.marker([selectedLat, selectedLon], { draggable: true }).addTo(map);
 
 				// Handle marker drag
 				marker.on('dragend', async (event: any) => {
 					const position = event.target.getLatLng();
 					selectedLat = position.lat;
-					selectedLng = position.lng;
+					selectedLon = position.lng;
 
 					// Reverse geocode to get location name
 					try {
 						const response = await fetch(
-							`https://nominatim.openstreetmap.org/reverse?format=json&lat=${selectedLat}&lon=${selectedLng}&zoom=10&addressdetails=1`
+							`https://nominatim.openstreetmap.org/reverse?format=json&lat=${selectedLat}&lon=${selectedLon}&zoom=10&addressdetails=1`
 						);
 						const data = await response.json();
 						if (data && data.display_name) {
@@ -68,13 +68,13 @@
 						}
 					} catch (error) {
 						console.log('Could not get location name:', error);
-						locationName = `${selectedLat.toFixed(4)}, ${selectedLng.toFixed(4)}`;
+						locationName = `${selectedLat.toFixed(4)}, ${selectedLon.toFixed(4)}`;
 					}
 
 					if (onLocationChange) {
 						onLocationChange({
 							lat: selectedLat,
-							lng: selectedLng,
+							lon: selectedLon,
 							name: locationName
 						});
 					}
@@ -84,7 +84,7 @@
 				map.on('click', async (event: any) => {
 					const { lat, lng } = event.latlng;
 					selectedLat = lat;
-					selectedLng = lng;
+					selectedLon = lng;
 
 					// Move marker to clicked location
 					marker.setLatLng([lat, lng]);
@@ -92,7 +92,7 @@
 					// Reverse geocode to get location name
 					try {
 						const response = await fetch(
-							`https://nominatim.openstreetmap.org/reverse?format=json&lat=${selectedLat}&lon=${selectedLng}&zoom=10&addressdetails=1`
+							`https://nominatim.openstreetmap.org/reverse?format=json&lat=${selectedLat}&lon=${selectedLon}&zoom=10&addressdetails=1`
 						);
 						const data = await response.json();
 						if (data && data.display_name) {
@@ -100,13 +100,13 @@
 						}
 					} catch (error) {
 						console.log('Could not get location name:', error);
-						locationName = `${selectedLat.toFixed(4)}, ${selectedLng.toFixed(4)}`;
+						locationName = `${selectedLat.toFixed(4)}, ${selectedLon.toFixed(4)}`;
 					}
 
 					if (onLocationChange) {
 						onLocationChange({
 							lat: selectedLat,
-							lng: selectedLng,
+							lon: selectedLon,
 							name: locationName
 						});
 					}
@@ -115,7 +115,7 @@
 				// Initial reverse geocoding
 				try {
 					const response = await fetch(
-						`https://nominatim.openstreetmap.org/reverse?format=json&lat=${selectedLat}&lon=${selectedLng}&zoom=10&addressdetails=1`
+						`https://nominatim.openstreetmap.org/reverse?format=json&lat=${selectedLat}&lon=${selectedLon}&zoom=10&addressdetails=1`
 					);
 					const data = await response.json();
 					if (data && data.display_name) {
@@ -123,7 +123,7 @@
 					}
 				} catch (error) {
 					console.log('Could not get initial location name:', error);
-					locationName = `${selectedLat.toFixed(4)}, ${selectedLng.toFixed(4)}`;
+					locationName = `${selectedLat.toFixed(4)}, ${selectedLon.toFixed(4)}`;
 				}
 			});
 		}
@@ -138,14 +138,14 @@
 
 	// Update marker position when initial coordinates change
 	$effect(() => {
-		if (map && marker && initialLat !== undefined && initialLng !== undefined) {
+		if (map && marker && initialLat !== undefined && initialLon !== undefined) {
 			selectedLat = initialLat;
-			selectedLng = initialLng;
-			marker.setLatLng([selectedLat, selectedLng]);
-			map.setView([selectedLat, selectedLng], 13);
+			selectedLon = initialLon;
+			marker.setLatLng([selectedLat, selectedLon]);
+			map.setView([selectedLat, selectedLon], 13);
 
 			// Reverse geocode the initial location
-			reverseGeocode(selectedLat, selectedLng);
+			reverseGeocode(selectedLat, selectedLon);
 		}
 	});
 
@@ -176,7 +176,7 @@
 
 {#if locationName}
 	<p class="mt-2 text-sm text-base-content/70">
-		Selected: <strong>{locationName}</strong> ({selectedLat.toFixed(4)}, {selectedLng.toFixed(4)})
+		Selected: <strong>{locationName}</strong> ({selectedLat.toFixed(4)}, {selectedLon.toFixed(4)})
 	</p>
 {/if}
 

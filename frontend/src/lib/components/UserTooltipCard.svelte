@@ -32,13 +32,13 @@
 				</div>
 			</div>
 		</div>
-		<p class="mb-3 text-sm text-base-content/80">{userData.biography}</p>
+		<p class="mb-3 text-sm whitespace-pre-wrap text-base-content/80">{userData.biography}</p>
 		{#if userData.interests.length}
 			<div>
-				<h4 class="mb-1 text-xs font-semibold text-base-content/60">Interests</h4>
+				<h4 class="mb-1 text-sm font-semibold text-base-content/60">Interests</h4>
 				<div class="flex flex-wrap gap-1">
 					{#each userData.interests as interest (interest)}
-						<span class="badge badge-outline badge-xs badge-accent">{interest}</span>
+						<span class="badge badge-outline badge-accent">{interest}</span>
 					{/each}
 				</div>
 			</div>

@@ -47,7 +47,8 @@ public class UserController {
 
 
     @PutMapping
-    public ResponseEntity<UserProfileResponse> updateUser(UpdateUserRequest request) {
+    public ResponseEntity<UserProfileResponse> updateUser(@RequestBody
+                                                          UpdateUserRequest request) {
         UserDTO self = (UserDTO) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
         return ResponseEntity.ok(mapper.dtoToUserProfileResponse(service.updateUser(self, request)));
     }

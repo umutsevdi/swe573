@@ -14,7 +14,7 @@
 	import MapComponent from '$lib/components/MapComponent.svelte';
 	import CreatePostModal from '$lib/components/CreatePostModal.svelte';
 	import UserAvatar from '$lib/components/UserAvatar.svelte';
-	import { SERVER_URL } from '$lib/config';
+	import { CLIENT_BASE_URL } from '$lib/config';
 	import { auth } from '$lib/stores/auth';
 	import { toast } from '$lib/stores/toast';
 	import { page } from '$app/stores';
@@ -77,8 +77,8 @@
 				tags: data.tags,
 				location: data.location
 					? {
-							lat: data.location.coordinates.lat,
-							lon: data.location.coordinates.lng,
+							lat: data.location.lat,
+							lon: data.location.lon,
 							name: data.location.name
 						}
 					: {
@@ -92,61 +92,14 @@
 				eventDate: data.eventDate
 			};
 
-			// Compare with original and send all fields, null for unchanged
-			const updateData: any = {};
-
-			// Helper to check if arrays are equal
-			const arraysEqual = (a: string[] | undefined, b: string[] | undefined) => {
-				const aArr = a || [];
-				const bArr = b || [];
-				if (aArr.length !== bArr.length) return false;
-				return aArr.every((val, index) => val === bArr[index]);
-			};
-
-			// Helper to check if locations are equal
-			const locationsEqual = (a: any, b: any) => {
-				return a.lat === b.lat && a.lon === b.lon && a.name === b.name;
-			};
-
-			updateData.title = serverData.title !== originalEvent.title ? serverData.title : null;
-			updateData.description =
-				serverData.description !== originalEvent.description ? serverData.description : null;
-			updateData.tags = !arraysEqual(serverData.tags, originalEvent.tags) ? serverData.tags : null;
-			updateData.location = !locationsEqual(serverData.location, {
-				lat: originalEvent.coordinates.lat,
-				lon: originalEvent.coordinates.lng,
-				name: originalEvent.location
-			})
-				? serverData.location
-				: null;
-			updateData.maxParticipants =
-				serverData.maxParticipants !== originalEvent.maxParticipants
-					? serverData.maxParticipants
-					: null;
-			updateData.type =
-				serverData.type !== (originalEvent.type === 'Offer' ? 'OFFER' : 'NEED')
-					? serverData.type
-					: null;
-			updateData.duration =
-				serverData.duration !== parseDuration(originalEvent.duration) ? serverData.duration : null;
-			updateData.eventDate =
-				serverData.eventDate !== originalEvent.targetDate ? serverData.eventDate : null;
-
-			// If no changes, do nothing
-			const hasChanges = Object.values(updateData).some((value) => value !== null);
-			if (!hasChanges) {
-				showEditModal = false;
-				return;
-			}
-
-			// Make API call
-			const response = await fetch(`${SERVER_URL}/event/${eventId}`, {
+			// Make API call with all data
+			const response = await fetch(`${CLIENT_BASE_URL}/event/${eventId}`, {
 				method: 'PUT',
 				headers: {
 					'Content-Type': 'application/json',
 					Authorization: `Bearer ${$auth.token}`
 				},
-				body: JSON.stringify(updateData)
+				body: JSON.stringify(serverData)
 			});
 
 			if (!response.ok) {
@@ -311,7 +264,7 @@
 
 	async function loadBackground() {
 		backgroundBlobUrl = await fetchAuthenticatedImage(
-			`${SERVER_URL}/assets/event/${$page.params.id}`,
+			`${CLIENT_BASE_URL}/assets/event/${$page.params.id}`,
 			$auth.token!,
 			'/assets/event.png'
 		);

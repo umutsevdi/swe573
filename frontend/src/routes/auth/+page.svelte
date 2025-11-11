@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
-	import { SERVER_URL } from '$lib/config';
+	import { CLIENT_BASE_URL } from '$lib/config';
 	import { auth } from '$lib/stores/auth';
 	import { toast } from '$lib/stores/toast';
 	import { Plus, X } from '@lucide/svelte';
@@ -25,7 +25,7 @@
 		event.preventDefault();
 
 		try {
-			const response = await fetch(`${SERVER_URL}/auth/login`, {
+			const response = await fetch(`${CLIENT_BASE_URL}/auth/login`, {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({ username: loginUsername, password: loginPassword })
@@ -50,7 +50,7 @@
 		event.preventDefault();
 
 		try {
-			const response = await fetch(`${SERVER_URL}/auth/register`, {
+			const response = await fetch(`${CLIENT_BASE_URL}/auth/register`, {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({

@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { User } from '@lucide/svelte';
 	import { resolve } from '$app/paths';
-	import { SERVER_URL } from '$lib/config';
+	import { CLIENT_BASE_URL } from '$lib/config';
 	import { auth } from '$lib/stores/auth';
 	import { loadAvatar as loadAvatarUtil } from '$lib/utils/avatar';
 	import {
@@ -58,7 +58,7 @@
 				if ($auth.token) {
 					headers.Authorization = `Bearer ${$auth.token}`;
 				}
-				const response = await fetch(`${SERVER_URL}/user/${id}/card`, { headers });
+				const response = await fetch(`${CLIENT_BASE_URL}/user/${id}/card`, { headers });
 				if (!response.ok) {
 					throw new Error(`Failed to fetch user data (${response.status})`);
 				}
@@ -101,8 +101,11 @@
 				return;
 			}
 
+			const token = $auth.token;
+			if (!token) return;
+
 			const promise = (async (): Promise<string> => {
-				const result = await loadAvatarUtil(id, $auth.token);
+				const result = await loadAvatarUtil(id, token);
 				const blobUrl = result || '/assets/profile.png';
 				avatarUrls.update((m) => new Map(m).set(id, blobUrl));
 				return blobUrl;

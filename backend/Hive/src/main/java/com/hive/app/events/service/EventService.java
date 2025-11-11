@@ -10,6 +10,9 @@ import com.hive.config.exceptions.NotFoundException;
 import com.hive.config.exceptions.PermissionDeniedException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 
@@ -24,6 +27,7 @@ public class EventService {
     private final EventMapper mapper;
     private final UserMapper userMapper;
 
+    @Cacheable(cacheNames = "getUserEvents", key = "#userId")
     public List<EventListView> getUserEvents(Long userId, boolean showInactive) {
         if (showInactive) {
             return repository.findByOwner_Id(userId);
@@ -48,6 +52,7 @@ public class EventService {
     }
 
 
+    @CacheEvict(cacheNames = {"getUserEvents", "eventById"}, allEntries = true)
     public EventResponse newEvent(EventRequest request, UserDTO userDTO) {
         request.setTags(request.getTags().stream().map(String::toLowerCase).toList());
         EventEntity entity = mapper.requestToEntity(request);
@@ -55,6 +60,10 @@ public class EventService {
         return mapper.entityToResponse(repository.save(entity));
     }
 
+    @Caching(evict = {
+            @CacheEvict(cacheNames = "eventById", key = "#id"),
+            @CacheEvict(cacheNames = "getUserEvents", allEntries = true)
+    })
     public EventResponse updateEvent(Long id, EventRequest request, UserDTO userDTO) throws NotFoundException {
         EventDTO event = repository.findById(id)
                 .map(mapper::entityToDTO)
@@ -87,6 +96,7 @@ public class EventService {
         return mapper.entityToResponse(repository.save(mapper.dtoToEntity(event)));
     }
 
+    @Cacheable(cacheNames = "eventById", key = "#id")
     public EventResponse getEvent(Long id) throws NotFoundException {
         return repository.findById(id)
                 .map(mapper::entityToResponse)

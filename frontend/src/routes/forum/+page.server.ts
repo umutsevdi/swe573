@@ -1,4 +1,4 @@
-import { SERVER_URL } from '$lib/config';
+import { SERVER_URL } from '$lib/serverConfig';
 import { type Cookies } from '@sveltejs/kit';
 import { loadWithAuth } from '$lib/utils/fetch';
 import { validateRequired, submitWithAuth } from '$lib/utils/actions';

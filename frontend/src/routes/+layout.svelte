@@ -22,7 +22,7 @@
 	import { auth } from '$lib/stores/auth';
 	import { toast } from '$lib/stores/toast';
 	import { goto, invalidateAll } from '$app/navigation';
-	import { SERVER_URL } from '$lib/config';
+	import { CLIENT_BASE_URL } from '$lib/config';
 
 	let { children } = $props();
 
@@ -32,7 +32,7 @@
 	let navbarAvatarUrl = $state<string | null>(null);
 
 	function openCreatePostModal() {
-		createPostModal?.openModal();
+		(createPostModal as any)?.openModal();
 	}
 
 	async function handleCreateThreadSubmit(
@@ -41,7 +41,7 @@
 		const { title, description, tags } = event.detail;
 
 		try {
-			const response = await fetch(`${SERVER_URL}/thread`, {
+			const response = await fetch(`${CLIENT_BASE_URL}/thread`, {
 				method: 'POST',
 				headers: {
 					'Content-Type': 'application/json',
@@ -70,7 +70,7 @@
 
 	async function handlePostSubmit(event: CustomEvent) {
 		try {
-			const response = await fetch(`${SERVER_URL}/event`, {
+			const response = await fetch(`${CLIENT_BASE_URL}/event`, {
 				method: 'POST',
 				headers: {
 					'Content-Type': 'application/json',
@@ -100,7 +100,7 @@
 		if (!$auth.userCard?.id || !$auth.token) return;
 
 		try {
-			const response = await fetch(`${SERVER_URL}/assets/profile/${$auth.userCard.id}`, {
+			const response = await fetch(`${CLIENT_BASE_URL}/assets/profile/${$auth.userCard.id}`, {
 				headers: {
 					Authorization: `Bearer ${$auth.token}`
 				}

@@ -1,4 +1,4 @@
-import { SERVER_URL } from '$lib/config';
+import { SERVER_URL } from '$lib/serverConfig';
 import { type Cookies } from '@sveltejs/kit';
 import { loadWithAuth } from '$lib/utils/fetch';
 
@@ -75,9 +75,9 @@ export const actions = {
 				method: 'POST',
 				headers: {
 					Authorization: `Bearer ${token}`,
-					'Content-Type': 'text/plain'
+					'Content-Type': 'application/json'
 				},
-				body: replyContent
+				body: JSON.stringify({ message: replyContent })
 			});
 
 			if (!response.ok) {

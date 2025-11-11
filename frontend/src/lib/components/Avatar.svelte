@@ -36,8 +36,11 @@
 				return;
 			}
 
+			const token = $auth.token;
+			if (!token) return;
+
 			const promise = (async (): Promise<string> => {
-				const result = await loadAvatarUtil(id, $auth.token);
+				const result = await loadAvatarUtil(id, token);
 				const blobUrl = result || '/assets/profile.png';
 				avatarUrls.update((m) => new Map(m).set(id, blobUrl));
 				return blobUrl;

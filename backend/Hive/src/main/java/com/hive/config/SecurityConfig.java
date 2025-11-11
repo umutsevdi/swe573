@@ -1,6 +1,8 @@
 package com.hive.config;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.log4j.Log4j2;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -24,11 +26,15 @@ import java.util.List;
 @Configuration
 @EnableWebSecurity
 @RequiredArgsConstructor
+@Log4j2
 public class SecurityConfig {
 
     private final UserDetailsService userDetailsService;
     private final JwtRequestFilter jwtAuthFilter;
+    private final EndpointLoggerFilter loggerFilter;
     private final AuthenticationEntryPoint entryPoint;
+    @Value("${origin.allowed}")
+    private String allowedOriginPatterns;
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
@@ -36,8 +42,9 @@ public class SecurityConfig {
                 .csrf(AbstractHttpConfigurer::disable)
                 .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .userDetailsService(userDetailsService)
-                .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class).
-                exceptionHandling(eh -> eh.authenticationEntryPoint(entryPoint))
+                .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)
+                .addFilterBefore(loggerFilter, JwtRequestFilter.class)
+                .exceptionHandling(eh -> eh.authenticationEntryPoint(entryPoint))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/docs/openapi/**",
                                 "/docs/swagger-ui.html",
@@ -60,9 +67,14 @@ public class SecurityConfig {
 
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
+        List<String> allowedPatterns = List.of(allowedOriginPatterns.split(","));
+        if (allowedPatterns.isEmpty()) {
+            throw new RuntimeException("Allowed Origins must not be empty");
+        }
+        allowedPatterns.forEach(pattern -> log.info("Allowed: {}", pattern));
+
         CorsConfiguration cfg = new CorsConfiguration();
-        cfg.addAllowedOriginPattern("http://localhost:*");
-        cfg.addAllowedOriginPattern("https://*.umutsevdi.com:*");
+        cfg.setAllowedOriginPatterns(allowedPatterns);
         cfg.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         cfg.setAllowedHeaders(List.of(
                 "Authorization", "Cache-Control", "Content-Type", "X-Requested-With"));

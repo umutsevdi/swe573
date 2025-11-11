@@ -1,14 +1,10 @@
 package com.hive.app.threads.controller;
 
 import com.hive.app.account.model.UserDTO;
-import com.hive.app.threads.model.ThreadDTO;
-import com.hive.app.threads.model.ThreadInfo;
-import com.hive.app.threads.model.ThreadMessageProjection;
-import com.hive.app.threads.model.ThreadRequest;
+import com.hive.app.threads.model.*;
 import com.hive.app.threads.service.ThreadService;
 import com.hive.config.exceptions.NotFoundException;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
@@ -39,19 +35,15 @@ public class ThreadController {
         return ResponseEntity.ok(service.getThread(id));
     }
 
-    @PostMapping(
-            path = "/{id}/reply",
-            produces = MediaType.APPLICATION_JSON_VALUE,
-            consumes = MediaType.TEXT_PLAIN_VALUE
-    )
+    @PostMapping("/{id}/reply")
     ResponseEntity<ThreadMessageProjection> reply(
             @PathVariable Long id,
-            @RequestBody String message) throws NotFoundException {
-        if (message == null || message.isEmpty()) {
+            @RequestBody ReplyRequest message) throws NotFoundException {
+        if (message.getMessage() == null || message.getMessage().isEmpty()) {
             return ResponseEntity.badRequest().build();
         }
         UserDTO self = (UserDTO) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
-        return ResponseEntity.ok(service.newReply(self, id, message));
+        return ResponseEntity.ok(service.newReply(self, id, message.getMessage()));
     }
 
     @PutMapping("/{id}")

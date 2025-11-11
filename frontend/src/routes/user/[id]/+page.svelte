@@ -12,7 +12,7 @@
 	import type { PageProps } from './$types';
 	import SearchResultCard from '$lib/components/SearchResultCard.svelte';
 	import EditProfileModal from '$lib/components/EditProfileModal.svelte';
-	import { SERVER_URL } from '$lib/config';
+	import { CLIENT_BASE_URL } from '$lib/config';
 	import { auth } from '$lib/stores/auth';
 	import { page } from '$app/stores';
 	import { toast } from '$lib';
@@ -45,7 +45,7 @@
 		const formData = new FormData();
 		formData.append('file', file);
 
-		const uploadResponse = await fetch(`${SERVER_URL}/assets/${type}/${$page.params.id}`, {
+		const uploadResponse = await fetch(`${CLIENT_BASE_URL}/assets/${type}/${$page.params.id}`, {
 			method: 'POST',
 			headers: {
 				Authorization: `Bearer ${$auth.token}`
@@ -77,7 +77,7 @@
 				interests: newInterests
 			};
 
-			const response = await fetch(`${SERVER_URL}/user`, {
+			const response = await fetch(`${CLIENT_BASE_URL}/user`, {
 				method: 'PUT',
 				headers: {
 					'Content-Type': 'application/json',
@@ -109,7 +109,7 @@
 
 	async function loadAvatar() {
 		try {
-			const response = await fetch(`${SERVER_URL}/assets/profile/${$page.params.id}`, {
+			const response = await fetch(`${CLIENT_BASE_URL}/assets/profile/${$page.params.id}`, {
 				headers: {
 					Authorization: `Bearer ${$auth.token}`
 				}
@@ -130,7 +130,7 @@
 		loading = true;
 		try {
 			const response = await fetch(
-				`${SERVER_URL}/event/owner/${$page.params.id}${showAll ? '?all=true' : ''}`,
+				`${CLIENT_BASE_URL}/event/owner/${$page.params.id}${showAll ? '?all=true' : ''}`,
 				{
 					headers: {
 						Authorization: `Bearer ${$auth.token}`
@@ -153,7 +153,7 @@
 
 	async function loadBackground() {
 		backgroundBlobUrl = await fetchAuthenticatedImage(
-			`${SERVER_URL}/assets/bg/${$page.params.id}`,
+			`${CLIENT_BASE_URL}/assets/bg/${$page.params.id}`,
 			$auth.token!,
 			'/assets/bg.png'
 		);
@@ -271,7 +271,7 @@
 						<p class="text-sm italic opacity-70">
 							@{data?.username}
 						</p>
-						<p class="mt-2 text-lg opacity-80">
+						<p class="mt-2 text-lg whitespace-pre-wrap opacity-80">
 							{biography}
 						</p>
 						<div class="mt-4 flex items-center gap-4">

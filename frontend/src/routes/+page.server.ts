@@ -1,5 +1,5 @@
 import type { PageServerLoad } from './$types';
-import { SERVER_URL } from '$lib/config';
+import { SERVER_URL } from '$lib/serverConfig';
 import { fetchWithAuth } from '$lib/utils/fetch';
 import type { Cookies } from '@sveltejs/kit';
 

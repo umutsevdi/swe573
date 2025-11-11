@@ -1,4 +1,4 @@
-import { SERVER_URL } from '$lib/config';
+import { CLIENT_BASE_URL } from '$lib/config';
 
 /**
  * Loads an avatar image for a user.
@@ -7,7 +7,7 @@ import { SERVER_URL } from '$lib/config';
  * @returns The blob URL of the avatar or null if not found.
  */
 export async function loadAvatar(id: number, token: string): Promise<string | null> {
-	const response = await fetch(`${SERVER_URL}/assets/profile/${id}`, {
+	const response = await fetch(`${CLIENT_BASE_URL}/assets/profile/${id}`, {
 		headers: {
 			Authorization: `Bearer ${token}`
 		}

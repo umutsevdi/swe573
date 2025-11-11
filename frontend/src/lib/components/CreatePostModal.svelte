@@ -33,7 +33,7 @@
 	let description = $state('');
 
 	let backgroundImagePreview = $state<string | null>(null);
-	let location = $state<{ lat: number; lng: number; name: string } | null>(null);
+	let location = $state<{ lat: number; lon: number; name: string } | null>(null);
 	let userLat = $state<number>(41.0082); // Default to Istanbul
 	let userLng = $state<number>(28.9784);
 	let eventDate = $state('');
@@ -84,7 +84,7 @@
 
 	// Prefill form for edit mode
 	$effect(() => {
-		if (mode === 'edit' && editData) {
+		if (mode === 'edit' && editData && open) {
 			type = editData.type || 'Offer';
 			title = editData.title || '';
 			description = editData.description || '';
@@ -93,7 +93,7 @@
 			if (editData.coordinates) {
 				location = {
 					lat: editData.coordinates.lat,
-					lng: editData.coordinates.lng,
+					lon: editData.coordinates.lng,
 					name: editData.location
 				};
 			}
@@ -141,7 +141,7 @@
 			title: string;
 			description: string;
 			tags: string[];
-			location: { lat: number; lng: number; name: string };
+			location: { lat: number; lon: number; name: string };
 			maxParticipants: number;
 			type: string;
 			duration: number;
@@ -152,7 +152,7 @@
 			tags,
 			location: {
 				lat: location.lat,
-				lng: location.lng,
+				lon: location.lon,
 				name: location.name
 			},
 			maxParticipants: capacity,
@@ -375,7 +375,7 @@
 						initialLat={mode === 'edit' && editData?.coordinates
 							? editData.coordinates.lat
 							: userLat}
-						initialLng={mode === 'edit' && editData?.coordinates
+						initialLon={mode === 'edit' && editData?.coordinates
 							? editData.coordinates.lng
 							: userLng}
 						height="h-96"

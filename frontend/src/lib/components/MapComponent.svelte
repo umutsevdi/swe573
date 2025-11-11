@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { browser } from '$app/environment';
+	import { MapPin } from '@lucide/svelte';
 	import { calculateDistance } from '$lib/utils/geo';
 
 	interface Props {
@@ -29,7 +30,7 @@
 	// Initialize map on client side
 	$effect(() => {
 		isClient = browser;
-		if (browser && mapContainer && !map) {
+		if (browser && mapContainer && !map && latitude != null && longitude != null) {
 			import('leaflet').then((L) => {
 				// Fix for default markers in Leaflet
 				delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -130,7 +131,7 @@
 
 	// Update map when coordinates change
 	$effect(() => {
-		if (isClient && map && latitude && longitude) {
+		if (isClient && map && latitude != null && longitude != null) {
 			map.setView([latitude, longitude], 13);
 
 			// Clear existing markers, polylines, and circles
@@ -211,10 +212,21 @@
 	});
 </script>
 
-<div
-	class="{height} overflow-hidden rounded-lg border border-base-300"
-	bind:this={mapContainer}
-></div>
+{#if latitude != null && longitude != null}
+	<div
+		class="{height} overflow-hidden rounded-lg border border-base-300"
+		bind:this={mapContainer}
+	></div>
+{:else}
+	<div
+		class="{height} flex items-center justify-center rounded-lg border border-base-300 bg-base-200"
+	>
+		<div class="text-center text-base-content/50">
+			<MapPin class="mx-auto mb-2 h-8 w-8" />
+			<p>Location not available</p>
+		</div>
+	</div>
+{/if}
 
 <style>
 	/* Ensure Leaflet controls are visible on dark themes */

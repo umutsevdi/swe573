@@ -1,6 +1,6 @@
 import type { PageServerLoad } from './$types';
 import { error } from '@sveltejs/kit';
-import { SERVER_URL } from '$lib/config';
+import { SERVER_URL } from '$lib/serverConfig';
 import { loadWithAuth } from '$lib/utils/fetch';
 
 interface UserApiResponse {

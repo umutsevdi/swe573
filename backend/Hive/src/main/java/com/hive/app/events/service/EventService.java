@@ -45,7 +45,8 @@ public class EventService {
                 EventSpecifications.isWithinProximity(options.getUserLocation(), options.getProximity()),
                 EventSpecifications.isAfter(options.getStartDate()),
                 EventSpecifications.isBefore(options.getEndDate()),
-                EventSpecifications.hasTags(options.getTags())
+                EventSpecifications.hasTags(options.getTags()),
+                EventSpecifications.hasType(options.getType())
         );
 
         return repository.findAll(spec).stream().map(mapper::entityToResponse).toList();

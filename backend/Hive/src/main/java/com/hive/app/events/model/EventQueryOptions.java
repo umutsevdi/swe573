@@ -13,4 +13,5 @@ public class EventQueryOptions {
     LocalDate endDate;
     String textSearch;
     List<String> tags;
+    EventType type;
 }

@@ -1,6 +1,7 @@
 package com.hive.app.events.repository;
 
 import com.hive.app.events.model.EventEntity;
+import com.hive.app.events.model.EventType;
 import com.hive.app.events.model.Location;
 import org.springframework.data.jpa.domain.Specification;
 
@@ -52,6 +53,12 @@ public class EventSpecifications {
                     .reduce(cb::or)
                     .orElse(cb.conjunction());
         };
+    }
+
+    public static Specification<EventEntity> hasType(EventType type) {
+        return (root, query, cb) ->
+                type == null ? cb.conjunction() :
+                        cb.equal(root.get("type"), type);
     }
 }
 

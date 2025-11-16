@@ -14,6 +14,7 @@
 	let start = $state('');
 	let end = $state('');
 	let proximity = $state(0);
+	let type = $state<'OFFER' | 'NEED' | ''>('');
 	let userLat = $state<number | null>(null);
 	let userLng = $state<number | null>(null);
 
@@ -44,6 +45,12 @@
 		end = params.get('end') || '';
 		const prox = params.get('proximity');
 		if (prox) proximity = parseInt(prox) || 0;
+		const typeParam = params.get('type');
+		if (typeParam && (typeParam === 'OFFER' || typeParam === 'NEED')) {
+			type = typeParam as 'OFFER' | 'NEED';
+		} else {
+			type = '';
+		}
 	});
 
 	function addTag() {
@@ -65,6 +72,7 @@
 		if (tags.length) params.set('tags', tags.join(','));
 		if (start) params.set('start', start);
 		if (end) params.set('end', end);
+		if (type) params.set('type', type);
 		if (proximity > 0 && userLat && userLng) {
 			params.set('user_lat', userLat.toString());
 			params.set('user_lng', userLng.toString());
@@ -77,89 +85,96 @@
 <div class="hero min-h-screen bg-base-200">
 	<div class="hero-content w-full max-w-4xl flex-col">
 		<div class="w-full">
-			<div class="mb-8 flex items-center justify-between">
-				<h1 class="text-4xl font-bold">Discover</h1>
-			</div>
-			<!-- Filter section -->
+			<!-- Map and Filters section -->
 			<div class="mb-4 bg-base-100 p-4">
-				<h2 class="mb-4 flex items-center gap-2 text-lg font-bold"><Funnel /> Filters</h2>
-				<form onsubmit={handleSubmit}>
-					<!-- Top Grid -->
-					<div class="mb-4 grid grid-cols-1 gap-4 lg:grid-cols-2">
-						<!-- Left: Title and Tags -->
-						<div class="space-y-4">
-							<!-- Search input -->
-							<div class="form-control">
+				<div class="mb-4">
+					<MapOverview events={data.events} {userLat} {userLng} {proximity} />
+				</div>
+				<form onsubmit={handleSubmit} class="space-y-4">
+					<!-- Search Row -->
+					<div class="flex flex-col gap-4 lg:flex-row lg:items-center">
+						<div class="flex flex-1 items-center gap-2">
+							<span class="label-text">Search</span>
+							<input
+								type="text"
+								placeholder="Search events..."
+								class="input-bordered input flex-1"
+								bind:value={q}
+							/>
+						</div>
+						<div class="flex flex-1 items-center gap-2">
+							<span class="label-text">Add Tag</span>
+							<div class="flex flex-1 gap-2">
 								<input
 									type="text"
-									placeholder="Search events..."
-									class="input-bordered input"
-									bind:value={q}
+									placeholder="Enter tag..."
+									class="input-bordered input flex-1"
+									bind:value={tagInput}
+									onkeydown={(e) => {
+										if (e.key === 'Enter') {
+											e.preventDefault();
+											addTag();
+										}
+									}}
 								/>
-							</div>
-
-							<!-- Tags -->
-							<div class="form-control">
-								<div class="flex gap-2">
-									<input
-										type="text"
-										placeholder="Add tag..."
-										class="input-bordered input"
-										bind:value={tagInput}
-										onkeydown={(e) => {
-											if (e.key === 'Enter') {
-												e.preventDefault();
-												addTag();
-											}
-										}}
-									/>
-									<button type="button" class="btn btn-outline" onclick={addTag}>+</button>
-								</div>
+								<button type="button" class="btn btn-outline" onclick={addTag}>+</button>
 							</div>
 						</div>
-
-						<!-- Right: Dates -->
-						<div class="space-y-4">
-							<div class="flex items-center gap-4">
-								<!-- Start Date -->
-								<div class="form-control">
-									<label class="label">
-										Between
-										<input type="date" class="input-bordered input" bind:value={start} />
-									</label>
-								</div>
-
-								<!-- End Date -->
-								<div class="form-control">
-									<label class="label">
-										<input type="date" class="input-bordered input" bind:value={end} />
-									</label>
-								</div>
-							</div>
-
-							<div class="flex items-center gap-4">
-								<!-- Proximity -->
-								<div class="form-control flex-1">
-									<div class="flex items-center gap-4">
-										<span class="label-text">Proximity</span>
-										<input
-											type="range"
-											min="0"
-											max="1000"
-											class="range flex-1"
-											bind:value={proximity}
-										/>
-										<span class="label-text">{proximity != 0 ? `${proximity}km` : 'No Filter'}</span
-										>
-									</div>
-								</div>
-								<!-- Search button -->
-								<button type="submit" class="btn btn-primary"><Search /></button>
+						<div class="flex items-center gap-2">
+							<span class="label-text">Type</span>
+							<div class="join">
+								<input
+									class="btn join-item {type === 'OFFER' ? 'btn-success' : 'btn-outline'}"
+									type="radio"
+									value="OFFER"
+									bind:group={type}
+									aria-label="OFFER"
+									onclick={() => {
+										if (type === 'OFFER') type = '';
+									}}
+								/>
+								<input
+									class="btn join-item {type === 'NEED' ? 'btn-accent' : 'btn-outline'}"
+									type="radio"
+									value="NEED"
+									bind:group={type}
+									aria-label="NEED"
+									onclick={() => {
+										if (type === 'NEED') type = '';
+									}}
+								/>
 							</div>
 						</div>
 					</div>
 
-					<!-- Bottom: Proximity and Search -->
+					<!-- Filters Row -->
+					<div class="flex flex-col gap-4 lg:flex-row lg:items-center">
+						<div class="flex flex-1 items-center gap-2">
+							<span class="label-text">Date Range</span>
+							<div class="flex flex-1 gap-2">
+								<input type="date" class="input-bordered input" bind:value={start} />
+								<span class="self-center">to</span>
+								<input type="date" class="input-bordered input" bind:value={end} />
+							</div>
+						</div>
+						<div class="flex flex-1 items-center gap-2">
+							<span class="label-text">Proximity</span>
+							<div class="flex flex-1 items-center gap-4">
+								<input
+									type="range"
+									min="0"
+									max="1000"
+									class="range flex-1"
+									bind:value={proximity}
+								/>
+								<span class="label-text">{proximity != 0 ? `${proximity}km` : 'No Filter'}</span>
+							</div>
+						</div>
+						<button type="submit" class="btn btn-primary">
+							<Search class="h-4 w-4" />
+							Search
+						</button>
+					</div>
 
 					<!-- Active filters display -->
 					<div class="mt-4">
@@ -204,34 +219,35 @@
 									>
 								</span>
 							{/if}
+							{#if type}
+								<span class="badge gap-2 badge-secondary">
+									Type: {type}
+									<button type="button" class="btn btn-ghost btn-xs" onclick={() => (type = '')}
+										>×</button
+									>
+								</span>
+							{/if}
 						</div>
 					</div>
 				</form>
 			</div>
-			<div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
-				<!-- Left: Map -->
-				<div>
-					<MapOverview events={data.events} {userLat} {userLng} {proximity} />
-				</div>
-
-				<!-- Right: List of cards -->
-				<div class="h-[75vh] space-y-4 overflow-y-auto">
-					{#each data.events as event (event.id)}
-						<SearchResultCard
-							title={event.title}
-							description={event.description}
-							tags={event.tags}
-							location={event.location}
-							participantCount={event.participantCount}
-							ownerId={event.ownerId}
-							type={event.type}
-							eventId={event.id}
-						/>
-					{/each}
-					{#if data.events.length === 0 && (q || tags.length > 0 || start || end || proximity > 0)}
-						<div class="alert alert-info">No events found matching your criteria.</div>
-					{/if}
-				</div>
+			<!-- List of cards -->
+			<div class="h-[75vh] space-y-4 overflow-y-auto">
+				{#each data.events as event (event.id)}
+					<SearchResultCard
+						title={event.title}
+						description={event.description}
+						tags={event.tags}
+						location={event.location}
+						participantCount={event.participantCount}
+						ownerId={event.ownerId}
+						type={event.type}
+						eventId={event.id}
+					/>
+				{/each}
+				{#if data.events.length === 0 && (q || tags.length > 0 || start || end || proximity > 0)}
+					<div class="alert alert-info">No events found matching your criteria.</div>
+				{/if}
 			</div>
 		</div>
 	</div>

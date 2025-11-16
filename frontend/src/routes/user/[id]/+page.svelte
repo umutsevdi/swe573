@@ -14,7 +14,7 @@
 	import type { PageProps } from './$types';
 	import SearchResultCard from '$lib/components/SearchResultCard.svelte';
 	import ProfileModal from '$lib/components/ProfileModal.svelte';
-	import { CLIENT_BASE_URL } from '$lib/config';
+	import { HIVE_API } from '$lib/config';
 	import { auth } from '$lib/stores/auth';
 	import { page } from '$app/stores';
 	import { toast } from '$lib';
@@ -49,7 +49,7 @@
 		const formData = new FormData();
 		formData.append('file', file);
 
-		const uploadResponse = await fetch(`${CLIENT_BASE_URL}/assets/${type}/${$page.params.id}`, {
+		const uploadResponse = await fetch(`${HIVE_API}/assets/${type}/${$page.params.id}`, {
 			method: 'POST',
 			headers: {
 				Authorization: `Bearer ${$auth.token}`
@@ -81,7 +81,7 @@
 				interests: newInterests
 			};
 
-			const response = await fetch(`${CLIENT_BASE_URL}/user`, {
+			const response = await fetch(`${HIVE_API}/user`, {
 				method: 'PUT',
 				headers: {
 					'Content-Type': 'application/json',
@@ -113,7 +113,7 @@
 
 	async function loadAvatar() {
 		try {
-			const response = await fetch(`${CLIENT_BASE_URL}/assets/profile/${$page.params.id}`, {
+			const response = await fetch(`${HIVE_API}/assets/profile/${$page.params.id}`, {
 				headers: {
 					Authorization: `Bearer ${$auth.token}`
 				}
@@ -134,7 +134,7 @@
 		loading = true;
 		try {
 			const response = await fetch(
-				`${CLIENT_BASE_URL}/event/owner/${$page.params.id}${showAll ? '?all=true' : ''}`,
+				`${HIVE_API}/event/owner/${$page.params.id}${showAll ? '?all=true' : ''}`,
 				{
 					headers: {
 						Authorization: `Bearer ${$auth.token}`
@@ -157,7 +157,7 @@
 
 	async function loadBackground() {
 		backgroundBlobUrl = await fetchAuthenticatedImage(
-			`${CLIENT_BASE_URL}/assets/bg/${$page.params.id}`,
+			`${HIVE_API}/assets/bg/${$page.params.id}`,
 			$auth.token!,
 			'/assets/bg.png'
 		);

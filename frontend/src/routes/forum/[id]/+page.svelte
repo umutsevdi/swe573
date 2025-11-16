@@ -8,7 +8,7 @@
 	import { auth } from '$lib/stores/auth';
 	import { toast } from '$lib/stores/toast';
 	import { breadcrumbs } from '$lib/stores/breadcrumbs';
-	import { CLIENT_BASE_URL } from '$lib/config';
+	import { HIVE_API } from '$lib/config';
 
 	type ForumPostData = {
 		content: string;
@@ -52,7 +52,7 @@
 
 	async function closeThread() {
 		try {
-			const response = await fetch(`${CLIENT_BASE_URL}/thread/${topic.id}/close`, {
+			const response = await fetch(`${HIVE_API}/thread/${topic.id}/close`, {
 				method: 'GET',
 				headers: {
 					Authorization: `Bearer ${$auth.token}`
@@ -73,7 +73,7 @@
 	async function updateThread(updates: { title: string; description: string; tags: string[] }) {
 		console.log('Updating thread with:', updates);
 		try {
-			const response = await fetch(`${CLIENT_BASE_URL}/thread/${topic.id}`, {
+			const response = await fetch(`${HIVE_API}/thread/${topic.id}`, {
 				method: 'PUT',
 				headers: {
 					Authorization: `Bearer ${$auth.token}`,
@@ -103,7 +103,7 @@
 		}
 
 		try {
-			const response = await fetch(`${CLIENT_BASE_URL}/thread/${topic.id}/reply`, {
+			const response = await fetch(`${HIVE_API}/thread/${topic.id}/reply`, {
 				method: 'POST',
 				headers: {
 					Authorization: `Bearer ${$auth.token}`,

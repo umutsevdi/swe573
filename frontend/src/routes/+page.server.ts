@@ -1,5 +1,5 @@
 import type { PageServerLoad } from './$types';
-import { SERVER_URL } from '$lib/serverConfig';
+import { HIVE_API } from '$lib/serverConfig';
 import { fetchWithAuth } from '$lib/utils/fetch';
 import type { Cookies } from '@sveltejs/kit';
 
@@ -83,9 +83,9 @@ export const load: PageServerLoad = async ({ url, cookies }: { url: URL; cookies
 	}
 
 	try {
-		console.log('Fetching events from:', `${SERVER_URL}/event/search`, 'with body:', requestBody);
+		console.log('Fetching events from:', `${HIVE_API}/event/search`, 'with body:', requestBody);
 		const response = await fetchWithAuth(
-			`${SERVER_URL}/event/search`,
+			`${HIVE_API}/event/search`,
 			cookies.get('token')!,
 			cookies,
 			{

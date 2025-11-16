@@ -18,14 +18,16 @@
 		Bell,
 		MapPinPlus,
 		MailPlus,
-		Handshake
+		Handshake,
+		MessageCircle
 	} from '@lucide/svelte';
 	import { auth } from '$lib/stores/auth';
 	import { toast } from '$lib/stores/toast';
 	import { breadcrumbs } from '$lib/stores/breadcrumbs';
 	import { goto, invalidateAll } from '$app/navigation';
 	import { page } from '$app/stores';
-	import { CLIENT_BASE_URL } from '$lib/config';
+	import { HIVE_API } from '$lib/config';
+	import ChatBar from '$lib/components/ChatBar.svelte';
 
 	let { children } = $props();
 
@@ -53,7 +55,7 @@
 		const { title, description, tags } = event.detail;
 
 		try {
-			const response = await fetch(`${CLIENT_BASE_URL}/thread`, {
+			const response = await fetch(`${HIVE_API}/thread`, {
 				method: 'POST',
 				headers: {
 					'Content-Type': 'application/json',
@@ -82,7 +84,7 @@
 
 	async function handlePostSubmit(event: CustomEvent) {
 		try {
-			const response = await fetch(`${CLIENT_BASE_URL}/event`, {
+			const response = await fetch(`${HIVE_API}/event`, {
 				method: 'POST',
 				headers: {
 					'Content-Type': 'application/json',
@@ -112,7 +114,7 @@
 		if (!$auth.userCard?.id || !$auth.token) return;
 
 		try {
-			const response = await fetch(`${CLIENT_BASE_URL}/assets/profile/${$auth.userCard.id}`, {
+			const response = await fetch(`${HIVE_API}/assets/profile/${$auth.userCard.id}`, {
 				headers: {
 					Authorization: `Bearer ${$auth.token}`
 				}
@@ -223,6 +225,18 @@
 
 		<!-- Speed Dial FAB for Events and Threads -->
 		{#if $auth.isLoggedIn}
+			<ChatBar toggleCallback={() => true} />
+			<div class="fab fixed right-24 bottom-8 z-20 fab-flower">
+				<!-- Trigger button -->
+				<div tabindex="0" role="button" class="btn btn-circle btn-lg btn-info">
+					<MessageCircle />
+				</div>
+				<div class="tooltip tooltip-left" data-tip="Close">
+					<div class="fab-close">
+						<span class="btn btn-circle btn-lg btn-error">✕</span>
+					</div>
+				</div>
+			</div>
 			<div class="fab fixed right-8 bottom-8 z-20 fab-flower">
 				<!-- Trigger button -->
 				<div tabindex="0" role="button" class="btn btn-circle btn-lg btn-info"><Plus /></div>

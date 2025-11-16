@@ -1,4 +1,4 @@
-import { SERVER_URL } from '$lib/serverConfig';
+import { HIVE_API } from '$lib/serverConfig';
 import { type Cookies } from '@sveltejs/kit';
 import { loadWithAuth } from '$lib/utils/fetch';
 import { validateRequired, submitWithAuth } from '$lib/utils/actions';
@@ -14,7 +14,7 @@ type ForumThread = {
 };
 
 export const load = async ({ cookies }: { cookies: Cookies }) => {
-	const threads: ForumThread[] = await loadWithAuth(`${SERVER_URL}/thread`, cookies);
+	const threads: ForumThread[] = await loadWithAuth(`${HIVE_API}/thread`, cookies);
 
 	// Transform tagsList: split by comma and flatten
 	const transformedThreads = threads.map((thread) => ({
@@ -39,7 +39,7 @@ export const actions = {
 
 		try {
 			const result = await submitWithAuth(
-				`${SERVER_URL}/thread`,
+				`${HIVE_API}/thread`,
 				{ title: title.trim(), description: description.trim(), tags },
 				cookies
 			);

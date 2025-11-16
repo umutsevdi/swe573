@@ -10,6 +10,7 @@ ID: 2024719168 Umut Can Sevdi
 
 ### Environment Variables
 
- - `SERVER_URL` Path to back-end server. (From same origin)
- - `CLIENT_BASE_URL` Path to back-end server (For the client)
- - `ALLOWED_ORIGINS` Domain of the application
+ - `PUBLIC_API` Path to back-end server.
+ - `SERVER_API` (Optional) The base URL used internally by the front-end server 
+to communicate with back-end. This can be set to an internal address
+(e.g. http://containerName:Port). By default it's set to `PUBLIC_API`.

@@ -1,6 +1,6 @@
 import type { PageServerLoad } from './$types';
 import { error } from '@sveltejs/kit';
-import { SERVER_URL } from '$lib/serverConfig';
+import { HIVE_API } from '$lib/serverConfig';
 import { loadWithAuth } from '$lib/utils/fetch';
 
 type ChatMessage = {
@@ -70,7 +70,7 @@ export const load: PageServerLoad = async ({ params, cookies }) => {
 		throw error(404, 'Event not found');
 	}
 
-	const serverData: EventApiResponse = await loadWithAuth(`${SERVER_URL}/event/${id}`, cookies);
+	const serverData: EventApiResponse = await loadWithAuth(`${HIVE_API}/event/${id}`, cookies);
 
 	// Decode JWT to get current user id
 	const token = cookies.get('token')!;

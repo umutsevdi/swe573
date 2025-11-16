@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { User, Annoyed, Frown, Meh, Smile } from '@lucide/svelte';
 	import { resolve } from '$app/paths';
-	import { CLIENT_BASE_URL } from '$lib/config';
+	import { HIVE_API } from '$lib/config';
 	import { auth } from '$lib/stores/auth';
 	import { loadAvatar as loadAvatarUtil } from '$lib/utils/avatar';
 	import {
@@ -61,7 +61,7 @@
 				if ($auth.token) {
 					headers.Authorization = `Bearer ${$auth.token}`;
 				}
-				const response = await fetch(`${CLIENT_BASE_URL}/user/${id}/card`, { headers });
+				const response = await fetch(`${HIVE_API}/user/${id}/card`, { headers });
 				if (!response.ok) {
 					throw new Error(`Failed to fetch user data (${response.status})`);
 				}

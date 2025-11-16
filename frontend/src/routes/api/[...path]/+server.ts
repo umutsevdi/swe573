@@ -1,4 +1,4 @@
-import { SERVER_URL } from '$lib/serverConfig';
+import { HIVE_API } from '$lib/serverConfig';
 
 export async function fallback({
 	request,
@@ -8,7 +8,7 @@ export async function fallback({
 	params: { path: string[] };
 }) {
 	const path = params.path.join('/');
-	const targetUrl = `${SERVER_URL}/${path}`;
+	const targetUrl = `${HIVE_API}/${path}`;
 
 	// Clone the request to modify headers
 	const requestInit: RequestInit = {

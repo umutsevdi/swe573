@@ -1,11 +1,7 @@
-import { browser } from '$app/environment';
+import { env } from '$env/dynamic/public';
 
-declare global {
-	interface Window {
-		env: {
-			CLIENT_BASE_URL: string;
-		};
-	}
+export const HIVE_API = env.PUBLIC_API;
+
+if (!HIVE_API) {
+    throw new Error('PUBLIC_API is required for the client.');
 }
-
-export const CLIENT_BASE_URL = browser ? window.env.CLIENT_BASE_URL : 'http://localhost:8080';

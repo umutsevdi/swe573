@@ -28,8 +28,7 @@ services:
     ports:
       - '80:3000'
     environment:
-      - SERVER_URL=http://backend:8080
-      - CLIENT_BASE_URL=http://localhost:8080
+      - PUBLIC_API=http://localhost:8080
       - ALLOWED_ORIGINS=localhost:*
     depends_on:
       - backend

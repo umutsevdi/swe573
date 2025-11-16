@@ -14,7 +14,7 @@ RUN npm install
 
 # Copy source code
 COPY . .
-
+ENV PUBLIC_API=http://localhost:8080
 # Build the application
 RUN npm run build
 

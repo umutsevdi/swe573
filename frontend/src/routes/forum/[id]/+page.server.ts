@@ -1,4 +1,4 @@
-import { SERVER_URL } from '$lib/serverConfig';
+import { HIVE_API } from '$lib/serverConfig';
 import { type Cookies } from '@sveltejs/kit';
 import { loadWithAuth } from '$lib/utils/fetch';
 
@@ -9,8 +9,8 @@ type ThreadMessage = {
 };
 
 export const load = async ({ params, cookies }: { params: { id: string }; cookies: Cookies }) => {
-	console.log('Fetching thread:', `${SERVER_URL}/thread/${params.id}`);
-	const thread = await loadWithAuth(`${SERVER_URL}/thread/${params.id}`, cookies);
+	console.log('Fetching thread:', `${HIVE_API}/thread/${params.id}`);
+	const thread = await loadWithAuth(`${HIVE_API}/thread/${params.id}`, cookies);
 
 	// Transform the server response to match the expected format
 	const parsedPosts = thread.messages.map((msg: ThreadMessage, index: number) => {

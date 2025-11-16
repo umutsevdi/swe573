@@ -22,7 +22,7 @@ public class JwtUtil {
     private static final long EXPIRATION_MS = 2 * 60 * 60 * 1000; // 2h
     @Value("${jwt.secret}")
     private String secretKey;
-    @Value("${jwt.issuer}")
+    @Value("${jwt.issuer:app.hive}")
     private String issuer;
 
     public JwtPayload parseToken(String token) {

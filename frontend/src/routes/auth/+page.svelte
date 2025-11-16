@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
-	import { CLIENT_BASE_URL } from '$lib/config';
+	import { HIVE_API } from '$lib/config';
 	import { auth } from '$lib/stores/auth';
 	import { toast } from '$lib/stores/toast';
 	import { breadcrumbs } from '$lib/stores/breadcrumbs';
@@ -28,7 +28,7 @@
 		event.preventDefault();
 
 		try {
-			const response = await fetch(`${CLIENT_BASE_URL}/auth/login`, {
+			const response = await fetch(`${HIVE_API}/auth/login`, {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({ username: loginUsername, password: loginPassword })
@@ -53,7 +53,7 @@
 		event.preventDefault();
 
 		try {
-			const response = await fetch(`${CLIENT_BASE_URL}/auth/register`, {
+			const response = await fetch(`${HIVE_API}/auth/register`, {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({

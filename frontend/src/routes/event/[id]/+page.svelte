@@ -16,7 +16,7 @@
 	import MapComponent from '$lib/components/MapComponent.svelte';
 	import EventModal from '$lib/components/EventModal.svelte';
 	import UserAvatar from '$lib/components/UserAvatar.svelte';
-	import { CLIENT_BASE_URL } from '$lib/config';
+	import { HIVE_API } from '$lib/config';
 	import { auth } from '$lib/stores/auth';
 	import { toast } from '$lib/stores/toast';
 	import { page } from '$app/stores';
@@ -107,7 +107,7 @@
 			};
 
 			// Make API call
-			const response = await fetch(`${CLIENT_BASE_URL}/event/${eventId}`, {
+			const response = await fetch(`${HIVE_API}/event/${eventId}`, {
 				method: 'PUT',
 				headers: {
 					'Content-Type': 'application/json',
@@ -287,7 +287,7 @@
 
 	async function loadBackground() {
 		backgroundBlobUrl = await fetchAuthenticatedImage(
-			`${CLIENT_BASE_URL}/assets/event/${$page.params.id}`,
+			`${HIVE_API}/assets/event/${$page.params.id}`,
 			$auth.token!,
 			'/assets/event.png'
 		);

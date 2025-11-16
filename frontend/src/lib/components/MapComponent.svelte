@@ -23,7 +23,7 @@
 		height = 'h-64'
 	}: Props = $props();
 
-	let mapContainer: HTMLElement;
+	let mapContainer = $state<HTMLElement | undefined>();
 	let map: any = null;
 	let isClient = $state(false);
 
@@ -42,7 +42,7 @@
 				});
 
 				// Initialize map
-				map = L.map(mapContainer).setView([latitude, longitude], 13);
+				map = L.map(mapContainer!).setView([latitude, longitude], 13);
 
 				// Add Carto tiles based on theme
 				const theme = document.documentElement.getAttribute('data-theme') || 'light';

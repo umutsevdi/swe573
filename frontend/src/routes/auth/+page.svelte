@@ -4,7 +4,10 @@
 	import { CLIENT_BASE_URL } from '$lib/config';
 	import { auth } from '$lib/stores/auth';
 	import { toast } from '$lib/stores/toast';
-	import { Plus, X } from '@lucide/svelte';
+	import { breadcrumbs } from '$lib/stores/breadcrumbs';
+	import { Plus, Handshake, X } from '@lucide/svelte';
+
+	breadcrumbs.set([{ text: 'Login' }]);
 
 	let activeTab = $state('login');
 
@@ -94,6 +97,11 @@
 	<div class="w-full max-w-md">
 		<div class="card bg-base-100 shadow-xl">
 			<div class="card-body">
+				<div class="mt-4 mb-4 flex w-full justify-center">
+					<a class="is-drawer-close:tooltip is-drawer-close:tooltip-right" data-tip="Hive" href="/"
+						><Handshake size="64" class="animate-bounce-yaw invert-y" /></a
+					>
+				</div>
 				<h2 class="card-title justify-center text-2xl">Welcome to Hive</h2>
 
 				<div class="tabs-boxed tabs justify-center">
@@ -273,3 +281,24 @@
 		</div>
 	</div>
 </div>
+
+<style>
+	@keyframes bounce-yaw {
+		0%,
+		100% {
+			transform: translateY(0) translateX(0) rotateZ(-10deg);
+		}
+		15% {
+			transform: translateY(-10px) translateX(-20px) rotateZ(0deg);
+		}
+		50% {
+			transform: translateY(-20px) translateX(0) rotateZ(10deg);
+		}
+		75% {
+			transform: translateY(-10px) translateX(20px) rotateZ(0deg);
+		}
+	}
+	:global(.animate-bounce-yaw) {
+		animation: bounce-yaw 4s infinite;
+	}
+</style>

@@ -19,15 +19,6 @@
 	let selectedLon = $state(initialLon ?? 28.9784);
 	let locationName = $state(initialName || '');
 
-	// Call onLocationChange immediately with initial values
-	if (onLocationChange) {
-		onLocationChange({
-			lat: selectedLat,
-			lon: selectedLon,
-			name: locationName || `${selectedLat.toFixed(4)}, ${selectedLon.toFixed(4)}`
-		});
-	}
-
 	// Initialize map when component mounts
 	$effect(() => {
 		if (browser && mapContainer && !map) {

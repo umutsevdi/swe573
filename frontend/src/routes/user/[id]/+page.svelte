@@ -9,6 +9,8 @@
 		Edit,
 		Hourglass
 	} from '@lucide/svelte';
+	import { breadcrumbs } from '$lib/stores/breadcrumbs';
+
 	import type { PageProps } from './$types';
 	import SearchResultCard from '$lib/components/SearchResultCard.svelte';
 	import ProfileModal from '$lib/components/ProfileModal.svelte';
@@ -19,6 +21,8 @@
 	import { fetchAuthenticatedImage } from '$lib/utils/fetch';
 
 	let { data }: PageProps = $props();
+
+	breadcrumbs.set([{ text: 'User' }, { text: data.fullName }]);
 
 	let biography = $state(data?.biography || '');
 	let interests = $state(data?.interests || []);

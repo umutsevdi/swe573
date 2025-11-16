@@ -5,8 +5,11 @@
 	import { Funnel, Search } from '@lucide/svelte';
 	import MapOverview from '$lib/components/MapOverview.svelte';
 	import SearchResultCard from '$lib/components/SearchResultCard.svelte';
+	import { breadcrumbs } from '$lib/stores/breadcrumbs';
 
 	let { data } = $props();
+
+	breadcrumbs.set([{ text: 'Discover' }]);
 
 	let q = $state('');
 	let tags = $state<string[]>([]);

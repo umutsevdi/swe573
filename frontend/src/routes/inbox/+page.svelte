@@ -1,6 +1,9 @@
 <script lang="ts">
 	import { MessageSquare, HeartHandshake, HandHelping, Check, ExternalLink } from '@lucide/svelte';
 	import { resolve } from '$app/paths';
+	import { breadcrumbs } from '$lib/stores/breadcrumbs';
+
+	breadcrumbs.set([{ text: 'Inbox' }]);
 
 	type NotificationType = 'forum_reply' | 'offer_response' | 'need_response';
 
@@ -53,8 +56,7 @@
 <div class="hero min-h-screen bg-base-200">
 	<div class="hero-content w-full max-w-4xl flex-col">
 		<div class="w-full">
-			<div class="mb-8 flex items-center justify-between">
-				<h1 class="text-4xl font-bold">Inbox</h1>
+			<div class="mb-8 flex justify-end">
 				{#if unreadCount > 0}
 					<div class="badge badge-lg badge-primary">{unreadCount} unread</div>
 				{:else}

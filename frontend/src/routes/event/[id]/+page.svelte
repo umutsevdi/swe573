@@ -10,6 +10,8 @@
 		HeartHandshake,
 		HandHelping
 	} from '@lucide/svelte';
+	import { breadcrumbs } from '$lib/stores/breadcrumbs';
+
 	import { resolve } from '$app/paths';
 	import MapComponent from '$lib/components/MapComponent.svelte';
 	import EventModal from '$lib/components/EventModal.svelte';
@@ -60,6 +62,8 @@
 
 	let { data } = $props<{ event: EventData; isOwner: boolean }>();
 	let event = $derived(data.event);
+
+	breadcrumbs.set([{ text: 'Event' }, { text: data.event.title }]);
 
 	// Edit functionality
 	let showEditModal = $state(false);
@@ -149,7 +153,11 @@
 	// Chat functionality
 	let activeTab = $state('public');
 	let newMessage = $state('');
-	let chatMessages = $state(event.chatMessages);
+	let chatMessages = $state<ChatMessage[]>([]);
+
+	$effect(() => {
+		chatMessages = event.chatMessages;
+	});
 	let negotiationMessages = $state<ChatMessage[]>([]);
 	let newNegotiationMessage = $state('');
 
@@ -201,8 +209,13 @@
 	}
 
 	// Participation functionality
-	let userParticipationStatus = $state(event.userParticipationStatus);
-	let participationRequests = $state(event.participationRequests);
+	let userParticipationStatus = $state<string>('none');
+	let participationRequests = $state<any[]>([]);
+
+	$effect(() => {
+		userParticipationStatus = event.userParticipationStatus;
+		participationRequests = event.participationRequests;
+	});
 	let participationMessage = $state('');
 
 	function sendParticipationRequest() {
@@ -389,8 +402,8 @@
 	});
 
 	// Scroll to bottom of chat when new messages arrive
-	let chatContainer: HTMLElement;
-	let negotiationContainer: HTMLElement;
+	let chatContainer = $state<HTMLElement | undefined>();
+	let negotiationContainer = $state<HTMLElement | undefined>();
 	$effect(() => {
 		if (chatContainer) {
 			chatContainer.scrollTop = chatContainer.scrollHeight;
@@ -689,15 +702,17 @@
 					<div class="card-body">
 						<!-- Tabs -->
 						<div class="tabs-boxed mb-4 tabs">
-							<a
+							<button
+								type="button"
 								class="tab-lg tab {activeTab === 'public' ? 'tab-active' : ''}"
 								onclick={() => (activeTab = 'public')}
 							>
 								<MessageSquare class="mr-2 h-5 w-5" />
 								<span class="text-lg font-semibold">Public Chat</span>
 								<span class="ml-2 badge badge-sm">{chatMessages.length}</span>
-							</a>
-							<a
+							</button>
+							<button
+								type="button"
 								class="tab-lg tab {activeTab === 'negotiation'
 									? 'tab-active'
 									: ''} {userParticipationStatus !== 'accepted' && !data.isOwner
@@ -711,7 +726,7 @@
 								<MessageSquare class="mr-2 h-5 w-5" />
 								<span class="text-lg font-semibold">Negotiation</span>
 								<span class="ml-2 badge badge-sm">{negotiationMessages.length}</span>
-							</a>
+							</button>
 						</div>
 
 						{#if activeTab === 'public'}
@@ -853,9 +868,17 @@
 			</div>
 			<div
 				class="modal-backdrop"
+				role="button"
+				tabindex="0"
 				onclick={() => {
 					showParticipationModal = false;
 					participationMessage = '';
+				}}
+				onkeydown={(e) => {
+					if (e.key === 'Enter' || e.key === ' ') {
+						showParticipationModal = false;
+						participationMessage = '';
+					}
 				}}
 			></div>
 		</div>

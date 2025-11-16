@@ -99,7 +99,7 @@
 	<div class="space-y-4">
 		<!-- Avatar Upload -->
 		<div class="form-control">
-			<label class="label">
+			<label class="label" for="profile-picture-input">
 				<span class="label-text">Profile Picture</span>
 			</label>
 			<div class="flex items-center gap-4">
@@ -117,14 +117,20 @@
 				<label class="btn btn-outline btn-sm">
 					<Upload class="mr-2 h-4 w-4" />
 					Upload Photo
-					<input type="file" accept="image/*" class="hidden" onchange={handleAvatarChange} />
+					<input
+						id="profile-picture-input"
+						type="file"
+						accept="image/*"
+						class="hidden"
+						onchange={handleAvatarChange}
+					/>
 				</label>
 			</div>
 		</div>
 
 		<!-- Background Upload -->
 		<div class="form-control">
-			<label class="label">
+			<label class="label" for="background-picture-input">
 				<span class="label-text">Background Picture</span>
 			</label>
 			<div class="flex items-center gap-4">
@@ -142,17 +148,24 @@
 				<label class="btn btn-outline btn-sm">
 					<Upload class="mr-2 h-4 w-4" />
 					Upload Background
-					<input type="file" accept="image/*" class="hidden" onchange={handleBackgroundChange} />
+					<input
+						id="background-picture-input"
+						type="file"
+						accept="image/*"
+						class="hidden"
+						onchange={handleBackgroundChange}
+					/>
 				</label>
 			</div>
 		</div>
 
 		<!-- Biography -->
 		<div class="form-control">
-			<label class="label">
+			<label class="label" for="biography-textarea">
 				<span class="label-text">Biography</span>
 			</label>
 			<textarea
+				id="biography-textarea"
 				class="textarea-bordered textarea h-24 w-full"
 				placeholder="Tell us about yourself..."
 				bind:value={biography}

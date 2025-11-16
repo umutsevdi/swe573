@@ -3,6 +3,9 @@
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import UserAvatar from '$lib/components/UserAvatar.svelte';
+	import { breadcrumbs } from '$lib/stores/breadcrumbs';
+
+	breadcrumbs.set([{ text: 'Forum' }]);
 
 	type ForumThread = {
 		id: number;
@@ -21,10 +24,6 @@
 <div class="hero min-h-screen bg-base-200">
 	<div class="hero-content w-full max-w-4xl flex-col">
 		<div class="w-full">
-			<div class="mb-8 flex items-center justify-between">
-				<h1 class="text-4xl font-bold">Forum</h1>
-			</div>
-
 			<div class="h-[75vh] space-y-4 overflow-y-auto">
 				{#each threads as thread (thread.id)}
 					<!-- svelte-ignore a11y_click_events_have_key_events -->

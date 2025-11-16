@@ -1,12 +1,13 @@
 <script lang="ts">
 	import { ArrowLeft, MessageSquare, Calendar } from '@lucide/svelte';
 	import { resolve } from '$app/paths';
-	import { goto } from '$app/navigation';
+	import { goto, invalidateAll } from '$app/navigation';
 	import ForumPost from '$lib/components/ForumPost.svelte';
 	import UserAvatar from '$lib/components/UserAvatar.svelte';
 	import ThreadModal from '$lib/components/ThreadModal.svelte';
 	import { auth } from '$lib/stores/auth';
 	import { toast } from '$lib/stores/toast';
+	import { breadcrumbs } from '$lib/stores/breadcrumbs';
 	import { CLIENT_BASE_URL } from '$lib/config';
 
 	type ForumPostData = {
@@ -28,6 +29,7 @@
 	};
 
 	let { data } = $props();
+	breadcrumbs.set([{ text: 'Forum', href: '/forum' }, { text: data.title }]);
 	let topic = $state(data as ForumTopicData);
 
 	let newMessageContent = $state('');

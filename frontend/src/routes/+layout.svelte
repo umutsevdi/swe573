@@ -17,10 +17,12 @@
 		Mails,
 		Bell,
 		MapPinPlus,
-		MailPlus
+		MailPlus,
+		Handshake
 	} from '@lucide/svelte';
 	import { auth } from '$lib/stores/auth';
 	import { toast } from '$lib/stores/toast';
+	import { breadcrumbs } from '$lib/stores/breadcrumbs';
 	import { goto, invalidateAll } from '$app/navigation';
 	import { page } from '$app/stores';
 	import { CLIENT_BASE_URL } from '$lib/config';
@@ -32,18 +34,9 @@
 	let threadModalOpen = $state(false);
 	let navbarAvatarUrl = $state<string | null>(null);
 
-	function getPageTitle(pathname: string): string {
-		if (pathname === '/') return 'Discover';
-		if (pathname.startsWith('/forum')) return 'Forum';
-		if (pathname.startsWith('/inbox')) return 'Inbox';
-		if (pathname.startsWith('/user/')) return 'Profile';
-		if (pathname.startsWith('/event/')) return 'Event';
-		if (pathname === '/auth') return 'Login';
-		return 'Hive';
-	}
-
-	let pageTitle = $derived(getPageTitle($page.url.pathname));
-	let title = $derived($auth.isLoggedIn ? `${pageTitle} | Hive` : 'Hive');
+	let title = $derived(
+		$auth.isLoggedIn ? `${$breadcrumbs[$breadcrumbs.length - 1].text} | Hive` : 'Hive'
+	);
 
 	function isActive(path: string): boolean {
 		if (path === '/') return $page.url.pathname === '/';
@@ -172,6 +165,29 @@
 <div class="drawer-open drawer">
 	<input id="my-drawer-4" type="checkbox" class="drawer-toggle" />
 	<div class="drawer-content">
+		{#if $auth.isLoggedIn}
+			<div class="flex items-center">
+				<div class="breadcrumbs ml-4 gap-1">
+					<ul>
+						{#each $breadcrumbs as crumb, i}
+							<li>
+								{#if crumb.href}
+									<a class="btn text-xl no-underline btn-ghost" href={crumb.href}>{crumb.text}</a>
+								{:else if i === $breadcrumbs.length - 1}
+									<a class="btn text-xl no-underline btn-ghost" href={$page.url.pathname}
+										>{crumb.text}</a
+									>
+								{:else}
+									<p class="btn text-xl no-underline btn-ghost">
+										{crumb.text}
+									</p>
+								{/if}
+							</li>
+						{/each}
+					</ul>
+				</div>
+			</div>
+		{/if}
 		{@render children?.()}
 		<Toast />
 		<footer class="footer items-center bg-neutral p-4 text-neutral-content sm:footer-horizontal">
@@ -243,6 +259,12 @@
 			<div
 				class="bg-base-400 flex min-h-full flex-col items-start is-drawer-close:w-14 is-drawer-open:w-32"
 			>
+				<!-- Logo -->
+				<div class="mt-4 mb-4 flex w-full justify-center">
+					<a class="is-drawer-close:tooltip is-drawer-close:tooltip-right" data-tip="Hive" href="/"
+						><Handshake size="32" /></a
+					>
+				</div>
 				<!-- Sidebar content here -->
 				<ul class="menu w-full grow gap-4">
 					<li>

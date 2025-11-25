@@ -8,12 +8,14 @@ import org.springframework.stereotype.Repository;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface EventRepository extends CrudRepository<EventEntity, Long>, JpaSpecificationExecutor<EventEntity> {
+    Optional<EventEntity> findByCancelledIsFalseAndId(Long id);
 
     List<EventListView> findByOwner_Id(Long ownerId);
 
-    List<EventListView> findByOwner_IdAndEventDateAfter(Long ownerId, LocalDate date);
+    List<EventListView> findByCancelledIsFalseAndOwner_IdAndEventDateAfter(Long ownerId, LocalDate date);
 
 }

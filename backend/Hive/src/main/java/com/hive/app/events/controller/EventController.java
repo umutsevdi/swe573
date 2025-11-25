@@ -53,4 +53,12 @@ public class EventController {
         UserDTO self = (UserDTO) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
         return ResponseEntity.ok(service.updateEvent(id, request, self));
     }
+
+    @DeleteMapping("/{id}")
+    ResponseEntity<Void> cancel(
+            @PathVariable Long id) throws NotFoundException {
+        service.cancelEvent(id, (UserDTO) SecurityContextHolder.getContext().getAuthentication().getPrincipal());
+        return ResponseEntity.ok().build();
+    }
+
 }

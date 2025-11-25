@@ -27,11 +27,11 @@ public class EventEntity {
     private String description;
     @Column(length = 512)
     private String tags;
-    @Column
+    @Column(name = "L_LAT")
     private Double latitude;
-    @Column
+    @Column(name = "L_LON")
     private Double longitude;
-    @Column
+    @Column(name = "L_NAME")
     private String locationName;
     @Column
     private Integer maxParticipants;
@@ -45,6 +45,8 @@ public class EventEntity {
     @CreationTimestamp
     @Column(updatable = false)
     private LocalDateTime createdAt;
+    @Column(nullable = false)
+    private boolean cancelled;
     @Column
     private LocalDateTime updatedAt;
     @ManyToOne(fetch = FetchType.LAZY)

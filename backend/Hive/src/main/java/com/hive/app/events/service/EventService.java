@@ -32,7 +32,8 @@ public class EventService {
         if (showInactive) {
             return repository.findByOwner_Id(userId);
         }
-        return repository.findByOwner_IdAndEventDateAfter(userId, LocalDate.now().minusDays(1));
+        return repository.findByCancelledIsFalseAndOwner_IdAndEventDateAfter(userId,
+                LocalDate.now().minusDays(1));
     }
 
     public List<EventResponse> getAllEventsBy(EventQueryOptions options) {
@@ -40,6 +41,7 @@ public class EventService {
             options.setStartDate(LocalDate.now().minusDays(1));
         }
         Specification<EventEntity> spec = Specification.allOf(
+                EventSpecifications.includeCancelled(options.isIncludeCancelled()),
                 EventSpecifications.hasText(options.getTextSearch()),
                 EventSpecifications.hasText(options.getTextSearch()),
                 EventSpecifications.isWithinProximity(options.getUserLocation(), options.getProximity()),
@@ -52,11 +54,19 @@ public class EventService {
         return repository.findAll(spec).stream().map(mapper::entityToResponse).toList();
     }
 
+    @Cacheable(cacheNames = "eventById", key = "#id")
+    public EventResponse getEvent(Long id) throws NotFoundException {
+        return repository.findByCancelledIsFalseAndId(id)
+                .map(mapper::entityToResponse)
+                .orElseThrow(NotFoundException::new);
+    }
+
 
     @CacheEvict(cacheNames = {"getUserEvents", "eventById"}, allEntries = true)
     public EventResponse newEvent(EventRequest request, UserDTO userDTO) {
         request.setTags(request.getTags().stream().map(String::toLowerCase).toList());
         EventEntity entity = mapper.requestToEntity(request);
+        entity.setCancelled(false);
         entity.setOwner(userMapper.dtoToEntity(userDTO));
         return mapper.entityToResponse(repository.save(entity));
     }
@@ -66,7 +76,7 @@ public class EventService {
             @CacheEvict(cacheNames = "getUserEvents", allEntries = true)
     })
     public EventResponse updateEvent(Long id, EventRequest request, UserDTO userDTO) throws NotFoundException {
-        EventDTO event = repository.findById(id)
+        EventDTO event = repository.findByCancelledIsFalseAndId(id)
                 .map(mapper::entityToDTO)
                 .orElseThrow(NotFoundException::new);
         if (!event.getOwner().getId().equals(userDTO.getId())) {
@@ -97,10 +107,18 @@ public class EventService {
         return mapper.entityToResponse(repository.save(mapper.dtoToEntity(event)));
     }
 
-    @Cacheable(cacheNames = "eventById", key = "#id")
-    public EventResponse getEvent(Long id) throws NotFoundException {
-        return repository.findById(id)
-                .map(mapper::entityToResponse)
+    @Caching(evict = {
+            @CacheEvict(cacheNames = "eventById", key = "#id"),
+            @CacheEvict(cacheNames = "getUserEvents", allEntries = true)
+    })
+    public void cancelEvent(Long id, UserDTO userDTO) throws NotFoundException {
+        EventEntity event = repository.findByCancelledIsFalseAndId(id)
                 .orElseThrow(NotFoundException::new);
+        if (!event.getOwner().getId().equals(userDTO.getId())) {
+            throw new PermissionDeniedException();
+        }
+        event.setCancelled(true);
+        repository.save(event);
     }
+
 }

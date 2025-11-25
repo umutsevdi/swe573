@@ -10,6 +10,12 @@ import java.util.List;
 
 public class EventSpecifications {
 
+    public static Specification<EventEntity> includeCancelled(boolean showCancelled) {
+        return (root, query, cb) ->
+                showCancelled ? cb.conjunction() :
+                        cb.equal(root.get("cancelled"), true);
+    }
+
     public static Specification<EventEntity> hasText(String textSearch) {
         return (root, query, cb) ->
                 textSearch == null ? cb.conjunction() :

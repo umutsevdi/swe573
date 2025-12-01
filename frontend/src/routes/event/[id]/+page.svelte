@@ -32,10 +32,18 @@
 
 	type ParticipationRequest = {
 		id: string;
-		userId: string;
+		userId: number;
 		userName: string;
 		message: string;
-		status: 'CREATED' | 'PENDING' | 'ACCEPTED' | 'REJECTED';
+		status:
+			| 'SENT'
+			| 'PENDING'
+			| 'CREATED'
+			| 'NEGOTIATING'
+			| 'ACCEPTED'
+			| 'REJECTED'
+			| 'WITHDRAWN'
+			| 'COMPLETED';
 	};
 
 	type EventData = {
@@ -209,38 +217,70 @@
 	}
 
 	// Participation functionality
-	let userParticipationStatus = $state<string>('none');
-	let participationRequests = $state<any[]>([]);
-
-	$effect(() => {
-		userParticipationStatus = event.userParticipationStatus;
-		participationRequests = event.participationRequests;
-	});
+	let userParticipationStatus = $state(event.userParticipationStatus);
+	let participationRequests = $state(event.participationRequests);
 	let participationMessage = $state('');
 
-	function sendParticipationRequest() {
+	async function sendParticipationRequest() {
 		const message = participationMessage.trim();
-		const request = {
-			id: Date.now().toString(),
-			userId: 'currentUser', // mock
-			userName: 'You',
-			message,
-			status: 'PENDING' as const
-		};
-		participationRequests = [...participationRequests, request];
-		userParticipationStatus = 'pending';
-		participationMessage = '';
-		// In real app, API call
-		console.log('Sent participation request:', request);
+		try {
+			const eventId = $page.params.id;
+			const response = await fetch(
+				`${HIVE_API}/event/${eventId}/participation?message=${encodeURIComponent(message)}`,
+				{
+					method: 'POST',
+					headers: {
+						Authorization: `Bearer ${$auth.token}`
+					}
+				}
+			);
+			if (!response.ok) {
+				throw new Error(`Failed to send participation request: ${response.statusText}`);
+			}
+			// Update local state
+			const currentUserId = $auth.userCard?.id;
+			if (!currentUserId) return;
+			const request = {
+				id: currentUserId.toString(),
+				userId: currentUserId,
+				userName: '', // Will be loaded by UserAvatar
+				message,
+				status: 'SENT' as const
+			};
+			participationRequests = [...participationRequests, request];
+			userParticipationStatus = 'pending';
+			participationMessage = '';
+			toast.success('Participation request sent successfully!');
+		} catch (error) {
+			console.error('Error sending participation request:', error);
+			toast.error('Failed to send participation request. Please try again.');
+		}
 	}
 
-	function leaveEvent() {
-		userParticipationStatus = 'none';
-		// Remove user's request
-		participationRequests = participationRequests.filter(
-			(req: ParticipationRequest) => req.userId !== 'currentUser'
-		);
-		// In real app, API call
+	async function leaveEvent() {
+		try {
+			const eventId = $page.params.id;
+			const response = await fetch(`${HIVE_API}/event/${eventId}/participation`, {
+				method: 'DELETE',
+				headers: {
+					Authorization: `Bearer ${$auth.token}`
+				}
+			});
+			if (!response.ok) {
+				throw new Error(`Failed to leave event: ${response.statusText}`);
+			}
+			// Update local state
+			const currentUserId = $auth.userCard?.id;
+			if (!currentUserId) return;
+			userParticipationStatus = 'none';
+			participationRequests = participationRequests.filter(
+				(req: ParticipationRequest) => req.userId !== currentUserId
+			);
+			toast.success('Left the event successfully!');
+		} catch (error) {
+			console.error('Error leaving event:', error);
+			toast.error('Failed to leave the event. Please try again.');
+		}
 	}
 
 	function acceptRequest(requestId: string) {
@@ -249,7 +289,8 @@
 		);
 		// Update user status if it's their request
 		const request = participationRequests.find((r: ParticipationRequest) => r.id === requestId);
-		if (request?.userId === 'currentUser') {
+		const currentUserId = $auth.userCard?.id;
+		if (request?.userId === currentUserId) {
 			userParticipationStatus = 'accepted';
 		}
 		// In real app, API call
@@ -260,7 +301,8 @@
 			req.id === requestId ? { ...req, status: 'REJECTED' } : req
 		);
 		const request = participationRequests.find((r: ParticipationRequest) => r.id === requestId);
-		if (request?.userId === 'currentUser') {
+		const currentUserId = $auth.userCard?.id;
+		if (request?.userId === currentUserId) {
 			userParticipationStatus = 'rejected';
 		}
 		// In real app, API call
@@ -271,18 +313,37 @@
 			req.id === requestId ? { ...req, status: 'REJECTED' } : req
 		);
 		const request = participationRequests.find((r: ParticipationRequest) => r.id === requestId);
-		if (request?.userId === 'currentUser') {
+		const currentUserId = $auth.userCard?.id;
+		if (request?.userId === currentUserId) {
 			userParticipationStatus = 'rejected';
 		}
 		// In real app, API call
 	}
 
-	function withdrawRequest() {
-		participationRequests = participationRequests.filter(
-			(req: ParticipationRequest) => req.userId !== 'currentUser'
-		);
-		userParticipationStatus = 'none';
-		// In real app, API call
+	async function withdrawRequest() {
+		try {
+			const eventId = $page.params.id;
+			const response = await fetch(`${HIVE_API}/event/${eventId}/participation`, {
+				method: 'DELETE',
+				headers: {
+					Authorization: `Bearer ${$auth.token}`
+				}
+			});
+			if (!response.ok) {
+				throw new Error(`Failed to withdraw participation: ${response.statusText}`);
+			}
+			// Update local state
+			const currentUserId = $auth.userCard?.id;
+			if (!currentUserId) return;
+			participationRequests = participationRequests.filter(
+				(req: ParticipationRequest) => req.userId !== currentUserId
+			);
+			userParticipationStatus = 'none';
+			toast.success('Participation request withdrawn successfully!');
+		} catch (error) {
+			console.error('Error withdrawing participation:', error);
+			toast.error('Failed to withdraw participation. Please try again.');
+		}
 	}
 
 	async function loadBackground() {
@@ -528,17 +589,18 @@
 							<h3 class="card-title">
 								<Users class="h-5 w-5" />
 								Pending Participation Requests ({participationRequests.filter(
-									(r: ParticipationRequest) => r.status === 'PENDING'
+									(r: ParticipationRequest) =>
+										r.status === 'SENT' || r.status === 'PENDING' || r.status === 'CREATED'
 								).length})
 							</h3>
-							{#if participationRequests.some((r: ParticipationRequest) => r.status === 'PENDING')}
-								{#each participationRequests.filter((r: ParticipationRequest) => r.status === 'PENDING') as request (request.id)}
+							{#if participationRequests.some((r: ParticipationRequest) => r.status === 'SENT' || r.status === 'PENDING' || r.status === 'CREATED')}
+								{#each participationRequests.filter((r: ParticipationRequest) => r.status === 'SENT' || r.status === 'PENDING' || r.status === 'CREATED') as request (request.id)}
 									<div
 										class="mb-4 border-b border-base-300 pb-4 last:mb-0 last:border-b-0 last:pb-0"
 									>
 										<div class="flex items-start justify-between">
 											<div class="flex-1">
-												<p class="font-semibold">{request.userName}</p>
+												<UserAvatar userId={request.userId} />
 												{#if request.message}
 													<p class="mt-1 text-sm opacity-70">{request.message}</p>
 												{/if}
@@ -572,17 +634,20 @@
 							<h3 class="card-title">
 								<Users class="h-5 w-5" />
 								Accepted Participants ({participationRequests.filter(
-									(r: ParticipationRequest) => r.status === 'ACCEPTED'
+									(r: ParticipationRequest) =>
+										r.status === 'ACCEPTED' ||
+										r.status === 'NEGOTIATING' ||
+										r.status === 'COMPLETED'
 								).length})
 							</h3>
-							{#if participationRequests.some((r: ParticipationRequest) => r.status === 'ACCEPTED')}
-								{#each participationRequests.filter((r: ParticipationRequest) => r.status === 'ACCEPTED') as request (request.id)}
+							{#if participationRequests.some((r: ParticipationRequest) => r.status === 'ACCEPTED' || r.status === 'NEGOTIATING' || r.status === 'COMPLETED')}
+								{#each participationRequests.filter((r: ParticipationRequest) => r.status === 'ACCEPTED' || r.status === 'NEGOTIATING' || r.status === 'COMPLETED') as request (request.id)}
 									<div
 										class="mb-4 border-b border-base-300 pb-4 last:mb-0 last:border-b-0 last:pb-0"
 									>
 										<div class="flex items-start justify-between">
 											<div class="flex-1">
-												<p class="font-semibold">{request.userName}</p>
+												<UserAvatar userId={request.userId} />
 												{#if request.message}
 													<p class="mt-1 text-sm opacity-70">{request.message}</p>
 												{/if}

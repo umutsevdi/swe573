@@ -19,7 +19,8 @@ public class CacheConfig {
                 "threadList",
                 "threadPage",
                 "eventById",
-                "getUserEvents"
+                "getUserEvents",
+                "getParticipants"
         );
     }
 }

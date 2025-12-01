@@ -1,12 +1,10 @@
 package com.hive.config;
 
-import com.hive.config.exceptions.AuthenticationFailureException;
-import com.hive.config.exceptions.NotFoundException;
-import com.hive.config.exceptions.PermissionDeniedException;
-import com.hive.config.exceptions.UserNotFoundException;
+import com.hive.config.exceptions.*;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.log4j.Log4j2;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
@@ -72,6 +70,18 @@ public class GlobalExceptionHandler {
                 HttpStatus.UNAUTHORIZED,
                 request,
                 "Authentication failed! " + ex.getMessage()), HttpStatus.UNAUTHORIZED);
+    }
+
+
+    @ExceptionHandler({
+            LogicException.class,
+            DataIntegrityViolationException.class
+    })
+    public ResponseEntity<ApiError> handleLogicException(Exception ex, HttpServletRequest request) {
+        return new ResponseEntity<>(buildError(
+                HttpStatus.BAD_REQUEST,
+                request,
+                ex.getMessage()), HttpStatus.BAD_REQUEST);
     }
 
     @ExceptionHandler({

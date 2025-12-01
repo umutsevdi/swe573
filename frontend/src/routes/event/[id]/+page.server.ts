@@ -13,10 +13,18 @@ type ChatMessage = {
 
 type ParticipationRequest = {
 	id: string;
-	userId: string;
+	userId: number;
 	userName: string;
 	message: string;
-	status: 'CREATED' | 'PENDING' | 'ACCEPTED' | 'REJECTED';
+	status:
+		| 'SENT'
+		| 'PENDING'
+		| 'CREATED'
+		| 'NEGOTIATING'
+		| 'ACCEPTED'
+		| 'REJECTED'
+		| 'WITHDRAWN'
+		| 'COMPLETED';
 };
 
 type EventData = {
@@ -72,10 +80,43 @@ export const load: PageServerLoad = async ({ params, cookies }) => {
 
 	const serverData: EventApiResponse = await loadWithAuth(`${HIVE_API}/event/${id}`, cookies);
 
+	// Fetch participation data
+	const participationData: Record<string, string> = await loadWithAuth(
+		`${HIVE_API}/event/${id}/participation`,
+		cookies
+	);
+
 	// Decode JWT to get current user id
 	const token = cookies.get('token')!;
 	const payload = decodeJwtPayload(token);
 	const currentUserId = payload?.id;
+
+	// Map participation data to ParticipationRequest array
+	const participationRequests: ParticipationRequest[] = Object.entries(participationData).map(
+		([userIdStr, status]) => ({
+			id: userIdStr,
+			userId: parseInt(userIdStr),
+			userName: '', // Will be loaded by UserAvatar
+			message: '',
+			status: status as ParticipationRequest['status']
+		})
+	);
+
+	// Map user participation status
+	const userStatus = participationData[currentUserId?.toString() || ''];
+	const statusMap: Record<string, 'none' | 'pending' | 'accepted' | 'rejected'> = {
+		SENT: 'pending',
+		PENDING: 'pending',
+		CREATED: 'pending',
+		NEGOTIATING: 'accepted',
+		ACCEPTED: 'accepted',
+		REJECTED: 'rejected',
+		WITHDRAWN: 'none',
+		COMPLETED: 'accepted'
+	};
+	const userParticipationStatus = userStatus ? statusMap[userStatus] || 'none' : 'none';
+
+	const isOwner = currentUserId === serverData.ownerId;
 
 	const mappedData: EventData = {
 		id: serverData.id.toString(),
@@ -93,12 +134,10 @@ export const load: PageServerLoad = async ({ params, cookies }) => {
 		targetDate: serverData.eventDate,
 		duration: serverData.duration ? `${serverData.duration} hour(s)` : undefined,
 		capacity: serverData.maxParticipants,
-		userParticipationStatus: 'none', // Default
-		participationRequests: [], // Default
+		userParticipationStatus,
+		participationRequests,
 		chatMessages: [] // Default
 	};
-
-	const isOwner = currentUserId === serverData.ownerId;
 
 	return { event: mappedData, isOwner };
 };

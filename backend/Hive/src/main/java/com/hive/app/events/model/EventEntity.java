@@ -19,7 +19,7 @@ import java.time.LocalDateTime;
 @Entity
 public class EventEntity {
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @GeneratedValue(strategy = GenerationType.SEQUENCE)
     private Long id;
     @Column(length = 256)
     private String title;

@@ -1,11 +1,9 @@
 package com.hive.app.events.controller;
 
 import com.hive.app.account.model.UserDTO;
-import com.hive.app.events.model.EventListView;
-import com.hive.app.events.model.EventQueryOptions;
-import com.hive.app.events.model.EventRequest;
-import com.hive.app.events.model.EventResponse;
+import com.hive.app.events.model.*;
 import com.hive.app.events.service.EventService;
+import com.hive.config.exceptions.LogicException;
 import com.hive.config.exceptions.NotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
@@ -14,6 +12,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequiredArgsConstructor
@@ -59,6 +58,37 @@ public class EventController {
             @PathVariable Long id) throws NotFoundException {
         service.cancelEvent(id, (UserDTO) SecurityContextHolder.getContext().getAuthentication().getPrincipal());
         return ResponseEntity.ok().build();
+    }
+
+    @PostMapping("/{id}/participation")
+    ResponseEntity<Void> participate(@PathVariable Long id, @RequestParam String message) throws NotFoundException, LogicException {
+        UserDTO self = (UserDTO) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        service.participate(id, self, message);
+        return ResponseEntity.ok().build();
+    }
+
+    @DeleteMapping("/{id}/participation")
+    ResponseEntity<Void> withdraw(@PathVariable Long id) throws NotFoundException,
+            LogicException {
+        UserDTO self = (UserDTO) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        service.withdraw(id, self);
+        return ResponseEntity.ok().build();
+    }
+
+    @PutMapping("/{id}/participation")
+    ResponseEntity<Void> manageParticipation(@PathVariable Long id,
+                                             @RequestBody ParticipationAssignmentRequest request) throws NotFoundException,
+            LogicException {
+        UserDTO self = (UserDTO) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        service.assign(id, self, request);
+        return ResponseEntity.ok().build();
+    }
+
+    @GetMapping("/{id}/participation")
+    ResponseEntity<Map<Long, ParticipationState>> getParticipants(@PathVariable Long id) {
+        var r = service.getParticipants(id);
+        log.info("participants: {}", r);
+        return ResponseEntity.ok(r);
     }
 
 }

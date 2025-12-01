@@ -1,18 +1,19 @@
 <script lang="ts">
 	import {
-		ArrowLeft,
 		MapPin,
 		Calendar,
-		Clock,
 		MessageSquare,
 		Users,
 		Send,
 		HeartHandshake,
-		HandHelping
+		HandHelping,
+		TriangleAlert,
+		Info,
+		Handshake,
+		CircleCheck
 	} from '@lucide/svelte';
 	import { breadcrumbs } from '$lib/stores/breadcrumbs';
 
-	import { resolve } from '$app/paths';
 	import MapComponent from '$lib/components/MapComponent.svelte';
 	import EventModal from '$lib/components/EventModal.svelte';
 	import UserAvatar from '$lib/components/UserAvatar.svelte';
@@ -62,13 +63,12 @@
 		// Additional fields for full event view
 
 		coordinates?: { lat: number; lng: number };
-		participantCount?: number;
 		userParticipationStatus?: 'none' | 'pending' | 'accepted' | 'rejected';
 		participationRequests?: ParticipationRequest[];
 		chatMessages?: ChatMessage[];
 	};
 
-	let { data } = $props<{ event: EventData; isOwner: boolean }>();
+	let { data } = $props<{ event: EventData; isOwner: boolean; currentUserId: number }>();
 	let event = $derived(data.event);
 
 	breadcrumbs.set([{ text: 'Event' }, { text: data.event.title }]);
@@ -164,7 +164,7 @@
 	let chatMessages = $state<ChatMessage[]>([]);
 
 	$effect(() => {
-		chatMessages = event.chatMessages;
+		chatMessages = event.chatMessages || [];
 	});
 	let negotiationMessages = $state<ChatMessage[]>([]);
 	let newNegotiationMessage = $state('');
@@ -219,6 +219,67 @@
 	// Participation functionality
 	let userParticipationStatus = $state(event.userParticipationStatus);
 	let participationRequests = $state(event.participationRequests);
+
+	// Steps for participation status
+	let steps = $state([
+		{ label: 'Request Sent', status: 'SENT' },
+		{ label: 'Negotiating', status: 'NEGOTIATING' },
+		{ label: 'Decision Made', status: 'DECIDED' },
+		{ label: 'Completed', status: 'COMPLETED' }
+	]);
+
+	$effect(() => {
+		steps[2].label =
+			currentStatus === 'ACCEPTED'
+				? 'Accepted'
+				: currentStatus === 'REJECTED'
+					? 'Rejected'
+					: 'Decision Made';
+	});
+
+	// Get current user's participation status
+	let userRequest = $derived(
+		participationRequests.find((r: ParticipationRequest) => r.userId === data.currentUserId)
+	);
+	let currentStatus = $derived(userRequest?.status);
+	let currentStepIndex = $derived(
+		currentStatus === 'SENT'
+			? 0
+			: currentStatus === 'NEGOTIATING'
+				? 1
+				: currentStatus === 'ACCEPTED' || currentStatus === 'REJECTED'
+					? 2
+					: currentStatus === 'COMPLETED'
+						? 3
+						: -1
+	);
+
+	type StepType = {
+		color: string;
+		message?: string;
+		icon?: typeof CircleCheck;
+	};
+
+	let stepClass = $derived((): StepType => {
+		switch (currentStatus) {
+			case 'COMPLETED':
+				return { color: 'success' };
+			case 'ACCEPTED':
+				return {
+					color: 'success',
+					icon: CircleCheck,
+					message: 'Negotiation was succesful. See you there.'
+				};
+			case 'REJECTED':
+				return { color: 'error', message: 'You were rejeceted by the owner.', icon: TriangleAlert };
+			case 'SENT':
+				return { color: 'accent', message: 'Waiting for approval.', icon: Info };
+			case 'NEGOTIATING':
+				return { color: 'info', message: 'Negotiating.', icon: Handshake };
+			default:
+				return { color: 'primary' };
+		}
+	});
 	let participationMessage = $state('');
 
 	async function sendParticipationRequest() {
@@ -267,19 +328,19 @@
 				}
 			});
 			if (!response.ok) {
-				throw new Error(`Failed to leave event: ${response.statusText}`);
+				throw new Error(`Failed to withdraw participation: ${response.statusText}`);
 			}
 			// Update local state
 			const currentUserId = $auth.userCard?.id;
 			if (!currentUserId) return;
-			userParticipationStatus = 'none';
 			participationRequests = participationRequests.filter(
 				(req: ParticipationRequest) => req.userId !== currentUserId
 			);
-			toast.success('Left the event successfully!');
+			userParticipationStatus = 'none';
+			toast.success('Participation request withdrawn successfully!');
 		} catch (error) {
-			console.error('Error leaving event:', error);
-			toast.error('Failed to leave the event. Please try again.');
+			console.error('Error withdrawing participation:', error);
+			toast.error('Failed to withdraw participation. Please try again.');
 		}
 	}
 
@@ -318,32 +379,6 @@
 			userParticipationStatus = 'rejected';
 		}
 		// In real app, API call
-	}
-
-	async function withdrawRequest() {
-		try {
-			const eventId = $page.params.id;
-			const response = await fetch(`${HIVE_API}/event/${eventId}/participation`, {
-				method: 'DELETE',
-				headers: {
-					Authorization: `Bearer ${$auth.token}`
-				}
-			});
-			if (!response.ok) {
-				throw new Error(`Failed to withdraw participation: ${response.statusText}`);
-			}
-			// Update local state
-			const currentUserId = $auth.userCard?.id;
-			if (!currentUserId) return;
-			participationRequests = participationRequests.filter(
-				(req: ParticipationRequest) => req.userId !== currentUserId
-			);
-			userParticipationStatus = 'none';
-			toast.success('Participation request withdrawn successfully!');
-		} catch (error) {
-			console.error('Error withdrawing participation:', error);
-			toast.error('Failed to withdraw participation. Please try again.');
-		}
 	}
 
 	async function loadBackground() {
@@ -416,6 +451,13 @@
 		return R * c;
 	}
 
+	function getParticipantCount(): number {
+		// Calculate active participant count from participation requests
+		return participationRequests.filter(
+			(r: ParticipationRequest) => r.status === 'ACCEPTED' || r.status === 'NEGOTIATING'
+		).length;
+	}
+
 	// Get user's location
 	function getUserLocation() {
 		if (navigator.geolocation) {
@@ -477,495 +519,444 @@
 	});
 </script>
 
-{#if !data.event}
-	<div class="flex min-h-screen items-center justify-center bg-base-200">
-		<div class="loading loading-lg loading-spinner"></div>
-	</div>
-{:else}
-	<div class="min-h-screen bg-base-200">
-		<!-- Hero Section -->
-		<div class="relative h-64 md:h-80 lg:h-96">
-			<div class="absolute inset-0">
-				<img src={backgroundImageSrc} alt={event.title} class="h-full w-full object-cover" />
-				<div class="absolute inset-0 bg-black/40"></div>
-			</div>
-			<div class="relative flex h-full items-end p-6 text-white">
-				<div class="container mx-auto flex items-end justify-between">
-					<div>
-						<a href={resolve('/')} class="btn mb-4 text-white btn-ghost hover:bg-white/20">
-							<ArrowLeft class="h-4 w-4" />
-							Back to Home
-						</a>
-						<div class="mb-2 flex items-center gap-3">
-							<div
-								class="badge badge-lg {event.type === 'OFFER' ? 'badge-success' : 'badge-accent'}"
-							>
-								{#if event.type === 'OFFER'}
-									<HeartHandshake class="h-4 w-4" />
-								{:else}
-									<HandHelping class="h-4 w-4" />
-								{/if}
-								{event.type}
+<div class="hero min-h-screen bg-base-200">
+	<div class="hero-content w-full max-w-4xl flex-col">
+		<div class="w-full">
+			{#if !data.event}
+				<div class="loading loading-lg loading-spinner"></div>
+			{:else}
+				<!-- Event Description -->
+				<div class="card mb-6 bg-base-100 shadow-xl">
+					<div class="card-body">
+						<div class="flex justify-between">
+							<h1 class="mb-2 card-title text-3xl">{event.title}</h1>
+							<div class="mb-2 flex items-center gap-3">
+								<div
+									class="badge badge-lg {event.type === 'OFFER' ? 'badge-success' : 'badge-accent'}"
+								>
+									{#if event.type === 'OFFER'}
+										<HeartHandshake class="h-4 w-4" />
+									{:else}
+										<HandHelping class="h-4 w-4" />
+									{/if}
+									{event.type}
+								</div>
 							</div>
 						</div>
-						<h1 class="mb-2 text-3xl font-bold md:text-4xl lg:text-5xl">
-							{event.title}
-						</h1>
-						<div class="flex flex-wrap gap-2">
+						<div class="mb-4 flex gap-1">
 							{#each event.tags as tag (tag)}
-								<span class="badge badge-outline badge-lg badge-accent">{tag}</span>
+								<span class="badge badge-outline badge-accent">{tag}</span>
 							{/each}
 						</div>
-					</div>
-					<div class="mt-4">
-						{#if !data.isOwner}
-							{#if userParticipationStatus === 'none'}
-								<button
-									class="btn btn-lg btn-primary"
-									onclick={() => (showParticipationModal = true)}
-								>
-									{#if event.type === 'OFFER'}
-										<HeartHandshake class="h-5 w-5" />
-									{:else}
-										<HandHelping class="h-5 w-5" />
-									{/if}
-									Apply to {event.type.toLowerCase()}
-								</button>
-							{:else if userParticipationStatus === 'pending'}
-								<div class="alert alert-info">
-									<Clock class="h-5 w-5" />
-									<span>Participation request pending approval.</span>
-								</div>
-								<button class="btn mt-2 btn-outline btn-warning" onclick={withdrawRequest}>
-									Withdraw Request
-								</button>
-							{:else if userParticipationStatus === 'accepted'}
-								<button class="btn btn-outline btn-lg btn-primary" onclick={leaveEvent}>
-									{#if event.type === 'OFFER'}
-										<HeartHandshake class="h-5 w-5" />
-									{:else}
-										<HandHelping class="h-5 w-5" />
-									{/if}
-									Leave {event.type.toLowerCase()}
-								</button>
-								<div class="mt-4 alert alert-success">
-									<HeartHandshake class="h-5 w-5" />
-									<span>You are participating in this {event.type.toLowerCase()}!</span>
-								</div>
-							{:else if userParticipationStatus === 'rejected'}
-								<div class="alert alert-error">
-									<span>Your participation request was rejected.</span>
-								</div>
-								<button
-									class="btn mt-2 btn-lg btn-primary"
-									onclick={() => (showParticipationModal = true)}
-								>
-									Apply Again
-								</button>
+
+						<!-- Map Section -->
+						<p class="flex items-center gap-2">
+							<span class="font-medium">{event.location}</span>
+							{#if distance}
+								<span class="badge badge-ghost">~{distance} away</span>
 							{/if}
-							{#if event.maxParticipants && event.participantCount >= event.maxParticipants}
-								<p class="mt-2 text-sm text-white/70">
-									This {event.type.toLowerCase()} is currently full
-								</p>
-							{/if}
+						</p>
+						{#if locationError}
+							<div class="mb-4 alert alert-warning">
+								<MapPin class="h-6 w-6" />
+								<span>{locationError}</span>
+							</div>
+						{:else if !userLatitude || !userLongitude}
+							<div class="mb-4 alert alert-info">
+								<MapPin class="h-6 w-6" />
+								<span>Getting your location...</span>
+							</div>
 						{/if}
-						{#if data.isOwner}
-							<button class="btn mt-2 btn-secondary" onclick={() => (showEditModal = true)}>
-								Edit Event
-							</button>
-						{/if}
-					</div>
-				</div>
-			</div>
-		</div>
-
-		<!-- Participation Management Section for Owner -->
-		{#if data.isOwner}
-			<div class="container mx-auto px-6 py-8">
-				<div class="grid grid-cols-1 gap-8 lg:grid-cols-2">
-					<!-- Pending Requests -->
-					<div class="card bg-base-100 shadow-xl">
-						<div class="card-body">
-							<h3 class="card-title">
-								<Users class="h-5 w-5" />
-								Pending Participation Requests ({participationRequests.filter(
-									(r: ParticipationRequest) =>
-										r.status === 'SENT' || r.status === 'PENDING' || r.status === 'CREATED'
-								).length})
-							</h3>
-							{#if participationRequests.some((r: ParticipationRequest) => r.status === 'SENT' || r.status === 'PENDING' || r.status === 'CREATED')}
-								{#each participationRequests.filter((r: ParticipationRequest) => r.status === 'SENT' || r.status === 'PENDING' || r.status === 'CREATED') as request (request.id)}
-									<div
-										class="mb-4 border-b border-base-300 pb-4 last:mb-0 last:border-b-0 last:pb-0"
-									>
-										<div class="flex items-start justify-between">
-											<div class="flex-1">
-												<UserAvatar userId={request.userId} />
-												{#if request.message}
-													<p class="mt-1 text-sm opacity-70">{request.message}</p>
-												{/if}
-											</div>
-											<div class="flex gap-2">
-												<button
-													class="btn btn-sm btn-success"
-													onclick={() => acceptRequest(request.id)}
-												>
-													Accept
-												</button>
-												<button
-													class="btn btn-sm btn-error"
-													onclick={() => rejectRequest(request.id)}
-												>
-													Reject
-												</button>
-											</div>
-										</div>
-									</div>
-								{/each}
-							{:else}
-								<p class="text-sm opacity-70">No pending participation requests.</p>
-							{/if}
-						</div>
-					</div>
-
-					<!-- Accepted Participants -->
-					<div class="card bg-base-100 shadow-xl">
-						<div class="card-body">
-							<h3 class="card-title">
-								<Users class="h-5 w-5" />
-								Accepted Participants ({participationRequests.filter(
-									(r: ParticipationRequest) =>
-										r.status === 'ACCEPTED' ||
-										r.status === 'NEGOTIATING' ||
-										r.status === 'COMPLETED'
-								).length})
-							</h3>
-							{#if participationRequests.some((r: ParticipationRequest) => r.status === 'ACCEPTED' || r.status === 'NEGOTIATING' || r.status === 'COMPLETED')}
-								{#each participationRequests.filter((r: ParticipationRequest) => r.status === 'ACCEPTED' || r.status === 'NEGOTIATING' || r.status === 'COMPLETED') as request (request.id)}
-									<div
-										class="mb-4 border-b border-base-300 pb-4 last:mb-0 last:border-b-0 last:pb-0"
-									>
-										<div class="flex items-start justify-between">
-											<div class="flex-1">
-												<UserAvatar userId={request.userId} />
-												{#if request.message}
-													<p class="mt-1 text-sm opacity-70">{request.message}</p>
-												{/if}
-											</div>
-											<div class="flex gap-2">
-												<button
-													class="btn btn-sm btn-error"
-													onclick={() => removeParticipant(request.id)}
-												>
-													Remove
-												</button>
-											</div>
-										</div>
-									</div>
-								{/each}
-							{:else}
-								<p class="text-sm opacity-70">There are no accepted participants.</p>
-							{/if}
-						</div>
-					</div>
-				</div>
-			</div>
-		{/if}
-
-		<!-- Main Content -->
-		<div class="container mx-auto px-6 py-8">
-			<div class="grid grid-cols-1 gap-8 lg:grid-cols-2">
-				<!-- Left Column: Event Details -->
-				<div class="space-y-6">
-					<!-- Event Description -->
-					<div class="card bg-base-100 shadow-xl">
-						<div class="card-body">
-							<div class="mb-4 flex items-center gap-4">
+						<MapComponent
+							latitude={event.coordinates?.lat}
+							longitude={event.coordinates?.lng}
+							locationName={event.location}
+							{userLatitude}
+							{userLongitude}
+							{userLocationName}
+							height="h-64"
+						/>
+						<p class="mb-4 text-base-content/70" style="white-space: pre-wrap;">
+							{event.description}
+						</p>
+						<div class="align-content justify-between lg:flex">
+							<div class="mb-4 flex items-center gap-3">
 								<UserAvatar userId={event.ownerId} />
-								<div class="flex items-center gap-4 text-sm opacity-70">
-									<div class="flex items-center gap-1">
-										<Calendar class="h-4 w-4" />
-										{event.createdAt}
-										{#if event.updatedAt}
-											<i class="text-xs italic opacity-60">Edited</i>
-										{/if}
-									</div>
-									<div class="flex items-center gap-1">
-										<Users class="h-4 w-4" />
-										{event.participantCount} participants
-									</div>
+								<div class="flex items-center gap-2 text-sm opacity-70">
+									<Calendar />
+									<span>{event.createdAt}</span>
+									<Users />
+									<span>{getParticipantCount()}/{event.maxParticipants} participants</span>
 								</div>
 							</div>
-							<p class="text-base leading-relaxed whitespace-pre-wrap">{event.description}</p>
-							<div class="divider"></div>
-							<div class="mt-4 flex flex-wrap gap-4">
-								<div class="flex items-center gap-4">
-									{#if event.targetDate}
-										<div class="flex items-center gap-2">
-											<Calendar class="h-4 w-4 text-primary" />
-											<span class="text-sm font-medium">Event Date: {event.targetDate}</span>
-										</div>
-									{/if}
-									{#if event.duration}
-										<div class="flex items-center gap-2">
-											<Clock class="h-4 w-4 text-primary" />
-											<span class="text-sm font-medium">Duration: {event.duration}</span>
+
+							{#if data.isOwner}
+								<button class="btn mt-2 btn-secondary" onclick={() => (showEditModal = true)}>
+									Edit Event
+								</button>
+							{:else if userParticipationStatus === 'none'}
+								{#if getParticipantCount() >= event.maxParticipants}
+									<span class="mt-2 text-sm opacity-70">Event is full</span>
+								{:else}
+									<button
+										class="btn mt-2 btn-primary"
+										onclick={() => (showParticipationModal = true)}
+									>
+										{#if event.type === 'OFFER'}
+											<HeartHandshake class="h-5 w-5" />
+										{:else}
+											<HandHelping class="h-5 w-5" />
+										{/if}
+										Apply to {event.type.toLowerCase()}
+									</button>
+								{/if}
+							{:else if userParticipationStatus !== 'accepted' && userParticipationStatus !== 'rejected' && userParticipationStatus !== 'completed'}
+								<button class="btn mt-2 btn-info" onclick={leaveEvent}>
+									Withdraw Participation
+								</button>
+							{/if}
+						</div>
+					</div>
+
+					{#if !data.isOwner && userRequest && currentStepIndex >= 0}
+						<div class="container mx-auto px-6 py-8">
+							<div class="card">
+								<div class="card-body">
+									<ul class="steps steps-vertical lg:steps-horizontal">
+										{#each steps as step, i (step.status)}
+											<li class="step {i <= currentStepIndex ? 'step-' + stepClass().color : ''}">
+												{step.label}
+											</li>
+										{/each}
+									</ul>
+									{#if stepClass().icon}
+										<div role="alert" class="mt-4 alert alert-soft {'alert-' + stepClass().color}">
+											<svelte:component
+												this={stepClass().icon}
+												class="h-6 w-6 shrink-0 stroke-current"
+											/>
+											<span>{stepClass().message}</span>
 										</div>
 									{/if}
 								</div>
-								{#if event.maxParticipants}
-									<div class="flex items-center gap-2">
-										<Users class="h-4 w-4 text-primary" />
-										<span class="text-sm font-medium">Capacity: {event.maxParticipants}</span>
+							</div>
+						</div>
+					{/if}
+
+					{#if data.isOwner}
+						<div class="grid grid-cols-1 gap-8 lg:grid-cols-2">
+							<!-- Pending Requests -->
+							<div class="card bg-base-100 shadow-xl">
+								<div class="card-body">
+									<h3 class="card-title">
+										<Users class="h-5 w-5" />
+										Pending Participation Requests ({participationRequests.filter(
+											(r: ParticipationRequest) =>
+												r.status === 'SENT' || r.status === 'PENDING' || r.status === 'CREATED'
+										).length})
+									</h3>
+									{#if participationRequests.some((r: ParticipationRequest) => r.status === 'SENT' || r.status === 'PENDING' || r.status === 'CREATED')}
+										{#each participationRequests.filter((r: ParticipationRequest) => r.status === 'SENT' || r.status === 'PENDING' || r.status === 'CREATED') as request (request.id)}
+											<div
+												class="mb-4 border-b border-base-300 pb-4 last:mb-0 last:border-b-0 last:pb-0"
+											>
+												<div class="flex items-start justify-between">
+													<div class="flex-1">
+														<UserAvatar userId={request.userId} />
+														{#if request.message}
+															<p class="mt-1 text-sm opacity-70">{request.message}</p>
+														{/if}
+													</div>
+													<div class="flex gap-2">
+														<button
+															class="btn btn-sm btn-success"
+															onclick={() => acceptRequest(request.id)}
+														>
+															Accept
+														</button>
+														<button
+															class="btn btn-sm btn-error"
+															onclick={() => rejectRequest(request.id)}
+														>
+															Reject
+														</button>
+													</div>
+												</div>
+											</div>
+										{/each}
+									{:else}
+										<p class="text-sm opacity-70">No pending participation requests.</p>
+									{/if}
+								</div>
+							</div>
+
+							<!-- Accepted Participants -->
+							<div class="card bg-base-100 shadow-xl">
+								<div class="card-body">
+									<h3 class="card-title">
+										<Users class="h-5 w-5" />
+										Accepted Participants ({participationRequests.filter(
+											(r: ParticipationRequest) =>
+												r.status === 'ACCEPTED' ||
+												r.status === 'NEGOTIATING' ||
+												r.status === 'COMPLETED'
+										).length})
+									</h3>
+									{#if participationRequests.some((r: ParticipationRequest) => r.status === 'ACCEPTED' || r.status === 'NEGOTIATING' || r.status === 'COMPLETED')}
+										{#each participationRequests.filter((r: ParticipationRequest) => r.status === 'ACCEPTED' || r.status === 'NEGOTIATING' || r.status === 'COMPLETED') as request (request.id)}
+											<div
+												class="mb-4 border-b border-base-300 pb-4 last:mb-0 last:border-b-0 last:pb-0"
+											>
+												<div class="flex items-start justify-between">
+													<div class="flex-1">
+														<UserAvatar userId={request.userId} />
+														{#if request.message}
+															<p class="mt-1 text-sm opacity-70">{request.message}</p>
+														{/if}
+													</div>
+													<div class="flex gap-2">
+														<button
+															class="btn btn-sm btn-error"
+															onclick={() => removeParticipant(request.id)}
+														>
+															Remove
+														</button>
+													</div>
+												</div>
+											</div>
+										{/each}
+									{:else}
+										<p class="text-sm opacity-70">There are no accepted participants.</p>
+									{/if}
+								</div>
+							</div>
+						</div>
+					{/if}
+				</div>
+				<!-- Main Content -->
+				<div class="container mx-auto">
+					<div class="grid grid-cols-1 gap-8 lg:grid-cols-2">
+						<!-- Left Column: Event Details -->
+						<div class="space-y-6"></div>
+
+						<!-- Right Column: Chat -->
+						<div class="card bg-base-100 shadow-xl">
+							<div class="card-body">
+								<!-- Tabs -->
+								<div class="tabs-boxed mb-4 tabs">
+									<button
+										type="button"
+										class="tab-lg tab {activeTab === 'public' ? 'tab-active' : ''}"
+										onclick={() => (activeTab = 'public')}
+									>
+										<MessageSquare class="mr-2 h-5 w-5" />
+										<span class="text-lg font-semibold">Public Chat</span>
+										<span class="ml-2 badge badge-sm">{chatMessages.length}</span>
+									</button>
+									<button
+										type="button"
+										class="tab-lg tab {activeTab === 'negotiation'
+											? 'tab-active'
+											: ''} {userParticipationStatus !== 'accepted' && !data.isOwner
+											? 'pointer-events-none opacity-50'
+											: ''}"
+										onclick={() => {
+											if (userParticipationStatus === 'accepted' || data.isOwner)
+												activeTab = 'negotiation';
+										}}
+									>
+										<MessageSquare class="mr-2 h-5 w-5" />
+										<span class="text-lg font-semibold">Negotiation</span>
+										<span class="ml-2 badge badge-sm">{negotiationMessages.length}</span>
+									</button>
+								</div>
+
+								{#if activeTab === 'public'}
+									<!-- Chat Messages -->
+									<div bind:this={chatContainer} class="mb-4 h-96 overflow-y-auto p-2">
+										{#each chatMessages as message (message.id)}
+											{#if message.author !== 'You'}
+												<div class="chat-start chat">
+													<UserAvatar userId={message.author === 'You' ? 0 : 2} />
+													<div class="chat-header">
+														{message.author}
+														<time class="text-xs opacity-50">{message.timestamp}</time>
+													</div>
+													<div
+														class="chat-bubble {message.author === 'You'
+															? 'chat-bubble-primary'
+															: ''}"
+													>
+														{message.content}
+													</div>
+												</div>
+											{:else}
+												<div class="chat-end chat">
+													<div class="chat-header">
+														{message.author}
+														<time class="text-xs opacity-50">{message.timestamp}</time>
+													</div>
+													<div
+														class="chat-bubble {message.author === 'You'
+															? 'chat-bubble-primary'
+															: ''}"
+													>
+														{message.content}
+													</div>
+												</div>
+											{/if}
+										{/each}
+									</div>
+
+									<!-- Message Input -->
+									<div class="flex gap-2">
+										<input
+											type="text"
+											placeholder="Type a message..."
+											class="input-bordered input flex-1"
+											bind:value={newMessage}
+											onkeydown={(e) => {
+												if (e.key === 'Enter') {
+													sendMessage();
+												}
+											}}
+										/>
+										<button
+											class="btn btn-primary"
+											onclick={sendMessage}
+											disabled={!newMessage.trim()}
+										>
+											<Send class="h-4 w-4" />
+										</button>
+									</div>
+								{:else if activeTab === 'negotiation'}
+									<!-- Negotiation Messages -->
+									<div bind:this={negotiationContainer} class="mb-4 h-96 overflow-y-auto p-2">
+										{#each negotiationMessages as message (message.id)}
+											{#if message.author !== 'You'}
+												<div class="chat-start chat">
+													<UserAvatar userId={message.author === 'You' ? 0 : 2} />
+													<div class="chat-header">
+														{message.author}
+														<time class="text-xs opacity-50">{message.timestamp}</time>
+													</div>
+													<div
+														class="chat-bubble {message.author === 'You'
+															? 'chat-bubble-primary'
+															: ''}"
+													>
+														{message.content}
+													</div>
+												</div>
+											{:else}
+												<div class="chat-end chat">
+													<div class="chat-header">
+														{message.author}
+														<time class="text-xs opacity-50">{message.timestamp}</time>
+													</div>
+													<div
+														class="chat-bubble {message.author === 'You'
+															? 'chat-bubble-primary'
+															: ''}"
+													>
+														{message.content}
+													</div>
+												</div>
+											{/if}
+										{/each}
+									</div>
+
+									<!-- Negotiation Message Input -->
+									<div class="flex gap-2">
+										<input
+											type="text"
+											placeholder="Type a message..."
+											class="input-bordered input flex-1"
+											bind:value={newNegotiationMessage}
+											onkeydown={(e) => {
+												if (e.key === 'Enter') {
+													sendNegotiationMessage();
+												}
+											}}
+										/>
+										<button
+											class="btn btn-primary"
+											onclick={sendNegotiationMessage}
+											disabled={!newNegotiationMessage.trim()}
+										>
+											<Send class="h-4 w-4" />
+										</button>
 									</div>
 								{/if}
 							</div>
 						</div>
 					</div>
-
-					<!-- Map Section -->
-					<div class="card bg-base-100 shadow-xl">
-						<div class="card-body">
-							<h3 class="card-title justify-between">
-								<span class="flex items-center gap-2">
-									<MapPin class="h-5 w-5" />
-									Location
-								</span>
-								<span class="flex items-center gap-2">
-									<span class="font-medium">{event.location}</span>
-									{#if distance}
-										<span class="badge badge-ghost">~{distance} away</span>
-									{/if}
-								</span>
-							</h3>
-							{#if locationError}
-								<div class="mb-4 alert alert-warning">
-									<MapPin class="h-6 w-6" />
-									<span>{locationError}</span>
-								</div>
-							{:else if !userLatitude || !userLongitude}
-								<div class="mb-4 alert alert-info">
-									<MapPin class="h-6 w-6" />
-									<span>Getting your location...</span>
-								</div>
-							{/if}
-							<MapComponent
-								latitude={event.coordinates?.lat}
-								longitude={event.coordinates?.lng}
-								locationName={event.location}
-								{userLatitude}
-								{userLongitude}
-								{userLocationName}
-								height="h-64"
-							/>
-						</div>
-					</div>
 				</div>
-
-				<!-- Right Column: Chat -->
-				<div class="card bg-base-100 shadow-xl">
-					<div class="card-body">
-						<!-- Tabs -->
-						<div class="tabs-boxed mb-4 tabs">
-							<button
-								type="button"
-								class="tab-lg tab {activeTab === 'public' ? 'tab-active' : ''}"
-								onclick={() => (activeTab = 'public')}
-							>
-								<MessageSquare class="mr-2 h-5 w-5" />
-								<span class="text-lg font-semibold">Public Chat</span>
-								<span class="ml-2 badge badge-sm">{chatMessages.length}</span>
-							</button>
-							<button
-								type="button"
-								class="tab-lg tab {activeTab === 'negotiation'
-									? 'tab-active'
-									: ''} {userParticipationStatus !== 'accepted' && !data.isOwner
-									? 'pointer-events-none opacity-50'
-									: ''}"
-								onclick={() => {
-									if (userParticipationStatus === 'accepted' || data.isOwner)
-										activeTab = 'negotiation';
-								}}
-							>
-								<MessageSquare class="mr-2 h-5 w-5" />
-								<span class="text-lg font-semibold">Negotiation</span>
-								<span class="ml-2 badge badge-sm">{negotiationMessages.length}</span>
-							</button>
-						</div>
-
-						{#if activeTab === 'public'}
-							<!-- Chat Messages -->
-							<div bind:this={chatContainer} class="mb-4 h-96 overflow-y-auto p-2">
-								{#each chatMessages as message (message.id)}
-									{#if message.author !== 'You'}
-										<div class="chat-start chat">
-											<UserAvatar userId={message.author === 'You' ? 0 : 2} />
-											<div class="chat-header">
-												{message.author}
-												<time class="text-xs opacity-50">{message.timestamp}</time>
-											</div>
-											<div
-												class="chat-bubble {message.author === 'You' ? 'chat-bubble-primary' : ''}"
-											>
-												{message.content}
-											</div>
-										</div>
-									{:else}
-										<div class="chat-end chat">
-											<div class="chat-header">
-												{message.author}
-												<time class="text-xs opacity-50">{message.timestamp}</time>
-											</div>
-											<div
-												class="chat-bubble {message.author === 'You' ? 'chat-bubble-primary' : ''}"
-											>
-												{message.content}
-											</div>
-										</div>
-									{/if}
-								{/each}
-							</div>
-
-							<!-- Message Input -->
-							<div class="flex gap-2">
-								<input
-									type="text"
-									placeholder="Type a message..."
-									class="input-bordered input flex-1"
-									bind:value={newMessage}
-									onkeydown={(e) => {
-										if (e.key === 'Enter') {
-											sendMessage();
-										}
-									}}
-								/>
-								<button class="btn btn-primary" onclick={sendMessage} disabled={!newMessage.trim()}>
-									<Send class="h-4 w-4" />
-								</button>
-							</div>
-						{:else if activeTab === 'negotiation'}
-							<!-- Negotiation Messages -->
-							<div bind:this={negotiationContainer} class="mb-4 h-96 overflow-y-auto p-2">
-								{#each negotiationMessages as message (message.id)}
-									{#if message.author !== 'You'}
-										<div class="chat-start chat">
-											<UserAvatar userId={message.author === 'You' ? 0 : 2} />
-											<div class="chat-header">
-												{message.author}
-												<time class="text-xs opacity-50">{message.timestamp}</time>
-											</div>
-											<div
-												class="chat-bubble {message.author === 'You' ? 'chat-bubble-primary' : ''}"
-											>
-												{message.content}
-											</div>
-										</div>
-									{:else}
-										<div class="chat-end chat">
-											<div class="chat-header">
-												{message.author}
-												<time class="text-xs opacity-50">{message.timestamp}</time>
-											</div>
-											<div
-												class="chat-bubble {message.author === 'You' ? 'chat-bubble-primary' : ''}"
-											>
-												{message.content}
-											</div>
-										</div>
-									{/if}
-								{/each}
-							</div>
-
-							<!-- Negotiation Message Input -->
-							<div class="flex gap-2">
-								<input
-									type="text"
-									placeholder="Type a message..."
-									class="input-bordered input flex-1"
-									bind:value={newNegotiationMessage}
-									onkeydown={(e) => {
-										if (e.key === 'Enter') {
-											sendNegotiationMessage();
-										}
-									}}
-								/>
-								<button
-									class="btn btn-primary"
-									onclick={sendNegotiationMessage}
-									disabled={!newNegotiationMessage.trim()}
-								>
-									<Send class="h-4 w-4" />
-								</button>
-							</div>
-						{/if}
-					</div>
-				</div>
-			</div>
+			{/if}
 		</div>
+	</div>
+</div>
 
-		<!-- Participation Modal -->
-		<div class="modal" class:modal-open={showParticipationModal}>
-			<div class="modal-box">
-				<h3 class="text-lg font-bold">Send Participation Request</h3>
-				<p class="py-4">Provide additional information for your request (optional).</p>
-				<textarea
-					class="textarea-bordered textarea w-full"
-					bind:value={participationMessage}
-					placeholder="Additional information..."
-				></textarea>
-				<div class="modal-action">
-					<button
-						class="btn"
-						onclick={() => {
-							showParticipationModal = false;
-							participationMessage = '';
-						}}>Cancel</button
-					>
-					<button
-						class="btn btn-primary"
-						onclick={() => {
-							sendParticipationRequest();
-							showParticipationModal = false;
-						}}>Send Request</button
-					>
-				</div>
-			</div>
-			<div
-				class="modal-backdrop"
-				role="button"
-				tabindex="0"
+<!-- Participation Modal -->
+<div class="modal" class:modal-open={showParticipationModal}>
+	<div class="modal-box">
+		<h3 class="text-lg font-bold">Send Participation Request</h3>
+		<p class="py-4">Provide additional information for your request (optional).</p>
+		<textarea
+			class="textarea-bordered textarea w-full"
+			bind:value={participationMessage}
+			placeholder="Additional information..."
+		></textarea>
+		<div class="modal-action">
+			<button
+				class="btn"
 				onclick={() => {
 					showParticipationModal = false;
 					participationMessage = '';
-				}}
-				onkeydown={(e) => {
-					if (e.key === 'Enter' || e.key === ' ') {
-						showParticipationModal = false;
-						participationMessage = '';
-					}
-				}}
-			></div>
+				}}>Cancel</button
+			>
+			<button
+				class="btn btn-primary"
+				onclick={() => {
+					sendParticipationRequest();
+					showParticipationModal = false;
+				}}>Send Request</button
+			>
 		</div>
-
-		<EventModal
-			bind:open={showEditModal}
-			mode="edit"
-			currentTitle={data.event.title}
-			currentDescription={data.event.description}
-			currentTags={data.event.tags}
-			currentLocation={data.event.coordinates
-				? {
-						lat: data.event.coordinates.lat,
-						lon: data.event.coordinates.lng,
-						name: data.event.location
-					}
-				: undefined}
-			currentMaxParticipants={data.event.maxParticipants}
-			currentType={data.event.type}
-			currentDuration={data.event.duration ? parseInt(data.event.duration.split(' ')[0]) : 0}
-			currentEventDate={data.event.targetDate}
-			on:update={updateEvent}
-		/>
 	</div>
-{/if}
+	<div
+		class="modal-backdrop"
+		role="button"
+		tabindex="0"
+		onclick={() => {
+			showParticipationModal = false;
+			participationMessage = '';
+		}}
+		onkeydown={(e) => {
+			if (e.key === 'Enter' || e.key === ' ') {
+				showParticipationModal = false;
+				participationMessage = '';
+			}
+		}}
+	></div>
+</div>
+
+<EventModal
+	bind:open={showEditModal}
+	mode="edit"
+	currentTitle={data.event.title}
+	currentDescription={data.event.description}
+	currentTags={data.event.tags}
+	currentLocation={data.event.coordinates
+		? {
+				lat: data.event.coordinates.lat,
+				lon: data.event.coordinates.lng,
+				name: data.event.location
+			}
+		: undefined}
+	currentMaxParticipants={data.event.maxParticipants}
+	currentType={data.event.type}
+	currentDuration={data.event.duration ? parseInt(data.event.duration.split(' ')[0]) : 0}
+	currentEventDate={data.event.targetDate}
+	on:update={updateEvent}
+/>

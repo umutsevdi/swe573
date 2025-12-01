@@ -15,6 +15,7 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.Optional;
@@ -38,6 +39,7 @@ public class UserService implements UserDetailsService {
     }
 
     @CacheEvict(cacheNames = {"usersById", "usersByUsername"}, allEntries = true)
+    @Transactional
     public void create(RegisterRequest request) throws PropertyValueException {
         var dto = mapper.requestToDto(request);
         dto.setCreatedAt(LocalDateTime.now());
@@ -59,8 +61,8 @@ public class UserService implements UserDetailsService {
     }
 
     @CacheEvict(cacheNames = {"usersById", "usersByUsername"}, allEntries = true)
+    @Transactional
     public UserDTO updateUser(UserDTO dto, UpdateUserRequest request) throws UsernameNotFoundException {
-        log.info("{}",request);
         boolean changed = false;
         if (request.getBiography() != null && !request.getBiography().isBlank() && !request.getBiography().equals(dto.getBiography())) {
             changed = true;
@@ -77,6 +79,7 @@ public class UserService implements UserDetailsService {
     }
 
     @CacheEvict(cacheNames = {"usersById", "usersByUsername"}, allEntries = true)
+    @Transactional
     public void deactivateUser(UserDTO dto) {
         dto.setActive(false);
         repository.save(mapper.dtoToEntity(dto));

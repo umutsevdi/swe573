@@ -19,13 +19,13 @@ import java.util.List;
 )
 @Entity
 public class ThreadEntity {
+    @Column(length = 1024)
+    String description;
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @GeneratedValue(strategy = GenerationType.SEQUENCE)
     private Long id;
     @Column(length = 256)
     private String title;
-    @Column(length = 1024)
-    String description;
     @Column(length = 512)
     private String tags;
     @Column

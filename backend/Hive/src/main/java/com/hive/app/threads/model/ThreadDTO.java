@@ -8,9 +8,9 @@ import java.util.List;
 
 @Data
 public class ThreadDTO {
+    String description;
     private Long id;
     private String title;
-    String description;
     private List<String> tags;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;

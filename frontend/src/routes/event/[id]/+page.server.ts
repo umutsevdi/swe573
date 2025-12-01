@@ -103,7 +103,7 @@ export const load: PageServerLoad = async ({ params, cookies }) => {
 	);
 
 	// Map user participation status
-	const userStatus = participationData[currentUserId?.toString() || ''];
+	const userStatus = participationData[currentUserId?.toString() || '']?.toUpperCase();
 	const statusMap: Record<string, 'none' | 'pending' | 'accepted' | 'rejected'> = {
 		SENT: 'pending',
 		PENDING: 'pending',
@@ -139,5 +139,5 @@ export const load: PageServerLoad = async ({ params, cookies }) => {
 		chatMessages: [] // Default
 	};
 
-	return { event: mappedData, isOwner };
+	return { event: mappedData, isOwner, currentUserId };
 };

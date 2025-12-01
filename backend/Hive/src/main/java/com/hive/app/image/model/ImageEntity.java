@@ -24,7 +24,7 @@ import java.util.Locale;
 @AllArgsConstructor
 public class ImageEntity {
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @GeneratedValue(strategy = GenerationType.SEQUENCE)
     private Long id;
     @Column(name = "PARENT_ID", nullable = false)
     private Long parentId;

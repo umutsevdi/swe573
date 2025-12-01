@@ -86,9 +86,7 @@ public class EventController {
 
     @GetMapping("/{id}/participation")
     ResponseEntity<Map<Long, ParticipationState>> getParticipants(@PathVariable Long id) {
-        var r = service.getParticipants(id);
-        log.info("participants: {}", r);
-        return ResponseEntity.ok(r);
+        return ResponseEntity.ok(service.getParticipants(id));
     }
 
 }

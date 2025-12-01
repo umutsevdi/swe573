@@ -20,7 +20,7 @@ import java.time.LocalDateTime;
 @Entity
 public class ThreadMessageEntity {
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @GeneratedValue(strategy = GenerationType.SEQUENCE)
     private Long id;
     @Column(length = 400)
     private String message;

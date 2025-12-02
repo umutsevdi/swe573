@@ -24,7 +24,8 @@ export async function fetchWithAuth(
 	});
 
 	if (!response.ok) {
-		const body = await response.text();
+		const errorData = await response.json().catch(() => ({}));
+		const body = JSON.stringify(errorData);
 		console.error(
 			`API Error: ${url} - ${response.status} ${response.statusText} - Payload: ${body}`
 		);
@@ -36,7 +37,7 @@ export async function fetchWithAuth(
 		if (response.status === 404) {
 			throw error(404, 'Not found');
 		}
-		throw error(response.status, `Failed to fetch: ${response.statusText}`);
+		throw error(response.status, errorData.message || `Failed to fetch: ${response.statusText}`);
 	}
 
 	return response;
@@ -55,6 +56,36 @@ export async function loadWithAuth(url: string, cookies: Cookies): Promise<any> 
 	}
 	const response = await fetchWithAuth(url, token, cookies);
 	return response.json();
+}
+
+/**
+ * Client-side fetch with authentication, handling common errors.
+ * @param url - The URL to fetch.
+ * @param token - The auth token.
+ * @param options - Additional fetch options.
+ * @returns The response.
+ */
+export async function fetchWithAuthClient(url: string, token: string, options: RequestInit = {}) {
+	const isFormData = options.body instanceof FormData;
+	const response = await fetch(url, {
+		...options,
+		headers: {
+			Authorization: `Bearer ${token}`,
+			...(isFormData ? {} : { 'Content-Type': 'application/json' }),
+			...options.headers
+		}
+	});
+
+	if (!response.ok) {
+		const errorData = await response.json().catch(() => ({}));
+		const body = JSON.stringify(errorData);
+		console.error(
+			`API Error: ${url} - ${response.status} ${response.statusText} - Payload: ${body}`
+		);
+		throw new Error(errorData.message || `Failed to fetch: ${response.statusText}`);
+	}
+
+	return response;
 }
 
 export async function fetchAuthenticatedImage(

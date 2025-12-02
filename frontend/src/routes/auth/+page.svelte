@@ -67,7 +67,8 @@
 			});
 
 			if (!response.ok) {
-				throw new Error('Registration failed');
+				const errorData = await response.json().catch(() => ({}));
+				throw new Error(errorData.message || 'Registration failed');
 			}
 
 			toast.success('Registration successful! Please log in.');

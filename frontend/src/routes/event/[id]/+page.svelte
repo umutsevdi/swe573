@@ -21,7 +21,7 @@
 	import { auth } from '$lib/stores/auth';
 	import { toast } from '$lib/stores/toast';
 	import { page } from '$app/stores';
-	import { fetchAuthenticatedImage } from '$lib/utils/fetch';
+	import { fetchAuthenticatedImage, fetchWithAuthClient } from '$lib/utils/fetch';
 
 	type ChatMessage = {
 		id: string;
@@ -115,26 +115,17 @@
 			};
 
 			// Make API call
-			const response = await fetch(`${HIVE_API}/event/${eventId}`, {
+			const response = await fetchWithAuthClient(`${HIVE_API}/event/${eventId}`, $auth.token!, {
 				method: 'PUT',
-				headers: {
-					'Content-Type': 'application/json',
-					Authorization: `Bearer ${$auth.token}`
-				},
 				body: JSON.stringify(serverData)
 			});
-
-			if (!response.ok) {
-				throw new Error(`Failed to update event: ${response.statusText}`);
-			}
 
 			showEditModal = false;
 			toast.success('Event updated successfully!');
 			// Reload to see changes
 			window.location.reload();
 		} catch (error) {
-			console.error('Error updating event:', error);
-			toast.error('Failed to update event. Please try again.');
+			toast.error(`Failed to update event. Please try again. ${error}`);
 		}
 	}
 
@@ -286,18 +277,13 @@
 		const message = participationMessage.trim();
 		try {
 			const eventId = $page.params.id;
-			const response = await fetch(
+			await fetchWithAuthClient(
 				`${HIVE_API}/event/${eventId}/participation?message=${encodeURIComponent(message)}`,
+				$auth.token!,
 				{
-					method: 'POST',
-					headers: {
-						Authorization: `Bearer ${$auth.token}`
-					}
+					method: 'POST'
 				}
 			);
-			if (!response.ok) {
-				throw new Error(`Failed to send participation request: ${response.statusText}`);
-			}
 			// Update local state
 			const currentUserId = $auth.userCard?.id;
 			if (!currentUserId) return;
@@ -313,23 +299,16 @@
 			participationMessage = '';
 			toast.success('Participation request sent successfully!');
 		} catch (error) {
-			console.error('Error sending participation request:', error);
-			toast.error('Failed to send participation request. Please try again.');
+			toast.error(`Failed to send participation request. Please try again. ${error}`);
 		}
 	}
 
 	async function leaveEvent() {
 		try {
 			const eventId = $page.params.id;
-			const response = await fetch(`${HIVE_API}/event/${eventId}/participation`, {
-				method: 'DELETE',
-				headers: {
-					Authorization: `Bearer ${$auth.token}`
-				}
+			await fetchWithAuthClient(`${HIVE_API}/event/${eventId}/participation`, $auth.token!, {
+				method: 'DELETE'
 			});
-			if (!response.ok) {
-				throw new Error(`Failed to withdraw participation: ${response.statusText}`);
-			}
 			// Update local state
 			const currentUserId = $auth.userCard?.id;
 			if (!currentUserId) return;
@@ -339,8 +318,7 @@
 			userParticipationStatus = 'none';
 			toast.success('Participation request withdrawn successfully!');
 		} catch (error) {
-			console.error('Error withdrawing participation:', error);
-			toast.error('Failed to withdraw participation. Please try again.');
+			toast.error(`Failed to withdraw participation. Please try again. ${error}`);
 		}
 	}
 
@@ -353,21 +331,13 @@
 
 		try {
 			const eventId = $page.params.id;
-			const response = await fetch(`${HIVE_API}/event/${eventId}/participation`, {
+			await fetchWithAuthClient(`${HIVE_API}/event/${eventId}/participation`, $auth.token!, {
 				method: 'PUT',
-				headers: {
-					'Content-Type': 'application/json',
-					Authorization: `Bearer ${$auth.token}`
-				},
 				body: JSON.stringify({
 					userId: request.userId,
 					state
 				})
 			});
-
-			if (!response.ok) {
-				throw new Error(`Failed to update participation status: ${response.statusText}`);
-			}
 
 			participationRequests = participationRequests.map((req: ParticipationRequest) =>
 				req.id === requestId ? { ...req, status: state } : req
@@ -390,8 +360,7 @@
 			};
 			toast.success(actionMessages[state]);
 		} catch (error) {
-			console.error('Error updating participation status:', error);
-			toast.error('Failed to update participation status. Please try again.');
+			toast.error(`Failed to update participation status. Please try again. ${error}`);
 		}
 	}
 
@@ -444,7 +413,7 @@
 							userLocationName = data.display_name.split(',')[0]; // Get city name
 						}
 					} catch (error) {
-						console.log('Could not get location name:', error);
+						toast.error(`Failed to get location name ${error}`);
 						userLocationName = 'Your Location';
 					}
 				},

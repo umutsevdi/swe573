@@ -18,7 +18,7 @@
 	import { auth } from '$lib/stores/auth';
 	import { page } from '$app/stores';
 	import { toast } from '$lib';
-	import { fetchAuthenticatedImage } from '$lib/utils/fetch';
+	import { fetchAuthenticatedImage, fetchWithAuthClient } from '$lib/utils/fetch';
 
 	let { data }: PageProps = $props();
 
@@ -49,17 +49,10 @@
 		const formData = new FormData();
 		formData.append('file', file);
 
-		const uploadResponse = await fetch(`${HIVE_API}/assets/${type}/${$page.params.id}`, {
+		await fetchWithAuthClient(`${HIVE_API}/assets/${type}/${$page.params.id}`, $auth.token!, {
 			method: 'POST',
-			headers: {
-				Authorization: `Bearer ${$auth.token}`
-			},
 			body: formData
 		});
-
-		if (!uploadResponse.ok) {
-			throw new Error(`Failed to upload ${type}`);
-		}
 
 		await reload();
 	}
@@ -81,18 +74,10 @@
 				interests: newInterests
 			};
 
-			const response = await fetch(`${HIVE_API}/user`, {
+			const response = await fetchWithAuthClient(`${HIVE_API}/user`, $auth.token!, {
 				method: 'PUT',
-				headers: {
-					'Content-Type': 'application/json',
-					Authorization: `Bearer ${$auth.token}`
-				},
 				body: JSON.stringify(updateData)
 			});
-
-			if (!response.ok) {
-				throw new Error('Failed to update profile');
-			}
 
 			const updatedData = await response.json();
 			// Update local state with server response
@@ -106,47 +91,32 @@
 			// Success
 			toast.success('Profile updated successfully!');
 		} catch (error) {
-			console.error('Failed to update profile:', error);
-			toast.error('Failed to update profile. Please try again.');
+			toast.error(`Failed to update profile. ${error}`);
 		}
 	}
 
 	async function loadAvatar() {
 		try {
-			const response = await fetch(`${HIVE_API}/assets/profile/${$page.params.id}`, {
-				headers: {
-					Authorization: `Bearer ${$auth.token}`
-				}
-			});
-
-			if (response.ok) {
-				const blob = await response.blob();
-				avatarBlobUrl = URL.createObjectURL(blob);
-			} else if (response.status === 404) {
-				avatarBlobUrl = '/assets/profile.png';
-			}
+			const response = await fetchWithAuthClient(
+				`${HIVE_API}/assets/profile/${$page.params.id}`,
+				$auth.token!
+			);
+			const blob = await response.blob();
+			avatarBlobUrl = URL.createObjectURL(blob);
 		} catch (error) {
 			console.error('Failed to load avatar:', error);
+			avatarBlobUrl = '/assets/profile.png';
 		}
 	}
 
 	async function loadEvents() {
 		loading = true;
 		try {
-			const response = await fetch(
+			const response = await fetchWithAuthClient(
 				`${HIVE_API}/event/owner/${$page.params.id}${showAll ? '?all=true' : ''}`,
-				{
-					headers: {
-						Authorization: `Bearer ${$auth.token}`
-					}
-				}
+				$auth.token!
 			);
-			if (response.ok) {
-				events = await response.json();
-			} else {
-				console.error('Failed to load events');
-				events = [];
-			}
+			events = await response.json();
 		} catch (error) {
 			console.error('Error loading events:', error);
 			events = [];

@@ -3,7 +3,8 @@
 	import { resolve } from '$app/paths';
 	import { HIVE_API } from '$lib/config';
 	import { auth } from '$lib/stores/auth';
-	import { loadAvatar as loadAvatarUtil } from '$lib/utils/avatar';
+	import { toast } from '$lib/stores/toast';
+	import { fetchWithAuthClient } from '$lib/utils/fetch';
 	import {
 		userCardCache,
 		userDataPromises,
@@ -57,14 +58,10 @@
 			}
 
 			const promise = (async () => {
-				const headers: any = {};
-				if ($auth.token) {
-					headers.Authorization = `Bearer ${$auth.token}`;
+				if (!$auth.token) {
+					throw new Error('No auth token available');
 				}
-				const response = await fetch(`${HIVE_API}/user/${id}/card`, { headers });
-				if (!response.ok) {
-					throw new Error(`Failed to fetch user data (${response.status})`);
-				}
+				const response = await fetchWithAuthClient(`${HIVE_API}/user/${id}/card`, $auth.token);
 
 				const data: any = await response.json();
 				const userCardData: UserCard = {
@@ -86,7 +83,7 @@
 
 			await promise;
 		} catch (err) {
-			console.error('Error loading user data:', err);
+			toast.error(`Failed to load user data. ${err}`);
 		} finally {
 			userDataPromises.update((m) => {
 				const newM = new Map(m);
@@ -94,6 +91,20 @@
 				return newM;
 			});
 			loading = false;
+		}
+	}
+
+	async function getAssetFromServer(id: number, token: string): Promise<string | null> {
+		try {
+			const response = await fetchWithAuthClient(`${HIVE_API}/assets/profile/${id}`, token);
+			const blob = await response.blob();
+			const blobUrl = URL.createObjectURL(blob);
+			return blobUrl;
+		} catch (error) {
+			if (error instanceof Error && error.message.includes('404')) {
+				return null; // No avatar
+			}
+			throw error;
 		}
 	}
 
@@ -108,7 +119,7 @@
 			if (!token) return;
 
 			const promise = (async (): Promise<string> => {
-				const result = await loadAvatarUtil(id, token);
+				const result = await getAssetFromServer(id, token);
 				const blobUrl = result || '/assets/profile.png';
 				avatarUrls.update((m) => new Map(m).set(id, blobUrl));
 				return blobUrl;
@@ -118,7 +129,7 @@
 
 			await promise;
 		} catch (error) {
-			console.error('Failed to load avatar:', error);
+			console.error(`Failed to load avatar. ${error}`);
 			// Set fallback on error to prevent continuous queries
 			avatarUrls.update((m) => new Map(m).set(id, '/assets/profile.png'));
 		} finally {

@@ -9,6 +9,7 @@
 	import { toast } from '$lib/stores/toast';
 	import { breadcrumbs } from '$lib/stores/breadcrumbs';
 	import { HIVE_API } from '$lib/config';
+	import { fetchWithAuthClient } from '$lib/utils/fetch';
 
 	type ForumPostData = {
 		content: string;
@@ -52,45 +53,28 @@
 
 	async function closeThread() {
 		try {
-			const response = await fetch(`${HIVE_API}/thread/${topic.id}/close`, {
-				method: 'GET',
-				headers: {
-					Authorization: `Bearer ${$auth.token}`
-				}
+			await fetchWithAuthClient(`${HIVE_API}/thread/${topic.id}/close`, $auth.token!, {
+				method: 'GET'
 			});
-			if (response.ok) {
-				toast.success('Thread closed successfully!');
-				invalidateAll();
-			} else {
-				toast.error('Failed to close thread');
-			}
+			toast.success('Thread closed successfully!');
+			invalidateAll();
 		} catch (error) {
-			console.error('Failed to close thread:', error);
-			toast.error('Failed to close thread');
+			toast.error(`Failed to close thread. ${error}`);
 		}
 	}
 
 	async function updateThread(updates: { title: string; description: string; tags: string[] }) {
 		console.log('Updating thread with:', updates);
 		try {
-			const response = await fetch(`${HIVE_API}/thread/${topic.id}`, {
+			await fetchWithAuthClient(`${HIVE_API}/thread/${topic.id}`, $auth.token!, {
 				method: 'PUT',
-				headers: {
-					Authorization: `Bearer ${$auth.token}`,
-					'Content-Type': 'application/json'
-				},
 				body: JSON.stringify(updates)
 			});
-			console.log('Response status:', response.status);
-			if (response.ok) {
-				toast.success('Thread updated successfully!');
-				invalidateAll();
-			} else {
-				toast.error('Failed to update thread');
-			}
+			console.log('Thread updated successfully');
+			toast.success('Thread updated successfully!');
+			invalidateAll();
 		} catch (error) {
-			console.error('Failed to update thread:', error);
-			toast.error('Failed to update thread');
+			toast.error(`Failed to update thread. ${error}`);
 		}
 	}
 
@@ -103,36 +87,31 @@
 		}
 
 		try {
-			const response = await fetch(`${HIVE_API}/thread/${topic.id}/reply`, {
-				method: 'POST',
-				headers: {
-					Authorization: `Bearer ${$auth.token}`,
-					'Content-Type': 'application/json'
-				},
-				body: JSON.stringify({ message })
-			});
+			const response = await fetchWithAuthClient(
+				`${HIVE_API}/thread/${topic.id}/reply`,
+				$auth.token!,
+				{
+					method: 'POST',
+					body: JSON.stringify({ message })
+				}
+			);
 
-			if (response.ok) {
-				const result = await response.json();
-				toast.success('Reply posted successfully!');
-				// Add the new reply to the posts array
-				topic.posts = [
-					...topic.posts,
-					{
-						content: result.message,
-						timestamp: new Date(result.createdAt).toLocaleString(),
-						userId: result.ownerId
-					}
-				];
-				topic.repliesCount += 1;
-				newMessageContent = '';
-				replyingTo = null;
-			} else {
-				toast.error('Failed to post reply');
-			}
+			const result = await response.json();
+			toast.success('Reply posted successfully!');
+			// Add the new reply to the posts array
+			topic.posts = [
+				...topic.posts,
+				{
+					content: result.message,
+					timestamp: new Date(result.createdAt).toLocaleString(),
+					userId: result.ownerId
+				}
+			];
+			topic.repliesCount += 1;
+			newMessageContent = '';
+			replyingTo = null;
 		} catch (error) {
-			console.error('Error posting reply:', error);
-			toast.error('Failed to post reply');
+			toast.error(`Failed to post reply. ${error}`);
 		}
 	}
 </script>

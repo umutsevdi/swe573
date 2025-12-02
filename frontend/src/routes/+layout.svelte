@@ -27,6 +27,7 @@
 	import { goto, invalidateAll } from '$app/navigation';
 	import { page } from '$app/stores';
 	import { HIVE_API } from '$lib/config';
+	import { fetchWithAuthClient } from '$lib/utils/fetch';
 	//	import ChatBar from '$lib/components/ChatBar.svelte';
 
 	let { children } = $props();
@@ -55,18 +56,10 @@
 		const { title, description, tags } = event.detail;
 
 		try {
-			const response = await fetch(`${HIVE_API}/thread`, {
+			const response = await fetchWithAuthClient(`${HIVE_API}/thread`, $auth.token!, {
 				method: 'POST',
-				headers: {
-					'Content-Type': 'application/json',
-					Authorization: `Bearer ${$auth.token}`
-				},
 				body: JSON.stringify({ title: title.trim(), description: description.trim(), tags })
 			});
-
-			if (!response.ok) {
-				throw new Error(`Failed to create thread: ${response.statusText}`);
-			}
 
 			const result = await response.json();
 			toast.success('Thread created successfully!');
@@ -75,27 +68,16 @@
 			goto(resolve(`/forum/${result.id}`));
 			threadModalOpen = false;
 		} catch (error) {
-			console.error('Error creating thread:', error);
-			toast.error(
-				error instanceof Error ? error.message : 'Failed to create thread. Please try again.'
-			);
+			toast.error(`Failed to create thread. Please try again. ${error}`);
 		}
 	}
 
 	async function handlePostSubmit(event: CustomEvent) {
 		try {
-			const response = await fetch(`${HIVE_API}/event`, {
+			const response = await fetchWithAuthClient(`${HIVE_API}/event`, $auth.token!, {
 				method: 'POST',
-				headers: {
-					'Content-Type': 'application/json',
-					Authorization: `Bearer ${$auth.token}`
-				},
 				body: JSON.stringify(event.detail)
 			});
-
-			if (!response.ok) {
-				throw new Error(`Failed to create event: ${response.statusText}`);
-			}
 
 			const result = await response.json();
 			toast.success('Event created successfully!');
@@ -103,10 +85,7 @@
 			// Navigate to the new event page
 			goto(resolve(`/event/${result.id}`));
 		} catch (error) {
-			console.error('Error creating event:', error);
-			toast.error(
-				error instanceof Error ? error.message : 'Failed to create event. Please try again.'
-			);
+			toast.error(`Failed to create event. ${error}`);
 		}
 	}
 

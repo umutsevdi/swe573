@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { browser } from '$app/environment';
 	import { MapPin } from '@lucide/svelte';
+	import { toast } from '$lib/stores/toast';
 
 	interface Props {
 		initialLat?: number;
@@ -107,7 +108,8 @@
 						locationName = data.display_name.split(',')[0];
 					}
 				} catch (error) {
-					console.log('Could not get initial location name:', error);
+					console.log('Could not get location name:', error);
+					toast.error(error instanceof Error ? error.message : 'Failed to get location name');
 					locationName = `${selectedLat.toFixed(4)}, ${selectedLon.toFixed(4)}`;
 				}
 			});
@@ -157,7 +159,8 @@
 			}
 		} catch (error) {
 			console.log('Could not get location name:', error);
-			locationName = `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+			toast.error(error instanceof Error ? error.message : 'Failed to get location name');
+			locationName = `${selectedLat.toFixed(4)}, ${selectedLon.toFixed(4)}`;
 		}
 	}
 </script>

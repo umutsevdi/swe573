@@ -344,41 +344,72 @@
 		}
 	}
 
-	function acceptRequest(requestId: string) {
-		participationRequests = participationRequests.map((req: ParticipationRequest) =>
-			req.id === requestId ? { ...req, status: 'ACCEPTED' } : req
-		);
-		// Update user status if it's their request
+	async function updateParticipationStatus(
+		requestId: string,
+		state: 'ACCEPTED' | 'REJECTED' | 'NEGOTIATING'
+	) {
 		const request = participationRequests.find((r: ParticipationRequest) => r.id === requestId);
-		const currentUserId = $auth.userCard?.id;
-		if (request?.userId === currentUserId) {
-			userParticipationStatus = 'accepted';
+		if (!request) return;
+
+		try {
+			const eventId = $page.params.id;
+			const response = await fetch(`${HIVE_API}/event/${eventId}/participation`, {
+				method: 'PUT',
+				headers: {
+					'Content-Type': 'application/json',
+					Authorization: `Bearer ${$auth.token}`
+				},
+				body: JSON.stringify({
+					userId: request.userId,
+					state
+				})
+			});
+
+			if (!response.ok) {
+				throw new Error(`Failed to update participation status: ${response.statusText}`);
+			}
+
+			participationRequests = participationRequests.map((req: ParticipationRequest) =>
+				req.id === requestId ? { ...req, status: state } : req
+			);
+
+			// Update user status if it's their request
+			const currentUserId = $auth.userCard?.id;
+			if (request?.userId === currentUserId) {
+				if (state === 'ACCEPTED') {
+					userParticipationStatus = 'accepted';
+				} else if (state === 'REJECTED') {
+					userParticipationStatus = 'rejected';
+				}
+			}
+
+			const actionMessages = {
+				ACCEPTED: 'Participant accepted successfully!',
+				REJECTED: 'Participant rejected successfully!',
+				NEGOTIATING: 'Negotiation started successfully!'
+			};
+			toast.success(actionMessages[state]);
+		} catch (error) {
+			console.error('Error updating participation status:', error);
+			toast.error('Failed to update participation status. Please try again.');
 		}
-		// In real app, API call
 	}
 
-	function rejectRequest(requestId: string) {
-		participationRequests = participationRequests.map((req: ParticipationRequest) =>
-			req.id === requestId ? { ...req, status: 'REJECTED' } : req
-		);
-		const request = participationRequests.find((r: ParticipationRequest) => r.id === requestId);
-		const currentUserId = $auth.userCard?.id;
-		if (request?.userId === currentUserId) {
-			userParticipationStatus = 'rejected';
-		}
-		// In real app, API call
+	// Wrapper functions for backward compatibility and clarity
+	async function acceptRequest(requestId: string) {
+		await updateParticipationStatus(requestId, 'ACCEPTED');
 	}
 
-	function removeParticipant(requestId: string) {
-		participationRequests = participationRequests.map((req: ParticipationRequest) =>
-			req.id === requestId ? { ...req, status: 'REJECTED' } : req
-		);
-		const request = participationRequests.find((r: ParticipationRequest) => r.id === requestId);
-		const currentUserId = $auth.userCard?.id;
-		if (request?.userId === currentUserId) {
-			userParticipationStatus = 'rejected';
-		}
-		// In real app, API call
+	async function rejectRequest(requestId: string) {
+		await updateParticipationStatus(requestId, 'REJECTED');
+	}
+
+	async function removeParticipant(requestId: string) {
+		await updateParticipationStatus(requestId, 'REJECTED');
+	}
+
+	async function startNegotiation(requestId: string) {
+		await updateParticipationStatus(requestId, 'NEGOTIATING');
 	}
 
 	async function loadBackground() {
@@ -715,6 +746,12 @@
 														{/if}
 													</div>
 													<div class="flex gap-2">
+														<button
+															class="btn btn-sm btn-info"
+															onclick={() => startNegotiation(request.id)}
+														>
+															Start Negotiation
+														</button>
 														<button
 															class="btn btn-sm btn-error"
 															onclick={() => removeParticipant(request.id)}

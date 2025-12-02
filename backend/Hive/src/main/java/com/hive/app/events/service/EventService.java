@@ -166,7 +166,8 @@ public class EventService {
         ParticipationEntity participation = participationRepository
                 .findByOwner_IdAndEvent_Id(userDTO.getId(), eventId)
                 .orElseThrow(NotFoundException::new);
-        if (ParticipationState.isResolved(participation.getState())) {
+        if (!ParticipationState.getOptions(participation.getState())
+                .contains(ParticipationState.WITHDRAWN)) {
             throw new LogicException("Not withdrawable.");
         }
         participation.setState(ParticipationState.WITHDRAWN);
@@ -178,20 +179,21 @@ public class EventService {
     @CacheEvict(cacheNames = "getParticipants", key = "#eventId")
     public void assign(Long eventId, UserDTO userDTO, ParticipationAssignmentRequest request) throws NotFoundException,
             LogicException {
-        if (ParticipationState.isRequestPermittedForOwner(request.getState())) {
-            throw new LogicException("State change is not permitted.");
-        }
         EventDTO event = repository.findByCancelledIsFalseAndId(eventId)
                 .map(mapper::entityToDTO)
                 .orElseThrow(NotFoundException::new);
-        if (!event.getOwner().getId().equals(userDTO.getId())) {
+        if (!event.getOwner().getId().equals(userDTO.getId()) ||
+                request.getState().equals(ParticipationState.WITHDRAWN)) {
             throw new PermissionDeniedException();
         }
         ParticipationEntity participation = participationRepository
                 .findByOwner_IdAndEvent_Id(request.getUserId(), eventId)
                 .orElseThrow(NotFoundException::new);
-        if (ParticipationState.isResolved(participation.getState())) {
-            throw new LogicException("Participation is not editable.");
+
+
+        if (!ParticipationState.getOptions(participation.getState())
+                .contains(request.getState())) {
+            throw new LogicException("Not negotiable.");
         }
         participation.setState(request.getState());
         participation.setUpdatedAt(LocalDateTime.now());

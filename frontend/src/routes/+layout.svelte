@@ -27,7 +27,7 @@
 	import { goto, invalidateAll } from '$app/navigation';
 	import { page } from '$app/stores';
 	import { HIVE_API } from '$lib/config';
-	import ChatBar from '$lib/components/ChatBar.svelte';
+	//	import ChatBar from '$lib/components/ChatBar.svelte';
 
 	let { children } = $props();
 
@@ -225,7 +225,7 @@
 
 		<!-- Speed Dial FAB for Events and Threads -->
 		{#if $auth.isLoggedIn}
-			<ChatBar toggleCallback={() => true} />
+			<!-- <ChatBar toggleCallback={() => true} /> -->
 			<div class="fab fixed right-24 bottom-8 z-20 fab-flower">
 				<!-- Trigger button -->
 				<div tabindex="0" role="button" class="btn btn-circle btn-lg btn-info">

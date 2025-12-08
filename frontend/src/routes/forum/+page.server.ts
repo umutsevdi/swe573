@@ -1,52 +1,49 @@
-import { HIVE_API } from '$lib/serverConfig';
-import { type Cookies } from '@sveltejs/kit';
-import { loadWithAuth } from '$lib/utils/fetch';
-import { validateRequired, submitWithAuth } from '$lib/utils/actions';
-
-type ForumThread = {
-	id: number;
-	title: string;
-	active: boolean;
-	description: string;
-	createdAt: string;
-	ownerId: number;
-	tagsList: string[];
-};
+import { HIVE_API } from "$lib/serverConfig";
+import { type Cookies } from "@sveltejs/kit";
+import { validateRequired } from "$lib/utils/actions";
+import { API } from "$lib/api";
+import type { ThreadView } from "$lib/api";
 
 export const load = async ({ cookies }: { cookies: Cookies }) => {
-	const threads: ForumThread[] = await loadWithAuth(`${HIVE_API}/thread`, cookies);
+  const threads: ThreadView[] = await API.threads.all(HIVE_API!, cookies);
 
-	// Transform tagsList: split by comma and flatten
-	const transformedThreads = threads.map((thread) => ({
-		...thread,
-		tags: thread.tagsList.flatMap((tag) => tag.split(',')).map((t) => t.trim())
-	}));
+  // Transform tagsList: split by comma and flatten
+  const transformedThreads = threads.map((thread) => ({
+    ...thread,
+    tags: thread.tagsList.flatMap((tag) => tag.split(",")).map((t) => t.trim())
+  }));
 
-	return { threads: transformedThreads };
+  return { threads: transformedThreads };
 };
 
 export const actions = {
-	create: async ({ request, cookies }: { request: Request; cookies: Cookies }) => {
-		const data = await request.formData();
-		const title = data.get('title') as string;
-		const description = data.get('description') as string;
-		const tags = JSON.parse(data.get('tags') as string) as string[];
+  create: async ({
+    request,
+    cookies
+  }: {
+    request: Request;
+    cookies: Cookies;
+  }) => {
+    const data = await request.formData();
+    const title = data.get("title") as string;
+    const description = data.get("description") as string;
+    const tags = JSON.parse(data.get("tags") as string) as string[];
 
-		const validationError = validateRequired({ title, description });
-		if (validationError) {
-			return { success: false, error: validationError };
-		}
+    const validationError = validateRequired({ title, description });
+    if (validationError) {
+      return { success: false, error: validationError };
+    }
 
-		try {
-			const result = await submitWithAuth(
-				`${HIVE_API}/thread`,
-				{ title: title.trim(), description: description.trim(), tags },
-				cookies
-			);
-			return { success: true, thread: result };
-		} catch (error) {
-			console.error('Error creating thread:', error);
-			return { success: false, error: 'Failed to create thread' };
-		}
-	}
+    try {
+      const result = await API.threads.create(HIVE_API!, cookies, {
+        title: title.trim(),
+        description: description.trim(),
+        tags
+      });
+      return { success: true, thread: result };
+    } catch (error) {
+      console.error("Error creating thread:", error);
+      return { success: false, error: "Failed to create thread" };
+    }
+  }
 };

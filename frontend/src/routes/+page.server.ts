@@ -1,133 +1,76 @@
-import type { PageServerLoad } from './$types';
-import { HIVE_API } from '$lib/serverConfig';
-import { fetchWithAuth } from '$lib/utils/fetch';
-import type { Cookies } from '@sveltejs/kit';
+import type { PageServerLoad } from "./$types";
+import { HIVE_API } from "$lib/serverConfig";
+import type { Cookies } from "@sveltejs/kit";
+import { API, type EventFilterRequest } from "$lib/api";
 
-interface EventFilterRequest {
-	textSearch?: string;
-	tags?: string[];
-	userLocation?: {
-		lat: number;
-		lon: number;
-	};
-	proximity?: number;
-	startDate?: string;
-	endDate?: string;
-	includeCancelled?: boolean;
-}
+export const load: PageServerLoad = async ({
+  url,
+  cookies
+}: {
+  url: URL;
+  cookies: Cookies;
+}) => {
+  const searchParams = url.searchParams;
+  const requestBody: EventFilterRequest = {};
 
-interface ApiEvent {
-	id: number;
-	title: string;
-	description: string;
-	tags: string[];
-	location: {
-		lat: number;
-		lon: number;
-		name: string;
-	};
-	maxParticipants: number;
-	type: 'OFFER' | 'NEED';
-	duration: number;
-	eventDate: string;
-	createdAt: string;
-	updatedAt: string;
-	ownerId: number;
-}
+  if (searchParams.has("q")) {
+    requestBody.textSearch = searchParams.get("q")!.trim();
+  }
 
-interface MappedEvent {
-	id: string;
-	title: string;
-	description: string;
-	tags: string[];
-	location: string;
-	latitude: number;
-	longitude: number;
-	participantCount: number;
-	type: 'OFFER' | 'NEED';
-	date: string;
-	ownerId: number;
-}
+  if (searchParams.has("tags")) {
+    requestBody.tags = searchParams.get("tags")!.split(",").filter(Boolean);
+  }
 
-export const load: PageServerLoad = async ({ url, cookies }: { url: URL; cookies: Cookies }) => {
-	const searchParams = url.searchParams;
-	const requestBody: EventFilterRequest = {};
+  if (searchParams.has("start")) {
+    requestBody.startDate = searchParams.get("start")!;
+  }
 
-	if (searchParams.has('q')) {
-		requestBody.textSearch = searchParams.get('q')!.trim();
-	}
+  if (searchParams.has("end")) {
+    requestBody.endDate = searchParams.get("end")!;
+  }
 
-	if (searchParams.has('tags')) {
-		requestBody.tags = searchParams.get('tags')!.split(',').filter(Boolean);
-	}
+  if (searchParams.has("user_lat") && searchParams.has("user_lng")) {
+    const userLat = parseFloat(searchParams.get("user_lat") || "");
+    const userLng = parseFloat(searchParams.get("user_lng") || "");
+    if (!isNaN(userLat) && !isNaN(userLng)) {
+      requestBody.userLocation = { lat: userLat, lon: userLng };
+      if (searchParams.has("proximity")) {
+        const proximity = parseInt(searchParams.get("proximity") || "0");
+        if (!isNaN(proximity) && proximity != 0) {
+          requestBody.proximity = proximity;
+        }
+      }
+    }
+  }
 
-	if (searchParams.has('start')) {
-		requestBody.startDate = searchParams.get('start')!;
-	}
+  if (searchParams.has("includeCancelled")) {
+    requestBody.includeCancelled =
+      searchParams.get("includeCancelled") === "true";
+  }
 
-	if (searchParams.has('end')) {
-		requestBody.endDate = searchParams.get('end')!;
-	}
-
-	if (searchParams.has('user_lat') && searchParams.has('user_lng')) {
-		const userLat = parseFloat(searchParams.get('user_lat') || '');
-		const userLng = parseFloat(searchParams.get('user_lng') || '');
-		if (!isNaN(userLat) && !isNaN(userLng)) {
-			requestBody.userLocation = { lat: userLat, lon: userLng };
-			if (searchParams.has('proximity')) {
-				const proximity = parseInt(searchParams.get('proximity') || '0');
-				if (!isNaN(proximity) && proximity != 0) {
-					requestBody.proximity = proximity;
-				}
-			}
-		}
-	}
-
-	if (searchParams.has('includeCancelled')) {
-		requestBody.includeCancelled = searchParams.get('includeCancelled') === 'true';
-	}
-
-	try {
-		console.log('Fetching events from:', `${HIVE_API}/event/search`, 'with body:', requestBody);
-		const response = await fetchWithAuth(
-			`${HIVE_API}/event/search`,
-			cookies.get('token')!,
-			cookies,
-			{
-				method: 'POST',
-				body: JSON.stringify(requestBody)
-			}
-		);
-
-		const apiEvents: ApiEvent[] = await response.json();
-		console.log('Fetched events:', apiEvents.length);
-
-		let events: MappedEvent[] = apiEvents.map((event) => ({
-			id: event.id.toString(),
-			title: event.title,
-			description: event.description,
-			tags: event.tags,
-			location: event.location.name,
-			latitude: event.location.lat,
-			longitude: event.location.lon,
-			participantCount: event.maxParticipants,
-			type: event.type === 'OFFER' ? 'OFFER' : 'NEED',
-			date: event.eventDate,
-			ownerId: event.ownerId
-		}));
-
-		// Apply type filter if present (since API doesn't support it)
-		if (searchParams.has('type')) {
-			const type = searchParams.get('type');
-			if (type && type !== 'all') {
-				events = events.filter((event) => event.type === type);
-			}
-		}
-
-		return { events };
-	} catch (error) {
-		console.error('Error fetching events:', error);
-		// Fallback to empty array or mock data if needed
-		return { events: [] };
-	}
+  try {
+    console.log(
+      "Fetching events from:",
+      `${HIVE_API}/event/search`,
+      "with body:",
+      requestBody
+    );
+    let events = await API.events.filter(
+      HIVE_API as string,
+      cookies,
+      requestBody
+    );
+    console.log("Fetched events:", events.length);
+    // Apply type filter if present (since API doesn't support it)
+    if (searchParams.has("type")) {
+      const type = searchParams.get("type");
+      if (type && type !== "all") {
+        events = events.filter((event) => event.type === type);
+      }
+    }
+    return { events };
+  } catch (error) {
+    console.error("Error fetching events:", error);
+    return { events: [] };
+  }
 };

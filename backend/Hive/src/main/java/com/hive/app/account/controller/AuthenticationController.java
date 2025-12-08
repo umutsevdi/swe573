@@ -66,6 +66,6 @@ public class AuthenticationController {
     public record AuthRequest(String username, String password) {
     }
 
-    public record AuthResponse(String token, UserCardResponse card) {
+    public record AuthResponse(String token, UserCardResponse user) {
     }
 }

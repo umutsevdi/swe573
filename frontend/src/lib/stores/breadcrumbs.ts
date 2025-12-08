@@ -1,3 +1,5 @@
-import { writable } from 'svelte/store';
+import { writable } from "svelte/store";
 
-export const breadcrumbs = writable<Array<{ text: string; href?: string }>>([{ text: 'Hive' }]);
+export const breadcrumbs = writable<Array<{ text: string; href?: string }>>([
+  { text: "Hive" }
+]);

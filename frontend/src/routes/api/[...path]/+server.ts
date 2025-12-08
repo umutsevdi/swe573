@@ -1,37 +1,37 @@
-import { HIVE_API } from '$lib/serverConfig';
+import { HIVE_API } from "$lib/serverConfig";
 
 export async function fallback({
-	request,
-	params
+  request,
+  params
 }: {
-	request: Request;
-	params: { path: string[] };
+  request: Request;
+  params: { path: string[] };
 }) {
-	const path = params.path.join('/');
-	const targetUrl = `${HIVE_API}/${path}`;
+  const path = params.path.join("/");
+  const targetUrl = `${HIVE_API}/${path}`;
 
-	// Clone the request to modify headers
-	const requestInit: RequestInit = {
-		method: request.method,
-		headers: new Headers(request.headers)
-	};
+  // Clone the request to modify headers
+  const requestInit: RequestInit = {
+    method: request.method,
+    headers: new Headers(request.headers)
+  };
 
-	// Remove host header to avoid issues
-	(requestInit.headers as Headers).delete('host');
+  // Remove host header to avoid issues
+  (requestInit.headers as Headers).delete("host");
 
-	// Add body for non-GET/HEAD requests
-	if (request.method !== 'GET' && request.method !== 'HEAD') {
-		requestInit.body = request.body;
-	}
+  // Add body for non-GET/HEAD requests
+  if (request.method !== "GET" && request.method !== "HEAD") {
+    requestInit.body = request.body;
+  }
 
-	const response = await fetch(targetUrl, requestInit);
+  const response = await fetch(targetUrl, requestInit);
 
-	// Clone the response to return it
-	const responseBody = response.body ? await response.arrayBuffer() : null;
+  // Clone the response to return it
+  const responseBody = response.body ? await response.arrayBuffer() : null;
 
-	return new Response(responseBody, {
-		status: response.status,
-		statusText: response.statusText,
-		headers: response.headers
-	});
+  return new Response(responseBody, {
+    status: response.status,
+    statusText: response.statusText,
+    headers: response.headers
+  });
 }

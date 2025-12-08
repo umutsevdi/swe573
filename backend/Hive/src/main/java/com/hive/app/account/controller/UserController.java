@@ -40,12 +40,6 @@ public class UserController {
         ));
     }
 
-    @GetMapping
-    public ResponseEntity<UserDTO> getCurrentUser() {
-        return ResponseEntity.ok((UserDTO) SecurityContextHolder.getContext().getAuthentication().getPrincipal());
-    }
-
-
     @PutMapping
     public ResponseEntity<UserProfileResponse> updateUser(@RequestBody
                                                           UpdateUserRequest request) {

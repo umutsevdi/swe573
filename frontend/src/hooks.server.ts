@@ -1,13 +1,13 @@
-import { redirect, type Handle } from '@sveltejs/kit';
+import { redirect, type Handle } from "@sveltejs/kit";
 
 export const handle: Handle = async ({ event, resolve }) => {
-	const token = event.cookies.get('token');
+  const token = event.cookies.get("token");
 
-	// If no token and not on auth page, redirect to auth
-	if (!token && !event.url.pathname.startsWith('/auth')) {
-		throw redirect(302, '/auth');
-	}
+  // If no token and not on auth page, redirect to auth
+  if (!token && !event.url.pathname.startsWith("/auth")) {
+    throw redirect(302, "/auth");
+  }
 
-	const response = await resolve(event);
-	return response;
+  const response = await resolve(event);
+  return response;
 };

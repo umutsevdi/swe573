@@ -20,4 +20,5 @@ public class UserProfileResponse {
     private int userScore;
     private boolean isSelf;
     private int timeBank;
+    private int frozenAmount;
 }

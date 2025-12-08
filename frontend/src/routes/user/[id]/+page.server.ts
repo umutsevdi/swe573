@@ -14,6 +14,7 @@ interface UserApiResponse {
 	createdAt: string;
 	userScore: number;
 	timeBank: number;
+	frozenAmount: number;
 	enabled: boolean;
 	active: boolean;
 	authorities: Array<{ authority: string }>;
@@ -45,6 +46,7 @@ export const load: PageServerLoad = async ({ params, cookies }) => {
 		interests: userData.interests,
 		isSelf: currentUserId === id,
 		timeBank: userData.timeBank || 0, // Default to 0 if not available
+		frozenAmount: userData.frozenAmount || 0, // Default to 0 if not available
 		userScore: userData.userScore
 	};
 	console.log(mappedData);

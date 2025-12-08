@@ -256,7 +256,10 @@
 							</div>
 							<div class="flex items-center gap-2">
 								<Hourglass class="h-4 w-4" />
-								<span class="text-sm font-medium">{data?.timeBank} Hours</span>
+								<span class="text-sm font-medium"
+									>Available: {data?.timeBank} Hours{#if data?.frozenAmount}
+										({data?.frozenAmount} Hours Frozen){/if}</span
+								>
 							</div>
 						</div>
 					</div>

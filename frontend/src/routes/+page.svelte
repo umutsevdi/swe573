@@ -18,6 +18,7 @@
 	let end = $state('');
 	let proximity = $state(0);
 	let type = $state<'OFFER' | 'NEED' | ''>('');
+	let includeCancelled = $state(false);
 	let userLat = $state<number | null>(null);
 	let userLng = $state<number | null>(null);
 
@@ -54,6 +55,7 @@
 		} else {
 			type = '';
 		}
+		includeCancelled = params.get('includeCancelled') === 'true';
 	});
 
 	function addTag() {
@@ -81,6 +83,7 @@
 			params.set('user_lng', userLng.toString());
 			params.set('proximity', proximity.toString());
 		}
+		if (includeCancelled) params.set('includeCancelled', 'true');
 		goto(`?${params.toString()}`);
 	}
 </script>
@@ -173,6 +176,16 @@
 								<span class="label-text">{proximity != 0 ? `${proximity}km` : 'No Filter'}</span>
 							</div>
 						</div>
+						<div class="flex items-center gap-2">
+							<label class="label cursor-pointer">
+								<span class="label-text mr-2">Include cancelled</span>
+								<input
+									type="checkbox"
+									class="toggle toggle-primary"
+									bind:checked={includeCancelled}
+								/>
+							</label>
+						</div>
 						<button type="submit" class="btn btn-primary">
 							<Search class="h-4 w-4" />
 							Search
@@ -227,6 +240,16 @@
 									Type: {type}
 									<button type="button" class="btn btn-ghost btn-xs" onclick={() => (type = '')}
 										>×</button
+									>
+								</span>
+							{/if}
+							{#if includeCancelled}
+								<span class="badge gap-2 badge-warning">
+									Include cancelled
+									<button
+										type="button"
+										class="btn btn-ghost btn-xs"
+										onclick={() => (includeCancelled = false)}>×</button
 									>
 								</span>
 							{/if}

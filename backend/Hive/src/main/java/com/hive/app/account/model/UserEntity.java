@@ -41,5 +41,7 @@ public class UserEntity {
     private int userScore = 100;
     @Column(nullable = false)
     private int timeBank = 10;
+    @Column(nullable = false)
+    private int frozenAmount = 0;
 
 }

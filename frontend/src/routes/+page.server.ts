@@ -13,6 +13,7 @@ interface EventFilterRequest {
 	proximity?: number;
 	startDate?: string;
 	endDate?: string;
+	includeCancelled?: boolean;
 }
 
 interface ApiEvent {
@@ -80,6 +81,10 @@ export const load: PageServerLoad = async ({ url, cookies }: { url: URL; cookies
 				}
 			}
 		}
+	}
+
+	if (searchParams.has('includeCancelled')) {
+		requestBody.includeCancelled = searchParams.get('includeCancelled') === 'true';
 	}
 
 	try {

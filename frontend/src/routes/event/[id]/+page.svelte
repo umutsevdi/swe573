@@ -10,7 +10,8 @@
 		TriangleAlert,
 		Info,
 		Handshake,
-		CircleCheck
+		CircleCheck,
+		Clock
 	} from '@lucide/svelte';
 	import { breadcrumbs } from '$lib/stores/breadcrumbs';
 
@@ -68,8 +69,28 @@
 		chatMessages?: ChatMessage[];
 	};
 
-	let { data } = $props<{ event: EventData; isOwner: boolean; currentUserId: number }>();
+	let { data } = $props<{
+		event: EventData;
+		isOwner: boolean;
+		currentUserId: number;
+	}>();
 	let event = $derived(data.event);
+	let userTimeBank = $state<number | null>(null);
+
+	// Check if event is completed (date has passed)
+	let isEventCompleted = $derived(() => {
+		if (!event.targetDate) return false;
+		const eventDate = new Date(event.targetDate);
+		const today = new Date();
+		today.setHours(0, 0, 0, 0); // Set to start of day
+		return eventDate < today;
+	});
+
+	// Check if user has enough time for the event
+	let hasEnoughTime = $derived(() => {
+		const durationHours = parseDuration(event.duration || '0 hour');
+		return userTimeBank === null || userTimeBank >= durationHours;
+	});
 
 	breadcrumbs.set([{ text: 'Event' }, { text: data.event.title }]);
 
@@ -389,6 +410,20 @@
 		);
 	}
 
+	async function loadUserTimeBank() {
+		try {
+			const response = await fetchWithAuthClient(
+				`${HIVE_API}/user/${data.currentUserId}`,
+				$auth.token!
+			);
+			const userData = await response.json();
+			userTimeBank = userData.timeBank || 0;
+		} catch (error) {
+			console.error('Failed to load user timeBank:', error);
+			userTimeBank = 0; // Default to 0 on error
+		}
+	}
+
 	// User location functionality
 	let userLatitude = $state<number | undefined>(undefined);
 	let userLongitude = $state<number | undefined>(undefined);
@@ -490,10 +525,13 @@
 		getUserLocation();
 	});
 
-	// Load background when component mounts
+	// Load background and user timeBank when component mounts
 	$effect(() => {
 		if ($auth.token && $page.params.id && data.event) {
 			loadBackground();
+			if (!data.isOwner) {
+				loadUserTimeBank();
+			}
 		}
 
 		// Cleanup blob URL on unmount (only if it's a blob URL)
@@ -585,6 +623,10 @@
 								<div class="flex items-center gap-2 text-sm opacity-70">
 									<Calendar />
 									<span>{event.createdAt}</span>
+									{#if event.duration}
+										<Clock />
+										<span>{event.duration}</span>
+									{/if}
 									<Users />
 									<span>{getParticipantCount()}/{event.maxParticipants} participants</span>
 								</div>
@@ -595,7 +637,37 @@
 									Edit Event
 								</button>
 							{:else if userParticipationStatus === 'none'}
-								{#if getParticipantCount() >= event.maxParticipants}
+								{#if isEventCompleted}
+									<div class="mt-2">
+										<button class="btn btn-disabled" disabled>
+											{#if event.type === 'OFFER'}
+												<HeartHandshake class="h-5 w-5" />
+											{:else}
+												<HandHelping class="h-5 w-5" />
+											{/if}
+											Apply to {event.type.toLowerCase()}
+										</button>
+										<div class="mt-2 alert alert-info">
+											<Info class="h-6 w-6" />
+											<span>Event is completed</span>
+										</div>
+									</div>
+								{:else if userTimeBank !== null && !hasEnoughTime}
+									<div class="mt-2">
+										<button class="btn btn-disabled" disabled>
+											{#if event.type === 'OFFER'}
+												<HeartHandshake class="h-5 w-5" />
+											{:else}
+												<HandHelping class="h-5 w-5" />
+											{/if}
+											Apply to {event.type.toLowerCase()}
+										</button>
+										<div class="mt-2 alert alert-warning">
+											<TriangleAlert class="h-6 w-6" />
+											<span>Not enough time available</span>
+										</div>
+									</div>
+								{:else if getParticipantCount() >= event.maxParticipants}
 									<span class="mt-2 text-sm opacity-70">Event is full</span>
 								{:else}
 									<button

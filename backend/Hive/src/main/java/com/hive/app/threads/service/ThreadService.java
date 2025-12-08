@@ -28,10 +28,7 @@ public class ThreadService {
     private final ThreadMapper mapper;
     private final UserMapper userMapper;
 
-    @Caching(evict = {
-            @CacheEvict(cacheNames = "threadById", allEntries = true),
-            @CacheEvict(cacheNames = "threadList", allEntries = true)
-    })
+    @CacheEvict(cacheNames = "threadList", allEntries = true)
     @Transactional
     public ThreadDTO newForum(ThreadRequest request, UserDTO user) {
         ThreadEntity entity = new ThreadEntity();

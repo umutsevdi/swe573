@@ -2,6 +2,7 @@ package com.hive.app.events.service;
 
 import com.hive.app.account.mapper.UserMapper;
 import com.hive.app.account.model.UserDTO;
+import com.hive.app.account.service.UserService;
 import com.hive.app.events.mapper.EventMapper;
 import com.hive.app.events.model.*;
 import com.hive.app.events.repository.EventRepository;
@@ -33,6 +34,7 @@ public class EventService {
     private final ParticipationRepository participationRepository;
     private final EventMapper mapper;
     private final UserMapper userMapper;
+    private final UserService userService;
 
     @Cacheable(cacheNames = "getUserEvents", key = "{#userId, #showInactive}")
     public List<EventListView> getUserEvents(Long userId, boolean showInactive) {
@@ -69,7 +71,7 @@ public class EventService {
     }
 
 
-    @CacheEvict(cacheNames = {"getUserEvents", "eventById"}, allEntries = true)
+    @CacheEvict(cacheNames = "getUserEvents", allEntries = true)
     @Transactional
     public EventResponse newEvent(EventRequest request, UserDTO userDTO) {
         request.setTags(request.getTags().stream().map(String::toLowerCase).toList());
@@ -150,6 +152,9 @@ public class EventService {
         } else if (e.getOwner().getId().equals(userDTO.getId())) {
             throw new LogicException("Can not participate as event owner.");
         }
+        if (userDTO.getTimeBank() < e.getDuration()) {
+            throw new LogicException("Insufficient time bank.");
+        }
         ParticipationEntity entity = participationRepository.findByOwner_IdAndEvent_Id(userDTO.getId(), eventId).orElse(new ParticipationEntity());
         entity.setMessage(message);
         entity.setOwner(userMapper.dtoToEntity(userDTO));
@@ -158,11 +163,16 @@ public class EventService {
         entity.setCreatedAt(LocalDateTime.now());
         entity.setUpdatedAt(LocalDateTime.now());
         participationRepository.save(entity);
+        userService.freezeTime(userDTO, e.getDuration());
     }
 
     @Transactional
     @CacheEvict(cacheNames = "getParticipants", key = "#eventId")
     public void withdraw(Long eventId, UserDTO userDTO) throws NotFoundException, LogicException {
+        EventEntity e = repository.findByCancelledIsFalseAndId(eventId).orElseThrow(NotFoundException::new);
+        if (e.getEventDate().isBefore(LocalDate.now())) {
+            throw new LogicException("Expired event.");
+        }
         ParticipationEntity participation = participationRepository
                 .findByOwner_IdAndEvent_Id(userDTO.getId(), eventId)
                 .orElseThrow(NotFoundException::new);
@@ -173,6 +183,7 @@ public class EventService {
         participation.setState(ParticipationState.WITHDRAWN);
         participation.setUpdatedAt(LocalDateTime.now());
         participationRepository.save(participation);
+        userService.unfreezeTime(userDTO, e.getDuration());
     }
 
     @Transactional
@@ -189,8 +200,6 @@ public class EventService {
         ParticipationEntity participation = participationRepository
                 .findByOwner_IdAndEvent_Id(request.getUserId(), eventId)
                 .orElseThrow(NotFoundException::new);
-
-
         if (!ParticipationState.getOptions(participation.getState())
                 .contains(request.getState())) {
             throw new LogicException("Not negotiable.");
@@ -198,5 +207,8 @@ public class EventService {
         participation.setState(request.getState());
         participation.setUpdatedAt(LocalDateTime.now());
         participationRepository.save(participation);
+        if (request.getState() != ParticipationState.ACCEPTED) {
+            userService.unfreezeTime(userMapper.entityToDto(participation.getOwner()), event.getDuration());
+        }
     }
 }

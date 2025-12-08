@@ -11,6 +11,7 @@ import lombok.extern.log4j.Log4j2;
 import org.hibernate.PropertyValueException;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
@@ -38,7 +39,6 @@ public class UserService implements UserDetailsService {
                 .map(mapper::entityToDto);
     }
 
-    @CacheEvict(cacheNames = {"usersById", "usersByUsername"}, allEntries = true)
     @Transactional
     public void create(RegisterRequest request) throws PropertyValueException {
         var dto = mapper.requestToDto(request);
@@ -60,7 +60,10 @@ public class UserService implements UserDetailsService {
                         "found"));
     }
 
-    @CacheEvict(cacheNames = {"usersById", "usersByUsername"}, allEntries = true)
+    @Caching(evict = {
+            @CacheEvict(value = "userByUsername", key = "#dto.username"),
+            @CacheEvict(value = "usersById", key = "#dto.id")}
+    )
     @Transactional
     public UserDTO updateUser(UserDTO dto, UpdateUserRequest request) throws UsernameNotFoundException {
         boolean changed = false;
@@ -78,10 +81,45 @@ public class UserService implements UserDetailsService {
         return dto;
     }
 
-    @CacheEvict(cacheNames = {"usersById", "usersByUsername"}, allEntries = true)
+    @Caching(evict = {
+            @CacheEvict(value = "userByUsername", key = "#dto.username"),
+            @CacheEvict(value = "usersById", key = "#dto.id")}
+    )
     @Transactional
     public void deactivateUser(UserDTO dto) {
         dto.setActive(false);
+        repository.save(mapper.dtoToEntity(dto));
+    }
+
+    @Caching(evict = {
+            @CacheEvict(value = "userByUsername", key = "#dto.username"),
+            @CacheEvict(value = "usersById", key = "#dto.id")}
+    )
+    @Transactional
+    public void freezeTime(UserDTO dto, int time) {
+        dto.setTimeBank(dto.getTimeBank() - time);
+        dto.setFrozenAmount(dto.getFrozenAmount() + time);
+        repository.save(mapper.dtoToEntity(dto));
+    }
+
+    @Caching(evict = {
+            @CacheEvict(value = "userByUsername", key = "#dto.username"),
+            @CacheEvict(value = "usersById", key = "#dto.id")}
+    )
+    @Transactional
+    public void unfreezeTime(UserDTO dto, int time) {
+        dto.setTimeBank(dto.getTimeBank() + time);
+        dto.setFrozenAmount(dto.getFrozenAmount() - time);
+        repository.save(mapper.dtoToEntity(dto));
+    }
+
+    @Caching(evict = {
+            @CacheEvict(value = "userByUsername", key = "#dto.username"),
+            @CacheEvict(value = "usersById", key = "#dto.id")}
+    )
+    @Transactional
+    public void transferTime(UserDTO dto, int time) {
+        dto.setFrozenAmount(dto.getFrozenAmount() - time);
         repository.save(mapper.dtoToEntity(dto));
     }
 }

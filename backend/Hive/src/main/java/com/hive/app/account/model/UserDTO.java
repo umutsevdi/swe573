@@ -27,6 +27,7 @@ public class UserDTO implements UserDetails {
     private LocalDateTime createdAt;
     private int userScore;
     private int timeBank;
+    private int frozenAmount;
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {

@@ -80,7 +80,7 @@
 				: { lat: 41.0082, lon: 28.9784, name: 'Istanbul' };
 			maxParticipants = currentMaxParticipants || 0;
 			type = currentType || 'OFFER';
-			duration = currentDuration ? Math.floor(currentDuration / 60) : 1;
+			duration = currentDuration || 1;
 			eventDate = currentEventDate || '';
 		} else {
 			title = '';

@@ -65,7 +65,7 @@ public class EventService {
 
     @Cacheable(cacheNames = "eventById", key = "#id")
     public EventResponse getEvent(Long id) throws NotFoundException {
-        return repository.findByCancelledIsFalseAndId(id)
+        return repository.findById(id)
                 .map(mapper::entityToResponse)
                 .orElseThrow(NotFoundException::new);
     }
@@ -86,13 +86,14 @@ public class EventService {
             @CacheEvict(cacheNames = "getUserEvents", allEntries = true)
     })
     @Transactional
-    public EventResponse updateEvent(Long id, EventRequest request, UserDTO userDTO) throws NotFoundException {
-        EventDTO event = repository.findByCancelledIsFalseAndId(id)
+    public EventResponse updateEvent(Long id, EventRequest request, UserDTO userDTO) throws NotFoundException, LogicException {
+        EventDTO event = repository.findById(id)
                 .map(mapper::entityToDTO)
                 .orElseThrow(NotFoundException::new);
         if (!event.getOwner().getId().equals(userDTO.getId())) {
             throw new PermissionDeniedException();
         }
+        isMutable(event.isCancelled(), event.getEventDate());
         log.info("{}", request);
         if (request.getTitle() != null) {
             event.setTitle(request.getTitle());
@@ -123,20 +124,20 @@ public class EventService {
             @CacheEvict(cacheNames = "getUserEvents", allEntries = true)
     })
     @Transactional
-    public void cancelEvent(Long id, UserDTO userDTO) throws NotFoundException {
-        EventEntity event = repository.findByCancelledIsFalseAndId(id)
+    public void cancelEvent(Long id, UserDTO userDTO) throws NotFoundException, LogicException {
+        EventEntity event = repository.findById(id)
                 .orElseThrow(NotFoundException::new);
         if (!event.getOwner().getId().equals(userDTO.getId())) {
             throw new PermissionDeniedException();
         }
+        isMutable(event.isCancelled(), event.getEventDate());
         event.setCancelled(true);
         repository.save(event);
     }
 
     @Cacheable(cacheNames = "getParticipants", key = "#eventId")
     public Map<Long, ParticipationState> getParticipants(Long eventId) {
-        log.info("getParticipants: {}", eventId);
-        return participationRepository.findByEvent_Id(eventId)
+        return participationRepository.findParticipants(eventId)
                 .stream()
                 .collect(Collectors.toMap(
                         ParticipantView::getOwnerId,
@@ -146,10 +147,9 @@ public class EventService {
     @Transactional
     @CacheEvict(cacheNames = "getParticipants", key = "#eventId")
     public void participate(Long eventId, UserDTO userDTO, String message) throws NotFoundException, LogicException {
-        EventEntity e = repository.findByCancelledIsFalseAndId(eventId).orElseThrow(NotFoundException::new);
-        if (e.getEventDate().isBefore(LocalDate.now())) {
-            throw new LogicException("Expired event.");
-        } else if (e.getOwner().getId().equals(userDTO.getId())) {
+        EventEntity e = repository.findById(eventId).orElseThrow(NotFoundException::new);
+        isMutable(e.isCancelled(), e.getEventDate());
+        if (e.getOwner().getId().equals(userDTO.getId())) {
             throw new LogicException("Can not participate as event owner.");
         }
         if (userDTO.getTimeBank() < e.getDuration()) {
@@ -169,10 +169,8 @@ public class EventService {
     @Transactional
     @CacheEvict(cacheNames = "getParticipants", key = "#eventId")
     public void withdraw(Long eventId, UserDTO userDTO) throws NotFoundException, LogicException {
-        EventEntity e = repository.findByCancelledIsFalseAndId(eventId).orElseThrow(NotFoundException::new);
-        if (e.getEventDate().isBefore(LocalDate.now())) {
-            throw new LogicException("Expired event.");
-        }
+        EventEntity e = repository.findById(eventId).orElseThrow(NotFoundException::new);
+        isMutable(e.isCancelled(), e.getEventDate());
         ParticipationEntity participation = participationRepository
                 .findByOwner_IdAndEvent_Id(userDTO.getId(), eventId)
                 .orElseThrow(NotFoundException::new);
@@ -190,9 +188,10 @@ public class EventService {
     @CacheEvict(cacheNames = "getParticipants", key = "#eventId")
     public void assign(Long eventId, UserDTO userDTO, ParticipationAssignmentRequest request) throws NotFoundException,
             LogicException {
-        EventDTO event = repository.findByCancelledIsFalseAndId(eventId)
+        EventDTO event = repository.findById(eventId)
                 .map(mapper::entityToDTO)
                 .orElseThrow(NotFoundException::new);
+        isMutable(event.isCancelled(), event.getEventDate());
         if (!event.getOwner().getId().equals(userDTO.getId()) ||
                 request.getState().equals(ParticipationState.WITHDRAWN)) {
             throw new PermissionDeniedException();
@@ -209,6 +208,13 @@ public class EventService {
         participationRepository.save(participation);
         if (request.getState() != ParticipationState.ACCEPTED) {
             userService.unfreezeTime(userMapper.entityToDto(participation.getOwner()), event.getDuration());
+        }
+    }
+
+
+    private static void isMutable(boolean isCancelled, LocalDate eventDate) throws LogicException {
+        if (isCancelled || !eventDate.isAfter(LocalDate.now())) {
+            throw new LogicException("Event is not modifiable.");
         }
     }
 }

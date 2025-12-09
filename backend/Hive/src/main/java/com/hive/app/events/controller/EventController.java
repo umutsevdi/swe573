@@ -48,14 +48,14 @@ public class EventController {
     @PutMapping("/{id}")
     ResponseEntity<EventResponse> updateEvent(
             @PathVariable Long id,
-            @RequestBody EventRequest request) throws NotFoundException {
+            @RequestBody EventRequest request) throws NotFoundException, LogicException {
         UserDTO self = (UserDTO) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
         return ResponseEntity.ok(service.updateEvent(id, request, self));
     }
 
     @DeleteMapping("/{id}")
     ResponseEntity<Void> cancel(
-            @PathVariable Long id) throws NotFoundException {
+            @PathVariable Long id) throws NotFoundException, LogicException {
         service.cancelEvent(id, (UserDTO) SecurityContextHolder.getContext().getAuthentication().getPrincipal());
         return ResponseEntity.ok().build();
     }

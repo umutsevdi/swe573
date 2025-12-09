@@ -5,6 +5,8 @@
   import MapOverview from "$lib/components/MapOverview.svelte";
   import SearchResultCard from "$lib/components/SearchResultCard.svelte";
   import { breadcrumbs } from "$lib/stores/breadcrumbs";
+  import { API, type EventFilterRequest, type EventResponse } from "$lib/api";
+  import { HIVE_API } from "$lib/config";
 
   let { data } = $props();
   breadcrumbs.set([{ text: "Discover" }]);
@@ -19,6 +21,48 @@
   let includeCancelled = $state(false);
   let userLat = $state<number | null>(null);
   let userLng = $state<number | null>(null);
+
+  // Client-side search state
+  let events = $state<EventResponse[]>([]);
+  let loading = $state(false);
+  let hasSearched = $state(false);
+
+  async function fetchEvents() {
+    loading = true;
+    try {
+      const token = document.cookie
+        .split("; ")
+        .find((row) => row.startsWith("token="))
+        ?.split("=")[1];
+
+      if (!token) {
+        // If no token, redirect to auth or handle unauth
+        events = [];
+        return;
+      }
+
+      const requestBody: EventFilterRequest = {};
+      if (q.trim()) requestBody.textSearch = q.trim();
+      if (tags.length) requestBody.tags = tags;
+      if (start) requestBody.startDate = start;
+      if (end) requestBody.endDate = end;
+      if (includeCancelled) requestBody.includeCancelled = includeCancelled;
+      if (proximity > 0 && userLat && userLng) {
+        requestBody.userLocation = { lat: userLat, lon: userLng };
+        requestBody.proximity = proximity;
+      }
+      if (type) requestBody.type = type;
+
+      events = await API.events.filter(HIVE_API, token, requestBody);
+      hasSearched = true;
+    } catch (error) {
+      console.error("Error fetching events:", error);
+      events = [];
+      hasSearched = true;
+    } finally {
+      loading = false;
+    }
+  }
 
   // Get user location
   $effect(() => {
@@ -82,7 +126,8 @@
       params.set("proximity", proximity.toString());
     }
     if (includeCancelled) params.set("includeCancelled", "true");
-    goto(`?${params.toString()}`);
+    goto(`?${params.toString()}`, { replaceState: true });
+    fetchEvents();
   }
 </script>
 
@@ -93,7 +138,7 @@
       <div class="mb-4 bg-base-100 p-4">
         <div class="mb-4">
           <MapOverview
-            events={data.events.map((e) => ({
+            events={events.map((e) => ({
               id: e.id,
               title: e.title,
               lat: e.location.lat,
@@ -166,6 +211,16 @@
                 />
               </div>
             </div>
+            <div class="flex items-center gap-2">
+              <label class="label cursor-pointer">
+                <span class="label-text mr-2">All</span>
+                <input
+                  type="checkbox"
+                  class="toggle toggle-primary"
+                  bind:checked={includeCancelled}
+                />
+              </label>
+            </div>
           </div>
 
           <!-- Filters Row -->
@@ -200,16 +255,6 @@
                   >{proximity != 0 ? `${proximity}km` : "No Filter"}</span
                 >
               </div>
-            </div>
-            <div class="flex items-center gap-2">
-              <label class="label cursor-pointer">
-                <span class="label-text mr-2">Include cancelled</span>
-                <input
-                  type="checkbox"
-                  class="toggle toggle-primary"
-                  bind:checked={includeCancelled}
-                />
-              </label>
             </div>
             <button type="submit" class="btn btn-primary">
               <Search class="h-4 w-4" />
@@ -282,7 +327,7 @@
               {/if}
               {#if includeCancelled}
                 <span class="badge gap-2 badge-warning">
-                  Include cancelled
+                  All
                   <button
                     type="button"
                     class="btn btn-ghost btn-xs"
@@ -296,22 +341,38 @@
       </div>
       <!-- List of cards -->
       <div class="h-[75vh] space-y-4 overflow-y-auto">
-        {#each data.events as event (event.id)}
-          <SearchResultCard
-            title={event.title}
-            description={event.description}
-            tags={event.tags}
-            location={event.location.name}
-            participantCount={event.maxParticipants}
-            ownerId={event.ownerId}
-            type={event.type}
-            eventId={event.id}
-          />
-        {/each}
-        {#if data.events.length === 0 && (q || tags.length > 0 || start || end || proximity > 0)}
-          <div class="alert alert-info">
-            No events found matching your criteria.
-          </div>
+        {#if loading}
+          {#each Array(5) as item, i (i)}
+            <div class="card bg-base-100 shadow-xl">
+              <div class="card-body">
+                <div class="skeleton h-6 w-3/4"></div>
+                <div class="skeleton h-4 w-full"></div>
+                <div class="skeleton h-4 w-1/2"></div>
+                <div class="flex gap-2 mt-2">
+                  <div class="skeleton h-6 w-16"></div>
+                  <div class="skeleton h-6 w-20"></div>
+                </div>
+              </div>
+            </div>
+          {/each}
+        {:else}
+          {#each events as event (event.id)}
+            <SearchResultCard
+              title={event.title}
+              description={event.description}
+              tags={event.tags}
+              location={event.location.name}
+              participantCount={event.maxParticipants}
+              ownerId={event.ownerId}
+              type={event.type}
+              eventId={event.id}
+            />
+          {/each}
+          {#if hasSearched && events.length === 0 && (q || tags.length > 0 || start || end || proximity > 0)}
+            <div class="alert alert-info">
+              No events found matching your criteria.
+            </div>
+          {/if}
         {/if}
       </div>
     </div>

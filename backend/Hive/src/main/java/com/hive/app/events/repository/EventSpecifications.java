@@ -13,7 +13,7 @@ public class EventSpecifications {
     public static Specification<EventEntity> includeCancelled(boolean showCancelled) {
         return (root, query, cb) ->
                 showCancelled ? cb.conjunction() :
-                        cb.equal(root.get("cancelled"), true);
+                        cb.equal(root.get("cancelled"), false);
     }
 
     public static Specification<EventEntity> hasText(String textSearch) {

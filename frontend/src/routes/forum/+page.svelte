@@ -3,91 +3,117 @@
   import { goto } from "$app/navigation";
   import { resolve } from "$app/paths";
   import UserAvatar from "$lib/components/UserAvatar.svelte";
+  import { API, type ThreadView } from "$lib/api";
+  import { HIVE_API } from "$lib/config";
   import { breadcrumbs } from "$lib/stores/breadcrumbs";
+  import { auth } from "$lib/stores/user";
 
   breadcrumbs.set([{ text: "Forum" }]);
 
-  type ForumThread = {
-    id: number;
-    title: string;
-    active: boolean;
-    description: string;
-    createdAt: string;
-    ownerId: number;
-    tags: string[];
-  };
+  let threads = $state<ThreadView[]>([]);
+  let loading = $state(true);
+  let showClosed = $state(false);
 
-  let { data } = $props();
-  let threads = $derived(data.threads as ForumThread[]);
+  let filteredThreads = $derived(threads.filter((t) => showClosed || t.active));
+
+  $effect(() => {
+    if ($auth.token) {
+      (async () => {
+        loading = true;
+        threads = await API.threads.all(HIVE_API!, $auth.token!);
+        loading = false;
+      })();
+    } else {
+      loading = false;
+    }
+  });
 </script>
 
 <div class="hero min-h-screen bg-base-200">
   <div class="hero-content w-full max-w-4xl flex-col">
     <div class="w-full">
+      <div class="mb-4 flex justify-end">
+        <label class="label cursor-pointer">
+          <span class="label-text mr-2">Show closed threads</span>
+          <input
+            type="checkbox"
+            class="toggle toggle-primary"
+            bind:checked={showClosed}
+          />
+        </label>
+      </div>
       <div class="h-[90vh] space-y-4 overflow-y-auto">
-        {#each threads as thread (thread.id)}
-          <!-- svelte-ignore a11y_click_events_have_key_events -->
-          <div
-            class="card cursor-pointer shadow-md hover:shadow-lg {thread.active
-              ? 'bg-base-100'
-              : 'bg-base-200'}"
-            onclick={() => goto(resolve(`/forum/${thread.id}`))}
-            role="button"
-            tabindex="0"
-            aria-label="View thread {thread.title}"
-          >
-            <div class="card-body p-4">
-              <!-- Title with closed badge -->
-              <div class="flex items-center">
-                <h2 class="card-title flex-1">{thread.title}</h2>
-                {#if !thread.active}
+        {#if loading}
+          {#each [0, 1, 2, 3, 4] as i (i)}
+            <div class="h-32 w-full skeleton"></div>
+          {/each}
+        {:else}
+          {#each filteredThreads as thread (thread.id)}
+            <!-- svelte-ignore a11y_click_events_have_key_events -->
+            <div
+              class="card cursor-pointer shadow-md hover:shadow-lg {thread.active
+                ? 'bg-base-100'
+                : 'bg-base-200'}"
+              onclick={() => goto(resolve(`/forum/${thread.id}`))}
+              role="button"
+              tabindex="0"
+              aria-label="View thread {thread.title}"
+            >
+              <div class="card-body p-4">
+                <!-- Title with closed badge -->
+                <div class="flex items-center">
+                  <h2 class="card-title flex-1">{thread.title}</h2>
+                  {#if !thread.active}
+                    <div
+                      class="badge shrink-0 font-semibold uppercase badge-neutral"
+                    >
+                      Closed
+                    </div>
+                  {/if}
+                </div>
+
+                <!-- Description row with date on right -->
+                <div class="flex items-start gap-3">
+                  <div class="flex-1">
+                    <p
+                      class="line-clamp-2 text-sm text-base-content/70"
+                      style="white-space: pre-wrap;"
+                    >
+                      {thread.description}
+                    </p>
+                  </div>
                   <div
-                    class="badge shrink-0 font-semibold uppercase badge-neutral"
+                    class="flex shrink-0 items-center gap-1 text-sm opacity-70"
                   >
-                    Closed
+                    <Calendar class="h-4 w-4" />
+                    <span
+                      >{new Date(thread.createdAt).toLocaleDateString()}</span
+                    >
                   </div>
-                {/if}
-              </div>
-
-              <!-- Description row with date on right -->
-              <div class="flex items-start gap-3">
-                <div class="flex-1">
-                  <p
-                    class="line-clamp-2 text-sm text-base-content/70"
-                    style="white-space: pre-wrap;"
-                  >
-                    {thread.description}
-                  </p>
                 </div>
-                <div
-                  class="flex shrink-0 items-center gap-1 text-sm opacity-70"
-                >
-                  <Calendar class="h-4 w-4" />
-                  <span>{new Date(thread.createdAt).toLocaleDateString()}</span>
-                </div>
-              </div>
 
-              <div class="flex">
-                <!-- Tags -->
-                {#if thread.tags.length > 0}
-                  <div class="flex flex-1 flex-wrap gap-2">
-                    {#each thread.tags as tag (tag)}
-                      <div class="badge gap-2 badge-outline badge-accent">
-                        {tag}
-                      </div>
-                    {/each}
+                <div class="flex">
+                  <!-- Tags -->
+                  {#if thread.tags.length > 0}
+                    <div class="flex flex-1 flex-wrap gap-2">
+                      {#each thread.tags as tag (tag)}
+                        <div class="badge gap-2 badge-outline badge-accent">
+                          {tag}
+                        </div>
+                      {/each}
+                    </div>
+                  {/if}
+                  <div class="flex shrink-0 items-center gap-2">
+                    <UserAvatar userId={thread.ownerId} />
                   </div>
-                {/if}
-                <div class="flex shrink-0 items-center gap-2">
-                  <UserAvatar userId={thread.ownerId} />
                 </div>
               </div>
             </div>
-          </div>
-        {/each}
+          {/each}
+        {/if}
       </div>
 
-      {#if threads.length === 0}
+      {#if !loading && filteredThreads.length === 0}
         <div class="text-center text-base-content/50">
           <p>No forum threads found.</p>
         </div>

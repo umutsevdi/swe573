@@ -2,6 +2,7 @@ package com.hive.app.events.repository;
 
 import com.hive.app.events.model.ParticipantView;
 import com.hive.app.events.model.ParticipationEntity;
+import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.CrudRepository;
 import org.springframework.stereotype.Repository;
 
@@ -13,5 +14,11 @@ public interface ParticipationRepository extends CrudRepository<ParticipationEnt
 
     Optional<ParticipationEntity> findByOwner_IdAndEvent_Id(Long ownerId, Long eventId);
 
-    List<ParticipantView> findByEvent_Id(Long eventId);
+    @Query("""
+                    SELECT e.state as state,
+                           e.owner.id as ownerId
+                    FROM ParticipationEntity e
+                    WHERE e.event.id = :eventId
+            """)
+    List<ParticipantView> findParticipants(Long eventId);
 }

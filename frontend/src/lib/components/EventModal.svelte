@@ -1,10 +1,11 @@
 <script lang="ts">
   import { createEventDispatcher } from "svelte";
-  import { Tag, MapPin } from "@lucide/svelte";
+  import { Tag, MapPin, Upload, Image } from "@lucide/svelte";
   import TagInput from "./TagInput.svelte";
   import BaseModal from "./BaseModal.svelte";
   import LocationPicker from "./LocationPicker.svelte";
   import { toast } from "$lib/stores/toast";
+  import { createFilePreview } from "$lib/utils/file";
 
   const dispatch = createEventDispatcher<{
     submit: {
@@ -16,6 +17,7 @@
       type: "OFFER" | "NEED";
       duration: number;
       eventDate: string;
+      image?: File;
     };
     update: {
       title: string;
@@ -26,6 +28,7 @@
       type: "OFFER" | "NEED";
       duration: number;
       eventDate: string;
+      image?: File;
     };
   }>();
 
@@ -39,7 +42,8 @@
     currentMaxParticipants = 0,
     currentType = "OFFER",
     currentDuration = 0,
-    currentEventDate = ""
+    currentEventDate = "",
+    currentImage
   } = $props<{
     mode: "create" | "edit";
     open: boolean;
@@ -51,6 +55,7 @@
     currentType?: "OFFER" | "NEED";
     currentDuration?: number;
     currentEventDate?: string;
+    currentImage?: string | null;
   }>();
 
   let title = $state("");
@@ -61,6 +66,8 @@
   let type = $state<"OFFER" | "NEED">("OFFER");
   let duration = $state(1);
   let eventDate = $state("");
+  let imageFile = $state<File | null>(null);
+  let imagePreview = $state<string | null>(null);
 
   function openModal() {
     open = true;
@@ -82,6 +89,7 @@
       type = currentType || "OFFER";
       duration = currentDuration || 1;
       eventDate = currentEventDate || "";
+      imagePreview = currentImage || null;
     } else {
       title = "";
       description = "";
@@ -91,6 +99,17 @@
       type = "OFFER";
       duration = 1;
       eventDate = new Date().toISOString().split("T")[0];
+      imagePreview = null;
+    }
+    imageFile = null;
+  }
+
+  async function handleImageChange(event: Event) {
+    const target = event.target as HTMLInputElement;
+    const file = target.files?.[0];
+    if (file) {
+      imageFile = file;
+      imagePreview = await createFilePreview(file);
     }
   }
 
@@ -112,7 +131,8 @@
       maxParticipants,
       type,
       duration: duration,
-      eventDate
+      eventDate,
+      image: imageFile || undefined
     };
     dispatch(mode === "edit" ? "update" : "submit", data);
     closeModal();
@@ -138,7 +158,7 @@
 
 <BaseModal bind:open size="max-w-2xl">
   <h3 class="mb-4 text-lg font-bold">
-    {mode === "edit" ? "Edit Event" : "Create New Event"}
+    {mode === "edit" ? "Edit" : "Create"}
   </h3>
 
   <form onsubmit={submitEvent}>
@@ -216,6 +236,46 @@
             </span>
           </label>
           <TagInput bind:tags />
+        </div>
+
+        <!-- Event Image -->
+        <div class="form-control">
+          <label class="label" for="event-image-input">
+            <span class="label-text flex items-center gap-2">
+              <Image class="h-4 w-4" />
+              Event Image (Optional)
+            </span>
+          </label>
+          <div class="flex items-center gap-4">
+            <div class="avatar">
+              <div class="h-16 w-16 rounded">
+                {#if imagePreview}
+                  <img
+                    src={imagePreview}
+                    alt="Event image preview"
+                    class="object-cover"
+                  />
+                {:else}
+                  <div
+                    class="flex h-full items-center justify-center bg-neutral text-neutral-content"
+                  >
+                    <Image class="h-8 w-8" />
+                  </div>
+                {/if}
+              </div>
+            </div>
+            <label class="btn btn-outline btn-sm">
+              <Upload class="mr-2 h-4 w-4" />
+              Upload Image
+              <input
+                id="event-image-input"
+                type="file"
+                accept="image/*"
+                class="hidden"
+                onchange={handleImageChange}
+              />
+            </label>
+          </div>
         </div>
       </div>
 
@@ -295,7 +355,7 @@
     <div class="modal-action mt-6">
       <button type="button" class="btn" onclick={closeModal}>Cancel</button>
       <button type="submit" class="btn btn-primary">
-        {mode === "edit" ? "Update" : "Create Event"}
+        {mode === "edit" ? "Update" : "Create"}
       </button>
     </div>
   </form>

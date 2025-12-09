@@ -81,6 +81,7 @@ export interface EventFilterRequest {
   startDate?: string;
   endDate?: string;
   includeCancelled?: boolean;
+  type?: "OFFER" | "NEED";
 }
 
 export interface EventResponse {
@@ -96,6 +97,7 @@ export interface EventResponse {
   createdAt: string;
   updatedAt: string;
   ownerId: number;
+  cancelled: boolean;
 }
 export interface EventListResponse {
   id: number;
@@ -109,6 +111,7 @@ export interface EventListResponse {
   createdAt: string;
   updatedAt: string;
   ownerId: number;
+  cancelled: boolean;
 }
 
 export interface EventRequest {
@@ -162,7 +165,7 @@ export interface ThreadView {
   title: string;
   description: string;
   createdAt: string;
-  tagsList: string[];
+  tags: string[];
   active: boolean;
 }
 
@@ -292,7 +295,7 @@ export const API = {
       auth: string | Cookies,
       request: EventRequest
     ): Promise<EventResponse> {
-      return fetchJSON(`${baseUrl}/event/`, auth, {
+      return fetchJSON(`${baseUrl}/event`, auth, {
         method: "POST",
         body: JSON.stringify(request)
       });
@@ -456,7 +459,7 @@ export const API = {
     upload: async function (
       baseUrl: string,
       auth: string | Cookies,
-      type: string,
+      type: "profile" | "event",
       id: number,
       file: File
     ): Promise<void> {

@@ -25,9 +25,8 @@ public class ThreadController {
     }
 
     @GetMapping
-    ResponseEntity<List<ThreadInfo>> getAllThreads(@RequestParam(value = "show", required = false)
-                                                   Boolean show) {
-        return ResponseEntity.ok(service.getThreads(show));
+    ResponseEntity<List<ThreadView>> getAllThreads() {
+        return ResponseEntity.ok(service.getThreads());
     }
 
     @GetMapping("/{id}")
@@ -54,11 +53,11 @@ public class ThreadController {
         return ResponseEntity.ok(service.updateThread(self, id, request));
     }
 
-    @GetMapping("/{id}/close")
+    @PutMapping("/{id}/close")
     ResponseEntity<Void> closeThread(
             @PathVariable Long id) throws NotFoundException {
         UserDTO self = (UserDTO) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
         service.closeThread(id, self.getId());
-        return ResponseEntity.accepted().build();
+        return ResponseEntity.ok().build();
     }
 }

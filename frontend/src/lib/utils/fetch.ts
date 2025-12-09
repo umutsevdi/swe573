@@ -1,4 +1,6 @@
 import { error, redirect, type Cookies } from "@sveltejs/kit";
+import { browser } from "$app/environment";
+import { auth as authStore } from "$lib/stores/user";
 
 /**
  * Fetches JSON data from a URL with authentication.
@@ -49,9 +51,21 @@ export async function fetchJSON(
       }
       throw error(response.status, errorMsg);
     }
+    if (response.status === 401) {
+      // Client-side 401 handling
+      if (browser) {
+        authStore.logout();
+        window.location.href = "/auth";
+        return;
+      }
+    }
     throw new Error(errorMsg);
   }
 
+  const contentLength = response.headers.get("content-length");
+  if (contentLength === "0" || response.status === 204) {
+    return null;
+  }
   return response.json();
 }
 
@@ -85,6 +99,14 @@ export async function fetchImage(
       }
     });
 
+    if (response.status === 401) {
+      // Client-side 401 handling
+      if (browser) {
+        authStore.logout();
+        window.location.href = "/auth";
+        return null;
+      }
+    }
     if (response.ok) {
       const blob = await response.blob();
       return URL.createObjectURL(blob);

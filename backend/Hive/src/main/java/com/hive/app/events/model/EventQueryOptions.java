@@ -14,5 +14,5 @@ public class EventQueryOptions {
     String textSearch;
     List<String> tags;
     EventType type;
-    boolean includeCancelled = false;
+    boolean includeCancelled;
 }

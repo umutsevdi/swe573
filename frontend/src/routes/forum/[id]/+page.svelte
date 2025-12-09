@@ -1,7 +1,6 @@
 <script lang="ts">
   import { ArrowLeft, MessageSquare, Calendar } from "@lucide/svelte";
   import { resolve } from "$app/paths";
-  import { invalidateAll } from "$app/navigation";
   import ForumPost from "$lib/components/ForumPost.svelte";
   import UserAvatar from "$lib/components/UserAvatar.svelte";
   import ThreadModal from "$lib/components/ThreadModal.svelte";
@@ -55,7 +54,7 @@
     try {
       await API.threads.close(HIVE_API, $auth.token!, topic.id);
       toast.success("Thread closed successfully!");
-      invalidateAll();
+      window.location.reload();
     } catch (error) {
       toast.error(`Failed to close thread. ${error}`);
     }
@@ -71,7 +70,7 @@
       await API.threads.update(HIVE_API, $auth.token!, topic.id, updates);
       console.log("Thread updated successfully");
       toast.success("Thread updated successfully!");
-      invalidateAll();
+      window.location.reload();
     } catch (error) {
       toast.error(`Failed to update thread. ${error}`);
     }

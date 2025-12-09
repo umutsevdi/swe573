@@ -29,6 +29,8 @@ public interface EventListView {
 
     Long getOwnerId();
 
+    boolean isCancelled();
+
     @JsonIgnore
     Double getLatitude();
 

@@ -12,7 +12,7 @@ import java.util.Optional;
 
 @Repository
 public interface EventRepository extends CrudRepository<EventEntity, Long>, JpaSpecificationExecutor<EventEntity> {
-    Optional<EventEntity> findByCancelledIsFalseAndId(Long id);
+    Optional<EventEntity> findById(Long id);
 
     List<EventListView> findByOwner_Id(Long ownerId);
 

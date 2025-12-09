@@ -20,4 +20,5 @@ public class EventResponse {
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
     private Long ownerId;
+    private boolean cancelled;
 }

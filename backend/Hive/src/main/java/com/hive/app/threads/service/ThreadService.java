@@ -95,13 +95,9 @@ public class ThreadService {
         return mapper.entityToDto(threads.findById(threadId).orElseThrow(NotFoundException::new));
     }
 
-    @Cacheable(cacheNames = "threadList",
-            key = "#show == null ? 'all' : ('active:' + #show)")
-    public List<ThreadInfo> getThreads(Boolean show) {
-        if (show == null) {
-            return threads.findAllProjectedBy();
-        }
-        return threads.findAllByActive(show);
+    @Cacheable(cacheNames = "threadList")
+    public List<ThreadView> getThreads() {
+        return threads.findAllProjectedBy();
     }
 
     @Caching(evict = {

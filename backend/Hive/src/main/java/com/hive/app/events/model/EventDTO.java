@@ -1,6 +1,7 @@
 package com.hive.app.events.model;
 
 import com.hive.app.account.model.UserDTO;
+import com.hive.config.exceptions.LogicException;
 import lombok.Data;
 
 import java.time.LocalDate;
@@ -20,5 +21,6 @@ public class EventDTO {
     private LocalDate eventDate;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+    private boolean cancelled;
     private UserDTO owner;
 }

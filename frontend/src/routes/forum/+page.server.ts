@@ -2,19 +2,6 @@ import { HIVE_API } from "$lib/serverConfig";
 import { type Cookies } from "@sveltejs/kit";
 import { validateRequired } from "$lib/utils/actions";
 import { API } from "$lib/api";
-import type { ThreadView } from "$lib/api";
-
-export const load = async ({ cookies }: { cookies: Cookies }) => {
-  const threads: ThreadView[] = await API.threads.all(HIVE_API!, cookies);
-
-  // Transform tagsList: split by comma and flatten
-  const transformedThreads = threads.map((thread) => ({
-    ...thread,
-    tags: thread.tagsList.flatMap((tag) => tag.split(",")).map((t) => t.trim())
-  }));
-
-  return { threads: transformedThreads };
-};
 
 export const actions = {
   create: async ({

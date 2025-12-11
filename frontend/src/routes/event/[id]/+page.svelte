@@ -2,15 +2,11 @@
   import {
     MapPin,
     Calendar,
-    MessageSquare,
     Users,
-    Send,
     HeartHandshake,
     HandHelping,
     TriangleAlert,
     Info,
-    Handshake,
-    CircleCheck,
     Clock
   } from "@lucide/svelte";
   import { breadcrumbs } from "$lib/stores/breadcrumbs";
@@ -18,65 +14,46 @@
   import MapComponent from "$lib/components/MapComponent.svelte";
   import EventModal from "$lib/components/EventModal.svelte";
   import UserAvatar from "$lib/components/UserAvatar.svelte";
+  import ParticipationProgress from "$lib/components/ParticipationProgress.svelte";
   import { HIVE_API } from "$lib/config";
   import { auth } from "$lib/stores/user";
   import { toast } from "$lib/stores/toast";
   import { page } from "$app/stores";
-  import { fetchImage } from "$lib/utils/fetch";
-  import { API } from "$lib/api";
-
-  type ChatMessage = {
-    id: string;
-    author: string;
-    avatar: string;
-    content: string;
-    timestamp: string;
-  };
+  import { API, type ParticipationState } from "$lib/api";
 
   type ParticipationRequest = {
     id: string;
     userId: number;
     userName: string;
     message: string;
-    status:
-      | "SENT"
-      | "PENDING"
-      | "CREATED"
-      | "NEGOTIATING"
-      | "ACCEPTED"
-      | "REJECTED"
-      | "WITHDRAWN"
-      | "COMPLETED";
+    status: ParticipationState;
   };
 
   type EventData = {
     id: number;
     title: string;
     description: string;
+    ownerId: number;
     tags: string[];
     location: string;
-    maxParticipants: number;
+    coordinates?: { lat: number; lng: number };
     type: "OFFER" | "NEED";
+    maxParticipants: number;
     duration: string;
-    targetDate?: string;
+    eventDate?: string;
     createdAt: string;
     updatedAt: string;
-    ownerId: number;
-    // Additional fields for full event view
-
-    coordinates?: { lat: number; lng: number };
-    userParticipationStatus?: "none" | "pending" | "accepted" | "rejected";
-    participationRequests?: ParticipationRequest[];
-    chatMessages?: ChatMessage[];
+    cancelled: boolean;
   };
 
   let { data } = $props<{
     event: EventData;
-    isOwner: boolean;
-    currentUserId: number;
   }>();
   let event = $derived(data.event);
   let userTimeBank = $state<number | null>(null);
+
+  let isOwner = $derived($auth.user?.id === event.ownerId);
+  let currentUserId = $derived($auth.user?.id);
 
   // User location functionality
   let userLatitude = $state<number | undefined>(undefined);
@@ -85,13 +62,25 @@
   let locationError = $state<string | undefined>(undefined);
 
   // Check if event is completed (date has passed)
-  let isEventCompleted = $derived(() => {
-    if (!event.targetDate) return false;
-    const eventDate = new Date(event.targetDate);
+  let isEventCompleted = () => {
+    if (!event.eventDate) return false;
+    const eventDate = new Date(event.eventDate);
     const today = new Date();
     today.setHours(0, 0, 0, 0); // Set to start of day
     return eventDate < today;
-  });
+  };
+
+  let isEventCancelled = () => event.cancelled;
+
+  let isImmutable = () => {
+    if (!event.eventDate) return false;
+    const eventDate = new Date(event.eventDate);
+    const today = new Date();
+    return eventDate <= today || isEventCompleted();
+  };
+
+  const asTitle = (str: string): string =>
+    `${str.charAt(0).toUpperCase()}${str.toLowerCase().slice(1).toLowerCase()}`;
 
   // Check if user has enough time for the event
   let hasEnoughTime = $derived(() => {
@@ -99,7 +88,10 @@
     return userTimeBank === null || userTimeBank >= durationHours;
   });
 
-  breadcrumbs.set([{ text: "Event" }, { text: data.event.title }]);
+  breadcrumbs.set([
+    { text: asTitle(event.type), href: `/?type=${event.type}` },
+    { text: data.event.title }
+  ]);
 
   // Edit functionality
   let showEditModal = $state(false);
@@ -148,7 +140,7 @@
         eventDate:
           eventData.eventDate !== undefined
             ? eventData.eventDate
-            : data.event.targetDate
+            : data.event.eventDate
       };
 
       // Make API call
@@ -159,12 +151,42 @@
         serverData
       );
 
+      // Upload image if provided
+      if (eventData.image) {
+        await API.assets.upload(
+          HIVE_API as string,
+          $auth.token,
+          "event",
+          parseInt(eventId),
+          eventData.image
+        );
+      }
+
       showEditModal = false;
-      toast.success("Event updated successfully!");
+      toast.success("Updated successfully!");
       // Reload to see changes
       window.location.reload();
     } catch (error) {
       toast.error(`Failed to update event. Please try again. ${error}`);
+    }
+  }
+
+  async function cancelEvent() {
+    try {
+      const eventId = $page.params.id;
+      if (!eventId || !$auth.token) return;
+
+      await API.events.cancel(
+        HIVE_API as string,
+        $auth.token,
+        parseInt(eventId)
+      );
+
+      toast.success("Cancelled successfully!");
+      // Reload to see changes
+      window.location.reload();
+    } catch (error) {
+      toast.error(`Failed to cancel event. Please try again. ${error}`);
     }
   }
 
@@ -188,89 +210,18 @@
     }
   }
 
-  // Chat functionality
-  let activeTab = $state("public");
-  let newMessage = $state("");
-  let chatMessages = $state<ChatMessage[]>([]);
-
-  $effect(() => {
-    chatMessages = event.chatMessages || [];
-  });
-  let negotiationMessages = $state<ChatMessage[]>([]);
-  let newNegotiationMessage = $state("");
-
   let backgroundBlobUrl = $state<string | null>(null);
 
-  // Use default event image when no background is loaded
-  let backgroundImageSrc = $derived(backgroundBlobUrl || "/assets/event.png");
-
-  function sendMessage() {
-    if (newMessage.trim()) {
-      const message: ChatMessage = {
-        id: Date.now().toString(),
-        author: "You", // In a real app, this would be the current user
-        avatar:
-          "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=100&q=80",
-        content: newMessage.trim(),
-        timestamp: new Date().toLocaleString()
-      };
-      chatMessages = [...chatMessages, message];
-      newMessage = "";
-      // Scroll to bottom after sending
-      setTimeout(() => {
-        if (chatContainer) {
-          chatContainer.scrollTop = chatContainer.scrollHeight;
-        }
-      }, 0);
-    }
-  }
-
-  function sendNegotiationMessage() {
-    if (newNegotiationMessage.trim()) {
-      const message: ChatMessage = {
-        id: Date.now().toString(),
-        author: "You", // In a real app, this would be the current user
-        avatar:
-          "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=100&q=80",
-        content: newNegotiationMessage.trim(),
-        timestamp: new Date().toLocaleString()
-      };
-      negotiationMessages = [...negotiationMessages, message];
-      newNegotiationMessage = "";
-      // Scroll to bottom after sending
-      setTimeout(() => {
-        if (negotiationContainer) {
-          negotiationContainer.scrollTop = negotiationContainer.scrollHeight;
-        }
-      }, 0);
-    }
-  }
-
   // Participation functionality
-  let userParticipationStatus = $state(event.userParticipationStatus);
-  let participationRequests = $state(event.participationRequests);
-
-  // Steps for participation status
-  let steps = $state([
-    { label: "Request Sent", status: "SENT" },
-    { label: "Negotiating", status: "NEGOTIATING" },
-    { label: "Decision Made", status: "DECIDED" },
-    { label: "Completed", status: "COMPLETED" }
-  ]);
-
-  $effect(() => {
-    steps[2].label =
-      currentStatus === "ACCEPTED"
-        ? "Accepted"
-        : currentStatus === "REJECTED"
-          ? "Rejected"
-          : "Decision Made";
-  });
+  let userParticipationStatus = $state<ParticipationState | undefined>(
+    undefined
+  );
+  let participationRequests = $state<ParticipationRequest[]>([]);
 
   // Get current user's participation status
   let userRequest = $derived(
     participationRequests.find(
-      (r: ParticipationRequest) => r.userId === data.currentUserId
+      (r: ParticipationRequest) => r.userId === currentUserId
     )
   );
   let currentStatus = $derived(userRequest?.status);
@@ -286,40 +237,6 @@
             : -1
   );
 
-  type StepType = {
-    color: string;
-    message?: string;
-    icon?: typeof CircleCheck;
-  };
-
-  let stepClass = $derived((): StepType => {
-    switch (currentStatus) {
-      case "COMPLETED":
-        return { color: "success" };
-      case "ACCEPTED":
-        return {
-          color: "success",
-          icon: CircleCheck,
-          message: "Negotiation was succesful. See you there."
-        };
-      case "REJECTED":
-        return {
-          color: "error",
-          message: "You were rejeceted by the owner.",
-          icon: TriangleAlert
-        };
-      case "SENT":
-        return {
-          color: "accent",
-          message: "Waiting for approval.",
-          icon: Info
-        };
-      case "NEGOTIATING":
-        return { color: "info", message: "Negotiating.", icon: Handshake };
-      default:
-        return { color: "primary" };
-    }
-  });
   let participationMessage = $state("");
 
   async function sendParticipationRequest() {
@@ -344,7 +261,7 @@
         status: "SENT" as const
       };
       participationRequests = [...participationRequests, request];
-      userParticipationStatus = "pending";
+      userParticipationStatus = "SENT";
       participationMessage = "";
       toast.success("Participation request sent successfully!");
     } catch (error) {
@@ -354,7 +271,7 @@
     }
   }
 
-  async function leaveEvent() {
+  async function withdraw() {
     try {
       const eventId = $page.params.id;
       if (!eventId || !$auth.token) return;
@@ -369,7 +286,7 @@
       participationRequests = participationRequests.filter(
         (req: ParticipationRequest) => req.userId !== currentUserId
       );
-      userParticipationStatus = "none";
+      userParticipationStatus = "WITHDRAWN";
       toast.success("Participation request withdrawn successfully!");
     } catch (error) {
       toast.error(
@@ -406,11 +323,7 @@
       // Update user status if it's their request
       const currentUserId = $auth.user?.id;
       if (request?.userId === currentUserId) {
-        if (state === "ACCEPTED") {
-          userParticipationStatus = "accepted";
-        } else if (state === "REJECTED") {
-          userParticipationStatus = "rejected";
-        }
+        userParticipationStatus = state;
       }
 
       const actionMessages = {
@@ -429,6 +342,10 @@
   // Wrapper functions for backward compatibility and clarity
   async function acceptRequest(requestId: string) {
     await updateParticipationStatus(requestId, "ACCEPTED");
+  }
+
+  async function negotiate(requestId: string) {
+    //TODO visit /chat/${eventId}/{requestId}
   }
 
   async function rejectRequest(requestId: string) {
@@ -509,11 +426,15 @@
   });
 
   async function loadBackground() {
-    backgroundBlobUrl = await fetchImage(
-      `${HIVE_API}/assets/event/${$page.params.id}`,
-      $auth.token!,
-      "/assets/event.png"
-    );
+    const token = $auth.token;
+    const id = $page.params.id;
+    if (token && id) {
+      backgroundBlobUrl = await API.assets.getEvent(
+        HIVE_API as string,
+        token,
+        parseInt(id)
+      );
+    }
   }
 
   async function loadUserTimeBank() {
@@ -521,7 +442,7 @@
       const userData = await API.users.getById(
         HIVE_API as string,
         $auth.token!,
-        data.currentUserId
+        currentUserId!
       );
       userTimeBank = userData.timeBank || 0;
     } catch (error) {
@@ -530,11 +451,42 @@
     }
   }
 
-  // Load background and user timeBank when component mounts
+  async function loadParticipationData() {
+    try {
+      const participationData: Record<number, ParticipationState> =
+        await API.events.participants.get(
+          HIVE_API as string,
+          $auth.token!,
+          parseInt($page.params.id!)
+        );
+
+      // Map participation data to ParticipationRequest array
+      participationRequests = Object.entries(participationData).map(
+        ([userIdStr, status]) => ({
+          id: userIdStr,
+          userId: parseInt(userIdStr),
+          userName: "", // Will be loaded by UserAvatar
+          message: "",
+          status: status
+        })
+      );
+
+      // Map user participation status
+      const userStatus = currentUserId
+        ? participationData[currentUserId]
+        : undefined;
+      userParticipationStatus = userStatus;
+    } catch (error) {
+      console.error("Failed to load participation data:", error);
+    }
+  }
+
+  // Load background, user timeBank, and participation data when component mounts
   $effect(() => {
     if ($auth.token && $page.params.id && data.event) {
       loadBackground();
-      if (!data.isOwner) {
+      loadParticipationData();
+      if (!isOwner) {
         loadUserTimeBank();
       }
     }
@@ -545,20 +497,6 @@
         URL.revokeObjectURL(backgroundBlobUrl);
       }
     };
-  });
-
-  // Scroll to bottom of chat when new messages arrive
-  let chatContainer = $state<HTMLElement | undefined>();
-  let negotiationContainer = $state<HTMLElement | undefined>();
-  $effect(() => {
-    if (chatContainer) {
-      chatContainer.scrollTop = chatContainer.scrollHeight;
-    }
-  });
-  $effect(() => {
-    if (negotiationContainer) {
-      negotiationContainer.scrollTop = negotiationContainer.scrollHeight;
-    }
   });
 </script>
 
@@ -594,6 +532,122 @@
               {/each}
             </div>
 
+            {#if backgroundBlobUrl}
+              <img
+                src={backgroundBlobUrl}
+                alt="Event background"
+                class="w-full h-64 object-cover rounded-lg mb-4"
+              />
+            {/if}
+
+            <!-- Event status alerts -->
+            {#if isEventCancelled()}
+              <div class="mb-4 alert alert-warning">
+                <TriangleAlert class="h-6 w-6" />
+                <span>{`${asTitle(event.type)} is cancelled`}</span>
+              </div>
+            {:else if isEventCompleted()}
+              <div class="mb-4 alert alert-info">
+                <Info class="h-6 w-6" />
+                <span>{`${asTitle(event.type)} is completed`}</span>
+              </div>
+            {:else if !isOwner && (!userParticipationStatus || userParticipationStatus === "WITHDRAWN" || userParticipationStatus === "REJECTED") && userTimeBank !== null && !hasEnoughTime}
+              <div class="mb-4 alert alert-warning">
+                <TriangleAlert class="h-6 w-6" />
+                <span>Not enough time available</span>
+              </div>
+            {/if}
+
+            <p class="mb-4 text-base-content/70" style="white-space: pre-wrap;">
+              {event.description}
+            </p>
+            <div class="align-content justify-between lg:flex">
+              <div class="mb-4 flex items-center gap-3">
+                <UserAvatar userId={event.ownerId} />
+                <div class="flex items-center gap-2 text-sm opacity-70">
+                  <Calendar />
+                  <span>{event.createdAt}</span>
+                  {#if event.duration}
+                    <Clock />
+                    <span>{event.duration}</span>
+                  {/if}
+                  <Users />
+                  <span
+                    >{getParticipantCount()}/{event.maxParticipants} participants</span
+                  >
+                </div>
+              </div>
+
+              {#if isOwner}
+                <div class="join join-vertical lg:join-horizontal">
+                  <button
+                    class="btn btn-secondary join-item"
+                    class:btn-disabled={isImmutable()}
+                    disabled={isImmutable()}
+                    onclick={() => (showEditModal = true)}
+                  >
+                    Edit
+                  </button>
+                  <button
+                    class="btn btn-error join-item"
+                    class:btn-disabled={isImmutable()}
+                    disabled={isImmutable()}
+                    onclick={cancelEvent}
+                  >
+                    Cancel
+                  </button>
+                </div>
+              {:else if !userParticipationStatus || userParticipationStatus === "WITHDRAWN" || userParticipationStatus === "REJECTED"}
+                {#if isEventCompleted() || isEventCancelled()}
+                  <div class="mt-2">
+                    <button class="btn btn-disabled" disabled>
+                      {#if event.type === "OFFER"}
+                        <HeartHandshake class="h-5 w-5" />
+                      {:else}
+                        <HandHelping class="h-5 w-5" />
+                      {/if}
+                      Apply to {event.type.toLowerCase()}
+                    </button>
+                  </div>
+                {:else if userTimeBank !== null && !hasEnoughTime}
+                  <div class="mt-2">
+                    <button class="btn btn-disabled" disabled>
+                      {#if event.type === "OFFER"}
+                        <HeartHandshake class="h-5 w-5" />
+                      {:else}
+                        <HandHelping class="h-5 w-5" />
+                      {/if}
+                      Apply to {event.type.toLowerCase()}
+                    </button>
+                  </div>
+                {:else if getParticipantCount() >= event.maxParticipants}
+                  <span class="mt-2 text-sm opacity-70">Full capacity</span>
+                {:else}
+                  <button
+                    class="btn mt-2 btn-primary"
+                    onclick={() => (showParticipationModal = true)}
+                  >
+                    {#if event.type === "OFFER"}
+                      <HeartHandshake class="h-5 w-5" />
+                    {:else}
+                      <HandHelping class="h-5 w-5" />
+                    {/if}
+                    Apply to {event.type.toLowerCase()}
+                  </button>
+                {/if}
+              {:else if userParticipationStatus && !["REJECTED", "WITHDRAWN"].includes(userParticipationStatus)}
+                <button
+                  class="btn mt-2 btn-secondary"
+                  class:btn-disabled={isImmutable()}
+                  disabled={isImmutable()}
+                  onclick={withdraw}
+                >
+                  Withdraw
+                </button>
+              {:else if userParticipationStatus === ("REJECTED" as ParticipationState)}
+                <!-- Rejected users cannot withdraw or reapply -->
+              {/if}
+            </div>
             <!-- Map Section -->
             <p class="flex items-center gap-2">
               <span class="font-medium">{event.location}</span>
@@ -621,128 +675,20 @@
               {userLocationName}
               height="h-64"
             />
-            <p class="mb-4 text-base-content/70" style="white-space: pre-wrap;">
-              {event.description}
-            </p>
-            <div class="align-content justify-between lg:flex">
-              <div class="mb-4 flex items-center gap-3">
-                <UserAvatar userId={event.ownerId} />
-                <div class="flex items-center gap-2 text-sm opacity-70">
-                  <Calendar />
-                  <span>{event.createdAt}</span>
-                  {#if event.duration}
-                    <Clock />
-                    <span>{event.duration}</span>
-                  {/if}
-                  <Users />
-                  <span
-                    >{getParticipantCount()}/{event.maxParticipants} participants</span
-                  >
-                </div>
-              </div>
-
-              {#if data.isOwner}
-                <button
-                  class="btn mt-2 btn-secondary"
-                  onclick={() => (showEditModal = true)}
-                >
-                  Edit Event
-                </button>
-              {:else if userParticipationStatus === "none"}
-                {#if isEventCompleted}
-                  <div class="mt-2">
-                    <button class="btn btn-disabled" disabled>
-                      {#if event.type === "OFFER"}
-                        <HeartHandshake class="h-5 w-5" />
-                      {:else}
-                        <HandHelping class="h-5 w-5" />
-                      {/if}
-                      Apply to {event.type.toLowerCase()}
-                    </button>
-                    <div class="mt-2 alert alert-info">
-                      <Info class="h-6 w-6" />
-                      <span>Event is completed</span>
-                    </div>
-                  </div>
-                {:else if userTimeBank !== null && !hasEnoughTime}
-                  <div class="mt-2">
-                    <button class="btn btn-disabled" disabled>
-                      {#if event.type === "OFFER"}
-                        <HeartHandshake class="h-5 w-5" />
-                      {:else}
-                        <HandHelping class="h-5 w-5" />
-                      {/if}
-                      Apply to {event.type.toLowerCase()}
-                    </button>
-                    <div class="mt-2 alert alert-warning">
-                      <TriangleAlert class="h-6 w-6" />
-                      <span>Not enough time available</span>
-                    </div>
-                  </div>
-                {:else if getParticipantCount() >= event.maxParticipants}
-                  <span class="mt-2 text-sm opacity-70">Event is full</span>
-                {:else}
-                  <button
-                    class="btn mt-2 btn-primary"
-                    onclick={() => (showParticipationModal = true)}
-                  >
-                    {#if event.type === "OFFER"}
-                      <HeartHandshake class="h-5 w-5" />
-                    {:else}
-                      <HandHelping class="h-5 w-5" />
-                    {/if}
-                    Apply to {event.type.toLowerCase()}
-                  </button>
-                {/if}
-              {:else if userParticipationStatus !== "accepted" && userParticipationStatus !== "rejected" && userParticipationStatus !== "completed"}
-                <button class="btn mt-2 btn-info" onclick={leaveEvent}>
-                  Withdraw Participation
-                </button>
-              {/if}
-            </div>
           </div>
 
-          {#if !data.isOwner && userRequest && currentStepIndex >= 0}
-            <div class="container mx-auto px-6 py-8">
-              <div class="card">
-                <div class="card-body">
-                  <ul class="steps steps-vertical lg:steps-horizontal">
-                    {#each steps as step, i (step.status)}
-                      <li
-                        class="step {i <= currentStepIndex
-                          ? 'step-' + stepClass().color
-                          : ''}"
-                      >
-                        {step.label}
-                      </li>
-                    {/each}
-                  </ul>
-                  {#if stepClass().icon}
-                    <div
-                      role="alert"
-                      class="mt-4 alert alert-soft {'alert-' +
-                        stepClass().color}"
-                    >
-                      <svelte:component
-                        this={stepClass().icon}
-                        class="h-6 w-6 shrink-0 stroke-current"
-                      />
-                      <span>{stepClass().message}</span>
-                    </div>
-                  {/if}
-                </div>
-              </div>
-            </div>
+          {#if !isOwner && userRequest && currentStepIndex >= 0}
+            <ParticipationProgress {currentStepIndex} {currentStatus} />
           {/if}
 
-          {#if data.isOwner}
+          {#if isOwner && !isEventCancelled()}
             <div class="grid grid-cols-1 gap-8 lg:grid-cols-2">
               <!-- Pending Requests -->
               <div class="card bg-base-100 shadow-xl">
                 <div class="card-body">
                   <h3 class="card-title">
                     <Users class="h-5 w-5" />
-                    Pending Participation Requests ({participationRequests.filter(
+                    Pending Requests ({participationRequests.filter(
                       (r: ParticipationRequest) =>
                         r.status === "SENT" ||
                         r.status === "PENDING" ||
@@ -763,15 +709,19 @@
                               </p>
                             {/if}
                           </div>
-                          <div class="flex gap-2">
+                          <div class="flex join">
                             <button
-                              class="btn btn-sm btn-success"
-                              onclick={() => acceptRequest(request.id)}
+                              class="btn btn-sm btn-info join-item"
+                              class:btn-disabled={isImmutable()}
+                              disabled={isImmutable()}
+                              onclick={() => startNegotiation(request.id)}
                             >
                               Accept
                             </button>
                             <button
-                              class="btn btn-sm btn-error"
+                              class="btn btn-sm btn-error join-item"
+                              class:btn-disabled={isImmutable()}
+                              disabled={isImmutable()}
                               onclick={() => rejectRequest(request.id)}
                             >
                               Reject
@@ -788,20 +738,17 @@
                 </div>
               </div>
 
-              <!-- Accepted Participants -->
+              <!-- Negotiating -->
               <div class="card bg-base-100 shadow-xl">
                 <div class="card-body">
                   <h3 class="card-title">
                     <Users class="h-5 w-5" />
-                    Accepted Participants ({participationRequests.filter(
-                      (r: ParticipationRequest) =>
-                        r.status === "ACCEPTED" ||
-                        r.status === "NEGOTIATING" ||
-                        r.status === "COMPLETED"
+                    Negotiation ({participationRequests.filter(
+                      (r: ParticipationRequest) => r.status === "NEGOTIATING"
                     ).length})
                   </h3>
-                  {#if participationRequests.some((r: ParticipationRequest) => r.status === "ACCEPTED" || r.status === "NEGOTIATING" || r.status === "COMPLETED")}
-                    {#each participationRequests.filter((r: ParticipationRequest) => r.status === "ACCEPTED" || r.status === "NEGOTIATING" || r.status === "COMPLETED") as request (request.id)}
+                  {#if participationRequests.some((r: ParticipationRequest) => r.status === "NEGOTIATING")}
+                    {#each participationRequests.filter((r: ParticipationRequest) => r.status === "NEGOTIATING") as request (request.id)}
                       <div
                         class="mb-4 border-b border-base-300 pb-4 last:mb-0 last:border-b-0 last:pb-0"
                       >
@@ -814,15 +761,27 @@
                               </p>
                             {/if}
                           </div>
-                          <div class="flex gap-2">
+                          <div class="flex join">
                             <button
-                              class="btn btn-sm btn-info"
-                              onclick={() => startNegotiation(request.id)}
+                              class="btn btn-sm btn-success join-item"
+                              class:btn-disabled={isImmutable()}
+                              disabled={isImmutable()}
+                              onclick={() => acceptRequest(request.id)}
                             >
-                              Start Negotiation
+                              Accept
                             </button>
                             <button
-                              class="btn btn-sm btn-error"
+                              class="btn btn-sm btn-accent join-item"
+                              class:btn-disabled={isImmutable()}
+                              disabled={isImmutable()}
+                              onclick={() => negotiate(request.id)}
+                            >
+                              Negotiate
+                            </button>
+                            <button
+                              class="btn btn-sm btn-error join-item"
+                              class:btn-disabled={isImmutable()}
+                              disabled={isImmutable()}
                               onclick={() => removeParticipant(request.id)}
                             >
                               Remove
@@ -833,7 +792,7 @@
                     {/each}
                   {:else}
                     <p class="text-sm opacity-70">
-                      There are no accepted participants.
+                      There are no participants in negotiation.
                     </p>
                   {/if}
                 </div>
@@ -841,194 +800,38 @@
             </div>
           {/if}
         </div>
-        <!-- Main Content -->
-        <div class="container mx-auto">
-          <div class="grid grid-cols-1 gap-8 lg:grid-cols-2">
-            <!-- Left Column: Event Details -->
-            <div class="space-y-6"></div>
-
-            <!-- Right Column: Chat -->
-            <div class="card bg-base-100 shadow-xl">
-              <div class="card-body">
-                <!-- Tabs -->
-                <div class="tabs-boxed mb-4 tabs">
-                  <button
-                    type="button"
-                    class="tab-lg tab {activeTab === 'public'
-                      ? 'tab-active'
-                      : ''}"
-                    onclick={() => (activeTab = "public")}
-                  >
-                    <MessageSquare class="mr-2 h-5 w-5" />
-                    <span class="text-lg font-semibold">Public Chat</span>
-                    <span class="ml-2 badge badge-sm"
-                      >{chatMessages.length}</span
-                    >
-                  </button>
-                  <button
-                    type="button"
-                    class="tab-lg tab {activeTab === 'negotiation'
-                      ? 'tab-active'
-                      : ''} {userParticipationStatus !== 'accepted' &&
-                    !data.isOwner
-                      ? 'pointer-events-none opacity-50'
-                      : ''}"
-                    onclick={() => {
-                      if (
-                        userParticipationStatus === "accepted" ||
-                        data.isOwner
-                      )
-                        activeTab = "negotiation";
-                    }}
-                  >
-                    <MessageSquare class="mr-2 h-5 w-5" />
-                    <span class="text-lg font-semibold">Negotiation</span>
-                    <span class="ml-2 badge badge-sm"
-                      >{negotiationMessages.length}</span
-                    >
-                  </button>
-                </div>
-
-                {#if activeTab === "public"}
-                  <!-- Chat Messages -->
-                  <div
-                    bind:this={chatContainer}
-                    class="mb-4 h-96 overflow-y-auto p-2"
-                  >
-                    {#each chatMessages as message (message.id)}
-                      {#if message.author !== "You"}
-                        <div class="chat-start chat">
-                          <UserAvatar
-                            userId={message.author === "You" ? 0 : 2}
-                          />
-                          <div class="chat-header">
-                            {message.author}
-                            <time class="text-xs opacity-50"
-                              >{message.timestamp}</time
-                            >
-                          </div>
-                          <div
-                            class="chat-bubble {message.author === 'You'
-                              ? 'chat-bubble-primary'
-                              : ''}"
-                          >
-                            {message.content}
-                          </div>
-                        </div>
-                      {:else}
-                        <div class="chat-end chat">
-                          <div class="chat-header">
-                            {message.author}
-                            <time class="text-xs opacity-50"
-                              >{message.timestamp}</time
-                            >
-                          </div>
-                          <div
-                            class="chat-bubble {message.author === 'You'
-                              ? 'chat-bubble-primary'
-                              : ''}"
-                          >
-                            {message.content}
-                          </div>
-                        </div>
-                      {/if}
-                    {/each}
-                  </div>
-
-                  <!-- Message Input -->
-                  <div class="flex gap-2">
-                    <input
-                      type="text"
-                      placeholder="Type a message..."
-                      class="input-bordered input flex-1"
-                      bind:value={newMessage}
-                      onkeydown={(e) => {
-                        if (e.key === "Enter") {
-                          sendMessage();
-                        }
-                      }}
-                    />
-                    <button
-                      class="btn btn-primary"
-                      onclick={sendMessage}
-                      disabled={!newMessage.trim()}
-                    >
-                      <Send class="h-4 w-4" />
-                    </button>
-                  </div>
-                {:else if activeTab === "negotiation"}
-                  <!-- Negotiation Messages -->
-                  <div
-                    bind:this={negotiationContainer}
-                    class="mb-4 h-96 overflow-y-auto p-2"
-                  >
-                    {#each negotiationMessages as message (message.id)}
-                      {#if message.author !== "You"}
-                        <div class="chat-start chat">
-                          <UserAvatar
-                            userId={message.author === "You" ? 0 : 2}
-                          />
-                          <div class="chat-header">
-                            {message.author}
-                            <time class="text-xs opacity-50"
-                              >{message.timestamp}</time
-                            >
-                          </div>
-                          <div
-                            class="chat-bubble {message.author === 'You'
-                              ? 'chat-bubble-primary'
-                              : ''}"
-                          >
-                            {message.content}
-                          </div>
-                        </div>
-                      {:else}
-                        <div class="chat-end chat">
-                          <div class="chat-header">
-                            {message.author}
-                            <time class="text-xs opacity-50"
-                              >{message.timestamp}</time
-                            >
-                          </div>
-                          <div
-                            class="chat-bubble {message.author === 'You'
-                              ? 'chat-bubble-primary'
-                              : ''}"
-                          >
-                            {message.content}
-                          </div>
-                        </div>
-                      {/if}
-                    {/each}
-                  </div>
-
-                  <!-- Negotiation Message Input -->
-                  <div class="flex gap-2">
-                    <input
-                      type="text"
-                      placeholder="Type a message..."
-                      class="input-bordered input flex-1"
-                      bind:value={newNegotiationMessage}
-                      onkeydown={(e) => {
-                        if (e.key === "Enter") {
-                          sendNegotiationMessage();
-                        }
-                      }}
-                    />
-                    <button
-                      class="btn btn-primary"
-                      onclick={sendNegotiationMessage}
-                      disabled={!newNegotiationMessage.trim()}
-                    >
-                      <Send class="h-4 w-4" />
-                    </button>
-                  </div>
-                {/if}
-              </div>
-            </div>
-          </div>
-        </div>
       {/if}
+      <!-- Attendees -->
+      <div class="card bg-base-100 shadow-xl">
+        <div class="card-body">
+          <h3 class="card-title">
+            <Users class="h-5 w-5" />
+            Attendees ({participationRequests.filter(
+              (r: ParticipationRequest) =>
+                r.status === "ACCEPTED" || r.status === "COMPLETED"
+            ).length})
+          </h3>
+          {#if participationRequests.some((r: ParticipationRequest) => r.status === "ACCEPTED" || r.status === "COMPLETED")}
+            <div
+              class="mb-4 border-b border-base-300 pb-4 last:mb-0 last:border-b-0 last:pb-0 flex gap-3 items-center"
+            >
+              <UserAvatar userId={event.ownerId} />
+              <span class="badge badge-accent">Owner</span>
+            </div>
+            {#each participationRequests.filter((r: ParticipationRequest) => r.status === "ACCEPTED" || r.status === "COMPLETED") as request (request.id)}
+              <div
+                class="mb-4 border-b border-base-300 pb-4 last:mb-0 last:border-b-0 last:pb-0"
+              >
+                <UserAvatar userId={request.userId} />
+              </div>
+            {/each}
+          {:else}
+            <p class="text-sm opacity-70">
+              There are no accepted participants.
+            </p>
+          {/if}
+        </div>
+      </div>
     </div>
   </div>
 </div>
@@ -1097,6 +900,7 @@
   currentDuration={data.event.duration
     ? parseInt(data.event.duration.split(" ")[0])
     : 0}
-  currentEventDate={data.event.targetDate}
+  currentEventDate={data.event.eventDate}
+  currentImage={backgroundBlobUrl}
   on:update={updateEvent}
 />

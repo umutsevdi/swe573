@@ -13,7 +13,7 @@ public interface EventListView {
     String getTitle();
 
     @JsonIgnore
-    String getTags();
+    String getTagsString();
 
     Integer getMaxParticipants();
 
@@ -41,11 +41,11 @@ public interface EventListView {
     String getLocationName();
 
 
-    default List<String> getTagsList() {
-        if (getTags().contains(",")) {
-            return List.of(Strings.split(getTags(), ","));
+    default List<String> getTags() {
+        if (getTagsString().contains(",")) {
+            return List.of(Strings.split(getTagsString(), ","));
         }
-        return List.of(getTags());
+        return List.of(getTagsString());
     }
 
     default Location getLocation() {

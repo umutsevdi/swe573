@@ -29,8 +29,8 @@ public class ImageController {
     ) throws HttpMediaTypeNotAcceptableException, NotFoundException {
         Long userId = ((UserDTO) SecurityContextHolder.getContext().getAuthentication().getPrincipal()).getId();
         switch (type) {
-            case EVENT -> service.storeEvent(file, userId, id);
-            case PROFILE, BG -> service.storeUserImage(file, type, userId, id);
+            case EVENT -> service.storeEvent(file, id, userId);
+            case PROFILE, BG -> service.storeUserImage(file, type, id, userId);
         }
         return ResponseEntity.ok().build();
     }

@@ -119,6 +119,24 @@
       return;
     }
 
+    if (maxParticipants < 1) {
+      toast.error("Maximum participants must be at least 1");
+      return;
+    }
+
+    if (duration < 1) {
+      toast.error("Duration must be at least 1 hour");
+      return;
+    }
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const selectedDate = new Date(eventDate);
+    if (selectedDate < today) {
+      toast.error("Event date cannot be earlier than today");
+      return;
+    }
+
     if (!location || !location.name) {
       location = { lat: 41.0082, lon: 28.9784, name: "Istanbul" };
     }

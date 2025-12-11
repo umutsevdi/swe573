@@ -51,7 +51,7 @@ public class ImageService {
                            Long userId
     ) throws HttpMediaTypeNotAcceptableException, NotFoundException {
         EventResponse event = eventService.getEvent(id);
-        if (event.getOwnerId().equals(userId)) {
+        if (!event.getOwnerId().equals(userId)) {
             throw new PermissionDeniedException();
         }
         try {

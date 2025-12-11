@@ -1,72 +1,32 @@
 <script lang="ts">
   import { goto } from "$app/navigation";
-  import { page } from "$app/stores";
   import { Search } from "@lucide/svelte";
   import MapOverview from "$lib/components/MapOverview.svelte";
   import SearchResultCard from "$lib/components/SearchResultCard.svelte";
   import { breadcrumbs } from "$lib/stores/breadcrumbs";
-  import { API, type EventFilterRequest, type EventResponse } from "$lib/api";
-  import { HIVE_API } from "$lib/config";
 
   let { data } = $props();
   breadcrumbs.set([{ text: "Discover" }]);
 
-  let q = $state("");
-  let tags = $state<string[]>([]);
+  let q = $state(data.q);
+  let tags = $state(data.tags);
   let tagInput = $state("");
-  let start = $state("");
-  let end = $state("");
-  let proximity = $state(0);
-  let type = $state<"OFFER" | "NEED" | "">("");
-  let includeCancelled = $state(false);
-  let userLat = $state<number | null>(null);
-  let userLng = $state<number | null>(null);
+  let start = $state(data.start);
+  let end = $state(data.end);
+  let proximity = $state(data.proximity);
+  let type = $state(data.type);
+  let includeCancelled = $state(data.includeCancelled);
+  let userLat = $state(data.userLat);
+  let userLng = $state(data.userLng);
 
-  // Client-side search state
-  let events = $state<EventResponse[]>([]);
-  let loading = $state(false);
-  let hasSearched = $state(false);
-
-  async function fetchEvents() {
-    loading = true;
-    try {
-      const token = document.cookie
-        .split("; ")
-        .find((row) => row.startsWith("token="))
-        ?.split("=")[1];
-
-      if (!token) {
-        // If no token, redirect to auth or handle unauth
-        events = [];
-        return;
-      }
-
-      const requestBody: EventFilterRequest = {};
-      if (q.trim()) requestBody.textSearch = q.trim();
-      if (tags.length) requestBody.tags = tags;
-      if (start) requestBody.startDate = start;
-      if (end) requestBody.endDate = end;
-      if (includeCancelled) requestBody.includeCancelled = includeCancelled;
-      if (proximity > 0 && userLat && userLng) {
-        requestBody.userLocation = { lat: userLat, lon: userLng };
-        requestBody.proximity = proximity;
-      }
-      if (type) requestBody.type = type;
-
-      events = await API.events.filter(HIVE_API, token, requestBody);
-      hasSearched = true;
-    } catch (error) {
-      console.error("Error fetching events:", error);
-      events = [];
-      hasSearched = true;
-    } finally {
-      loading = false;
-    }
-  }
-
-  // Get user location
+  // Get user location for proximity filter
   $effect(() => {
-    if (typeof navigator !== "undefined" && navigator.geolocation) {
+    if (
+      typeof navigator !== "undefined" &&
+      navigator.geolocation &&
+      !userLat &&
+      !userLng
+    ) {
       navigator.geolocation.getCurrentPosition(
         (position) => {
           userLat = position.coords.latitude;
@@ -79,29 +39,30 @@
     }
   });
 
-  // Prefill from URL
+  // Redirect to default search if no query params
   $effect(() => {
-    const params = $page.url.searchParams;
-    q = params.get("q") || "";
-    const tagsParam = params.get("tags");
-    if (tagsParam) {
-      tags = tagsParam.split(",").filter(Boolean);
+    if (
+      typeof window !== "undefined" &&
+      window.location.search === "" &&
+      userLat &&
+      userLng
+    ) {
+      const today = new Date().toISOString().split("T")[0];
+      const params = new URLSearchParams();
+      params.set("start", today);
+      params.set("proximity", "20");
+      params.set("user_lat", userLat.toString());
+      params.set("user_lng", userLng.toString());
+      goto(`?${params.toString()}`, { replaceState: true });
     }
-    start = params.get("start") || "";
-    end = params.get("end") || "";
-    const prox = params.get("proximity");
-    if (prox) proximity = parseInt(prox) || 0;
-    const typeParam = params.get("type");
-    if (typeParam && (typeParam === "OFFER" || typeParam === "NEED")) {
-      type = typeParam as "OFFER" | "NEED";
-    } else {
-      type = "";
-    }
-    includeCancelled = params.get("includeCancelled") === "true";
   });
 
   function addTag() {
-    const trimmed = tagInput.trim().toLowerCase();
+    const trimmed = tagInput
+      .trim()
+      .toLowerCase()
+      .replace(/\s+/g, "-")
+      .replace(/[^a-z0-9-]/g, "");
     if (trimmed && !tags.includes(trimmed)) {
       tags = [...tags, trimmed];
       tagInput = "";
@@ -127,7 +88,6 @@
     }
     if (includeCancelled) params.set("includeCancelled", "true");
     goto(`?${params.toString()}`, { replaceState: true });
-    fetchEvents();
   }
 </script>
 
@@ -138,7 +98,7 @@
       <div class="mb-4 bg-base-100 p-4">
         <div class="mb-4">
           <MapOverview
-            events={events.map((e) => ({
+            events={data.events.map((e) => ({
               id: e.id,
               title: e.title,
               lat: e.location.lat,
@@ -226,7 +186,7 @@
           <!-- Filters Row -->
           <div class="flex flex-col gap-4 lg:flex-row lg:items-center">
             <div class="flex flex-1 items-center gap-2">
-              <span class="label-text">Date Range</span>
+              <span class="label-text">From</span>
               <div class="flex flex-1 gap-2">
                 <input
                   type="date"
@@ -246,13 +206,13 @@
               <div class="flex flex-1 items-center gap-4">
                 <input
                   type="range"
-                  min="0"
-                  max="1000"
+                  min="2"
+                  max="250"
                   class="range flex-1"
                   bind:value={proximity}
                 />
                 <span class="label-text"
-                  >{proximity != 0 ? `${proximity}km` : "No Filter"}</span
+                  >{proximity != 0 ? `${proximity}km` : "  "}</span
                 >
               </div>
             </div>
@@ -341,38 +301,22 @@
       </div>
       <!-- List of cards -->
       <div class="h-[75vh] space-y-4 overflow-y-auto">
-        {#if loading}
-          {#each Array(5) as item, i (i)}
-            <div class="card bg-base-100 shadow-xl">
-              <div class="card-body">
-                <div class="skeleton h-6 w-3/4"></div>
-                <div class="skeleton h-4 w-full"></div>
-                <div class="skeleton h-4 w-1/2"></div>
-                <div class="flex gap-2 mt-2">
-                  <div class="skeleton h-6 w-16"></div>
-                  <div class="skeleton h-6 w-20"></div>
-                </div>
-              </div>
-            </div>
-          {/each}
-        {:else}
-          {#each events as event (event.id)}
-            <SearchResultCard
-              title={event.title}
-              description={event.description}
-              tags={event.tags}
-              location={event.location.name}
-              participantCount={event.maxParticipants}
-              ownerId={event.ownerId}
-              type={event.type}
-              eventId={event.id}
-            />
-          {/each}
-          {#if hasSearched && events.length === 0 && (q || tags.length > 0 || start || end || proximity > 0)}
-            <div class="alert alert-info">
-              No events found matching your criteria.
-            </div>
-          {/if}
+        {#each data.events as event (event.id)}
+          <SearchResultCard
+            title={event.title}
+            description={event.description}
+            tags={event.tags}
+            location={event.location.name}
+            participantCount={event.maxParticipants}
+            ownerId={event.ownerId}
+            type={event.type}
+            eventId={event.id}
+          />
+        {/each}
+        {#if data.hasSearched && data.events.length === 0 && (q || tags.length > 0 || start || end || proximity > 0)}
+          <div class="alert alert-info">
+            No events found matching your criteria.
+          </div>
         {/if}
       </div>
     </div>

@@ -74,7 +74,7 @@ public class EventService {
     @CacheEvict(cacheNames = "getUserEvents", allEntries = true)
     @Transactional
     public EventResponse newEvent(EventRequest request, UserDTO userDTO) {
-        request.setTags(request.getTags().stream().map(String::toLowerCase).toList());
+        request.setTags(request.getTags().stream().map(e->e.toLowerCase().replace(' ', '-')).toList());
         EventEntity entity = mapper.requestToEntity(request);
         entity.setCancelled(false);
         entity.setOwner(userMapper.dtoToEntity(userDTO));
@@ -102,7 +102,7 @@ public class EventService {
             event.setDescription(request.getDescription());
         }
         if (request.getTags() != null) {
-            event.setTags(request.getTags().stream().map(String::toLowerCase).toList());
+            event.setTags(request.getTags().stream().map(e->e.toLowerCase().replace(' ', '-')).toList());
         }
         if (request.getLocation() != null) {
             event.setLocation(request.getLocation());

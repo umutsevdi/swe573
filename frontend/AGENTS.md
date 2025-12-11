@@ -17,6 +17,7 @@
 - **Styling**: Tailwind CSS + DaisyUI components
 - **Error handling**: Throw errors for invalid states, validate inputs
 - **Comments**: Minimal, only when necessary for clarity
+- **Back-end API**: A type safe FFI is defined under `src/lib/api.ts`
 
 ## Guidelines
 

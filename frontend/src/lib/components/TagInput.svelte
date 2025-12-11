@@ -14,7 +14,11 @@
   let tagInput = $state("");
 
   function addTag() {
-    const trimmed = tagInput.trim().toLowerCase();
+    const trimmed = tagInput
+      .trim()
+      .toLowerCase()
+      .replace(/\s+/g, "-")
+      .replace(/[^a-z0-9-]/g, "");
     if (
       trimmed &&
       !tags.includes(trimmed) &&

@@ -10,7 +10,6 @@
       biography: string;
       interests: string[];
       avatar?: File;
-      background?: File;
     };
   }>();
 
@@ -18,22 +17,18 @@
     open = $bindable(false),
     currentBiography = "",
     currentInterests = [],
-    currentAvatar,
-    currentBackground
+    currentAvatar
   } = $props<{
     open: boolean;
     currentBiography: string;
     currentInterests: string[];
     currentAvatar?: string | null;
-    currentBackground?: string | null;
   }>();
 
   let biography = $state(currentBiography);
   let interests = $state(currentInterests);
   let avatarFile = $state<File | null>(null);
   let avatarPreview = $state<string | null>(currentAvatar || null);
-  let backgroundFile = $state<File | null>(null);
-  let backgroundPreview = $state<string | null>(currentBackground || null);
 
   function openModal() {
     open = true;
@@ -53,21 +48,11 @@
     }
   }
 
-  async function handleBackgroundChange(event: Event) {
-    const target = event.target as HTMLInputElement;
-    const file = target.files?.[0];
-    if (file) {
-      backgroundFile = file;
-      backgroundPreview = await createFilePreview(file);
-    }
-  }
-
   function submit() {
     dispatch("update", {
       biography,
       interests,
-      avatar: avatarFile || undefined,
-      background: backgroundFile || undefined
+      avatar: avatarFile || undefined
     });
     closeModal();
   }
@@ -77,8 +62,6 @@
     interests = currentInterests;
     avatarFile = null;
     avatarPreview = currentAvatar || null;
-    backgroundFile = null;
-    backgroundPreview = currentBackground || null;
   }
 
   $effect(() => {
@@ -133,43 +116,6 @@
       </div>
     </div>
 
-    <!-- Background Upload -->
-    <div class="form-control">
-      <label class="label" for="background-picture-input">
-        <span class="label-text">Background Picture</span>
-      </label>
-      <div class="flex items-center gap-4">
-        <div class="avatar">
-          <div class="h-16 w-16 rounded">
-            {#if backgroundPreview}
-              <img
-                src={backgroundPreview}
-                alt="Background preview"
-                class="object-cover"
-              />
-            {:else}
-              <div
-                class="flex h-full items-center justify-center bg-neutral text-neutral-content"
-              >
-                <User class="h-8 w-8" />
-              </div>
-            {/if}
-          </div>
-        </div>
-        <label class="btn btn-outline btn-sm">
-          <Upload class="mr-2 h-4 w-4" />
-          Upload Background
-          <input
-            id="background-picture-input"
-            type="file"
-            accept="image/*"
-            class="hidden"
-            onchange={handleBackgroundChange}
-          />
-        </label>
-      </div>
-    </div>
-
     <!-- Biography -->
     <div class="form-control">
       <label class="label" for="biography-textarea">
@@ -204,6 +150,6 @@
 
   <div class="modal-action">
     <button class="btn btn-ghost" onclick={closeModal}>Cancel</button>
-    <button class="btn btn-primary" onclick={submit}>Save Changes</button>
+    <button class="btn btn-primary" onclick={submit}>Save</button>
   </div>
 </BaseModal>

@@ -13,8 +13,8 @@ public class CacheConfig {
     @Bean
     public CacheManager cacheManager() {
         return new ConcurrentMapCacheManager(
-                "usersById",
-                "usersByUsername",
+                "userById",
+                "userByUsername",
                 "threadById",
                 "threadList",
                 "threadPage",

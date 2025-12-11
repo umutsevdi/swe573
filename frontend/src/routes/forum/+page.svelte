@@ -34,7 +34,7 @@
     <div class="w-full">
       <div class="mb-4 flex justify-end">
         <label class="label cursor-pointer">
-          <span class="label-text mr-2">Show closed threads</span>
+          <span class="label-text mr-2">Show Inactive Threads</span>
           <input
             type="checkbox"
             class="toggle toggle-primary"

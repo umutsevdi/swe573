@@ -46,7 +46,7 @@ export interface UserProfileResponse {
   timeBank: number;
   frozenAmount: number;
   active: boolean;
-  isSelf: boolean;
+  self: boolean;
 }
 
 export interface UserResponse {
@@ -102,7 +102,7 @@ export interface EventResponse {
 export interface EventListResponse {
   id: number;
   title: string;
-  tagsList: string[];
+  tags: string[];
   location: { lat: number; lon: number; name: string };
   maxParticipants: number;
   type: "OFFER" | "NEED";
@@ -338,10 +338,15 @@ export const API = {
         eventId: number,
         message: string
       ): Promise<void> {
-        await fetchJSON(`${baseUrl}/event/${eventId}/participation`, auth, {
-          method: "POST",
-          body: JSON.stringify({ message })
-        });
+        const query = message ? `message=${message.trim()}` : "";
+        await fetchJSON(
+          `${baseUrl}/event/${eventId}/participation?${query}`,
+          auth,
+          {
+            method: "POST",
+            body: JSON.stringify({ message })
+          }
+        );
       },
 
       manageParticipant: async function (

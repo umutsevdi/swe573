@@ -9,6 +9,7 @@ import com.hive.app.account.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.hibernate.PropertyValueException;
+import org.jspecify.annotations.NonNull;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.cache.annotation.Caching;
@@ -28,20 +29,25 @@ public class UserService implements UserDetailsService {
     private final UserRepository repository;
     private final UserMapper mapper;
 
-    @Cacheable(cacheNames = "usersById", key = "#id")
+    @Cacheable(cacheNames = "userById", key = "#id")
     public Optional<UserDTO> findById(Long id) {
         return repository.findByIdAndIsActiveTrue(id).map(mapper::entityToDto);
     }
 
-    @Cacheable(cacheNames = "usersByUsername", key = "#username")
+    @Cacheable(cacheNames = "userByUsername", key = "#username")
     public Optional<UserDTO> findByUsername(String username) {
         return repository.findByUsernameAndIsActiveTrue(username)
                 .map(mapper::entityToDto);
     }
 
+    @Caching(evict = {
+            @CacheEvict(value = "userByUsername", allEntries = true),
+            @CacheEvict(value = "userById", allEntries = true)}
+    )
     @Transactional
     public void create(RegisterRequest request) throws PropertyValueException {
         var dto = mapper.requestToDto(request);
+        dto.setInterests(request.getInterests().stream().map(e-> e.toLowerCase().replace(' ', '-')).toList());
         dto.setCreatedAt(LocalDateTime.now());
         dto.setTimeBank(10);
         dto.setUserScore(100);
@@ -51,9 +57,9 @@ public class UserService implements UserDetailsService {
         repository.save(mapper.dtoToEntity(dto));
     }
 
-    @Cacheable(cacheNames = "usersByUsername", key = "#username")
+    @Cacheable(cacheNames = "userByUsername", key = "#username")
     @Override
-    public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
+    public UserDetails loadUserByUsername(@NonNull String username) throws UsernameNotFoundException {
         return repository.findByUsernameAndIsActiveTrue(username)
                 .map(mapper::entityToDto)
                 .orElseThrow(() -> new UsernameNotFoundException("User not " +
@@ -62,7 +68,7 @@ public class UserService implements UserDetailsService {
 
     @Caching(evict = {
             @CacheEvict(value = "userByUsername", key = "#dto.username"),
-            @CacheEvict(value = "usersById", key = "#dto.id")}
+            @CacheEvict(value = "userById", key = "#dto.id")}
     )
     @Transactional
     public UserDTO updateUser(UserDTO dto, UpdateUserRequest request) throws UsernameNotFoundException {
@@ -73,7 +79,7 @@ public class UserService implements UserDetailsService {
         }
         if (request.getInterests() != null && !request.getInterests().isEmpty() && !request.getInterests().equals(dto.getInterests())) {
             changed = true;
-            dto.setInterests(request.getInterests());
+            dto.setInterests(request.getInterests().stream().map(e-> e.toLowerCase().replace(' ', '-')).toList());
         }
         if (changed) {
             repository.save(mapper.dtoToEntity(dto));
@@ -83,7 +89,7 @@ public class UserService implements UserDetailsService {
 
     @Caching(evict = {
             @CacheEvict(value = "userByUsername", key = "#dto.username"),
-            @CacheEvict(value = "usersById", key = "#dto.id")}
+            @CacheEvict(value = "userById", key = "#dto.id")}
     )
     @Transactional
     public void deactivateUser(UserDTO dto) {
@@ -93,7 +99,7 @@ public class UserService implements UserDetailsService {
 
     @Caching(evict = {
             @CacheEvict(value = "userByUsername", key = "#dto.username"),
-            @CacheEvict(value = "usersById", key = "#dto.id")}
+            @CacheEvict(value = "userById", key = "#dto.id")}
     )
     @Transactional
     public void freezeTime(UserDTO dto, int time) {
@@ -104,7 +110,7 @@ public class UserService implements UserDetailsService {
 
     @Caching(evict = {
             @CacheEvict(value = "userByUsername", key = "#dto.username"),
-            @CacheEvict(value = "usersById", key = "#dto.id")}
+            @CacheEvict(value = "userById", key = "#dto.id")}
     )
     @Transactional
     public void unfreezeTime(UserDTO dto, int time) {
@@ -115,7 +121,7 @@ public class UserService implements UserDetailsService {
 
     @Caching(evict = {
             @CacheEvict(value = "userByUsername", key = "#dto.username"),
-            @CacheEvict(value = "usersById", key = "#dto.id")}
+            @CacheEvict(value = "userById", key = "#dto.id")}
     )
     @Transactional
     public void transferTime(UserDTO dto, int time) {

@@ -18,6 +18,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -32,7 +33,9 @@ public class ThreadService {
     @Transactional
     public ThreadDTO newForum(ThreadRequest request, UserDTO user) {
         ThreadEntity entity = new ThreadEntity();
-        entity.setTags(Strings.join(request.getTags(), ','));
+        entity.setTags(request.getTags().stream()
+                .map(e -> e.toLowerCase().replace(' ', '-'))
+                .collect(Collectors.joining(",")));
         entity.setOwner(userMapper.dtoToEntity(user));
         entity.setTitle(request.getTitle());
         entity.setDescription(request.getDescription());
@@ -54,7 +57,9 @@ public class ThreadService {
         }
         boolean updated = false;
         if (request.getTags() != null) {
-            entity.setTags(Strings.join(request.getTags(), ','));
+            entity.setTags(request.getTags().stream()
+                    .map(e -> e.toLowerCase().replace(' ', '-'))
+                    .collect(Collectors.joining(",")));
             updated = true;
         }
         if (request.getTitle() != null) {

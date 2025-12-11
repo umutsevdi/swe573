@@ -75,7 +75,11 @@
   }
 
   function addInterest() {
-    const trimmed = registerInterestInput.trim();
+    const trimmed = registerInterestInput
+      .trim()
+      .toLowerCase()
+      .replace(/\s+/g, "-")
+      .replace(/[^a-z0-9-]/g, "");
     if (trimmed && !registerInterests.includes(trimmed)) {
       registerInterests = [...registerInterests, trimmed];
       registerInterestInput = "";

@@ -1,34 +1,10 @@
 import type { PageServerLoad } from "./$types";
 import { error } from "@sveltejs/kit";
 import { HIVE_API } from "$lib/serverConfig";
-import { API, type ParticipationState } from "$lib/api";
-
-type ChatMessage = {
-  id: string;
-  author: string;
-  avatar: string;
-  content: string;
-  timestamp: string;
-};
-
-type ParticipationRequest = {
-  id: string;
-  userId: number;
-  userName: string;
-  message: string;
-  status:
-    | "SENT"
-    | "PENDING"
-    | "CREATED"
-    | "NEGOTIATING"
-    | "ACCEPTED"
-    | "REJECTED"
-    | "WITHDRAWN"
-    | "COMPLETED";
-};
+import { API, type EventResponse } from "$lib/api";
 
 type EventData = {
-  id: string;
+  id: number;
   title: string;
   description: string;
   ownerId: number;
@@ -40,34 +16,11 @@ type EventData = {
   maxParticipants?: number;
   createdAt: string;
   updatedAt: string;
-  targetDate?: string;
+  eventDate?: string;
   duration?: string;
   capacity?: number;
-  userParticipationStatus: "none" | "pending" | "accepted" | "rejected";
-  participationRequests: ParticipationRequest[];
-  chatMessages: ChatMessage[];
+  cancelled: boolean;
 };
-
-interface EventApiResponse {
-  id: number;
-  title: string;
-  description: string;
-  tags: string[];
-  location: {
-    lat: number;
-    lon: number;
-    name: string;
-  };
-  maxParticipants: number;
-  type: string;
-  duration: number;
-  eventDate: string;
-  createdAt: string;
-  updatedAt: string;
-  ownerId: number;
-}
-
-import { decodeJwtPayload } from "$lib/utils/jwt";
 
 export const load: PageServerLoad = async ({ params, cookies }) => {
   const id = Number(params.id);
@@ -78,79 +31,35 @@ export const load: PageServerLoad = async ({ params, cookies }) => {
     throw error(404, "Event not found");
   }
 
-  const serverData: EventApiResponse = await API.events.getById(
+  const serverData: EventResponse = await API.events.getById(
     HIVE_API as string,
     cookies,
     id
   );
-
-  // Fetch participation data
-  const participationData: Record<number, ParticipationState> =
-    await API.events.participants.get(HIVE_API as string, cookies, id);
-
-  // Decode JWT to get current user id
-  const token = cookies.get("token")!;
-  const payload = decodeJwtPayload(token);
-  const currentUserId = payload?.id;
-
-  // Map participation data to ParticipationRequest array
-  const participationRequests: ParticipationRequest[] = Object.entries(
-    participationData
-  ).map(([userIdStr, status]) => ({
-    id: userIdStr,
-    userId: parseInt(userIdStr),
-    userName: "", // Will be loaded by UserAvatar
-    message: "",
-    status: status
-  }));
-
-  // Map user participation status
-  const userStatus = currentUserId
-    ? participationData[currentUserId]?.toUpperCase()
-    : undefined;
-  const statusMap: Record<
-    string,
-    "none" | "pending" | "accepted" | "rejected"
-  > = {
-    SENT: "pending",
-    PENDING: "pending",
-    CREATED: "pending",
-    NEGOTIATING: "accepted",
-    ACCEPTED: "accepted",
-    REJECTED: "rejected",
-    WITHDRAWN: "none",
-    COMPLETED: "accepted"
-  };
-  const userParticipationStatus = userStatus
-    ? statusMap[userStatus] || "none"
-    : "none";
-
-  const isOwner = currentUserId === serverData.ownerId;
+  console.log(serverData);
 
   const mappedData: EventData = {
-    id: serverData.id.toString(),
+    id: serverData.id,
     title: serverData.title,
     description: serverData.description,
     ownerId: serverData.ownerId,
     tags: serverData.tags,
     location: serverData.location.name,
     coordinates: { lat: serverData.location.lat, lng: serverData.location.lon },
-    type: serverData.type === "OFFER" ? "OFFER" : "NEED",
+    type: serverData.type,
     participantCount: 0, // Default, as not provided in server response
     maxParticipants: serverData.maxParticipants,
     createdAt: new Date(serverData.createdAt).toLocaleDateString(),
     updatedAt: serverData.updatedAt
       ? new Date(serverData.updatedAt).toLocaleDateString()
       : "",
-    targetDate: serverData.eventDate,
+    eventDate: serverData.eventDate,
     duration: serverData.duration
       ? `${serverData.duration} hour(s)`
       : undefined,
     capacity: serverData.maxParticipants,
-    userParticipationStatus,
-    participationRequests,
-    chatMessages: [] // Default
+    cancelled: serverData.cancelled
   };
 
-  return { event: mappedData, isOwner, currentUserId };
+  return { event: mappedData };
 };

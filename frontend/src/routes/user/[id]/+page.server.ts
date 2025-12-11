@@ -17,11 +17,10 @@ export const load: PageServerLoad = async ({ params, cookies }) => {
     username: userData.username,
     biography: userData.biography,
     interests: userData.interests,
-    isSelf: userData.isSelf,
-    timeBank: userData.timeBank || 0, // Default to 0 if not available
-    frozenAmount: userData.frozenAmount || 0, // Default to 0 if not available
+    self: userData.self,
+    timeBank: userData.timeBank || 0,
+    frozenAmount: userData.frozenAmount || 0,
     userScore: userData.userScore
   };
-  console.log(mappedData);
   return mappedData;
 };

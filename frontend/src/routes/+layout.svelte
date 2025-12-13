@@ -18,7 +18,10 @@
     MapPinPlus,
     MailPlus,
     Handshake,
-    MessageCircle
+    MessageCircle,
+
+    GlobeLock
+
   } from "@lucide/svelte";
   import { auth } from "$lib/stores/user";
   import { toast } from "$lib/stores/toast";
@@ -215,18 +218,6 @@
 
     <!-- Speed Dial FAB for Events and Threads -->
     {#if $auth.isLoggedIn}
-      <!-- <ChatBar toggleCallback={() => true} /> -->
-      <div class="fab fixed right-24 bottom-8 z-20 fab-flower">
-        <!-- Trigger button -->
-        <div tabindex="0" role="button" class="btn btn-circle btn-lg btn-info">
-          <MessageCircle />
-        </div>
-        <div class="tooltip tooltip-left" data-tip="Close">
-          <div class="fab-close">
-            <span class="btn btn-circle btn-lg btn-error">✕</span>
-          </div>
-        </div>
-      </div>
       <div class="fab fixed right-8 bottom-8 z-20 fab-flower">
         <!-- Trigger button -->
         <div tabindex="0" role="button" class="btn btn-circle btn-lg btn-info">
@@ -291,6 +282,19 @@
           </li>
           <li>
             <a
+              href={resolve("/chat")}
+              class="is-drawer-close:tooltip is-drawer-close:tooltip-right {isActive(
+                '/chat'
+              )
+                ? 'bg-primary text-primary-content'
+                : ''}"
+              data-tip="Chat"
+              ><MessageCircle class="h-6 w-6" />
+              <span class="is-drawer-close:hidden">Settings</span>
+            </a>
+          </li>
+          <li>
+            <a
               href={resolve("/forum")}
               class="is-drawer-close:tooltip is-drawer-close:tooltip-right {isActive(
                 '/forum'
@@ -337,6 +341,20 @@
           </li>
           <li>
             <a
+              href={resolve("/admin")}
+              class="is-drawer-close:tooltip is-drawer-close:tooltip-right {isActive(
+                '/admin'
+              )
+                ? 'bg-primary text-primary-content'
+                : ''}"
+              data-tip="Administration"
+              ><GlobeLock class="h-6 w-6" />
+              <span class="is-drawer-close:hidden">Administration</span>
+            </a>
+          </li>
+
+          <li>
+            <a
               href={resolve("/inbox")}
               class="is-drawer-close:tooltip is-drawer-close:tooltip-right {isActive(
                 '/inbox'
@@ -348,6 +366,7 @@
               <span class="is-drawer-close:hidden">Settings</span>
             </a>
           </li>
+
           <li>
             <button
               class="is-drawer-close:tooltip is-drawer-close:tooltip-right"

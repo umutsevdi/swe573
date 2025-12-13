@@ -1,6 +1,10 @@
 package com.hive.app.image.service;
 
-import com.hive.app.events.model.EventResponse;
+import com.hive.app.async.transaction.model.Identifier;
+import com.hive.app.async.transaction.model.TransactionRecord;
+import com.hive.app.async.transaction.model.TransactionType;
+import com.hive.app.async.transaction.service.TransactionService;
+import com.hive.app.events.model.response.EventResponse;
 import com.hive.app.events.service.EventService;
 import com.hive.app.image.model.ImageEntity;
 import com.hive.app.image.repository.ImageRepository;
@@ -20,6 +24,7 @@ public class ImageService {
 
     private final ImageRepository repo;
     private final EventService eventService;
+    private final TransactionService transactionService;
 
     @Transactional
     public void storeUserImage(MultipartFile file,
@@ -40,6 +45,12 @@ public class ImageService {
                     file.getSize(),
                     file.getBytes()
             ));
+            transactionService.insertTransaction(new TransactionRecord(
+                    TransactionType.USER_UPDATE,
+                    new Identifier(userId, Identifier.IdType.USER),
+                    new Identifier(id, Identifier.IdType.USER),
+                    "User updated it's profile picture.")
+            );
         } catch (IOException e) {
             throw new HttpMediaTypeNotAcceptableException(e.getMessage());
         }
@@ -64,6 +75,13 @@ public class ImageService {
                     file.getSize(),
                     file.getBytes()
             ));
+
+            transactionService.insertTransaction(new TransactionRecord(
+                    TransactionType.EVENT_UPDATE,
+                    new Identifier(userId, Identifier.IdType.USER),
+                    new Identifier(id, Identifier.IdType.EVENT),
+                    "User updated offer/need's picture.")
+            );
         } catch (IOException e) {
             throw new HttpMediaTypeNotAcceptableException(e.getMessage());
         }

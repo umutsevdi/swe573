@@ -2,11 +2,16 @@ package com.hive.app.account.service;
 
 import com.hive.app.account.mapper.UserMapper;
 import com.hive.app.account.model.UserDTO;
+import com.hive.app.account.model.UserEntity;
 import com.hive.app.account.model.UserRole;
 import com.hive.app.account.model.request.RegisterRequest;
 import com.hive.app.account.model.request.UpdateUserRequest;
 import com.hive.app.account.model.response.UserCardResponse;
 import com.hive.app.account.repository.UserRepository;
+import com.hive.app.async.transaction.model.Identifier;
+import com.hive.app.async.transaction.model.TransactionRecord;
+import com.hive.app.async.transaction.model.TransactionType;
+import com.hive.app.async.transaction.service.TransactionService;
 import com.hive.config.exceptions.UserNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
@@ -30,6 +35,7 @@ import java.util.Optional;
 @RequiredArgsConstructor
 public class UserService implements UserDetailsService {
     private final UserRepository repository;
+    private final TransactionService transactionService;
     private final UserMapper mapper;
 
     @Cacheable(cacheNames = "userByIdCard", key = "#id")
@@ -57,7 +63,7 @@ public class UserService implements UserDetailsService {
     @Transactional
     public void create(RegisterRequest request) throws PropertyValueException {
         var dto = mapper.requestToDto(request);
-        dto.setInterests(request.getInterests().stream().map(e-> e.toLowerCase().replace(' ', '-')).toList());
+        dto.setInterests(request.getInterests().stream().map(e -> e.toLowerCase().replace(' ', '-')).toList());
         dto.setCreatedAt(LocalDateTime.now());
         dto.setTimeBank(10);
         dto.setUserScore(100);
@@ -65,6 +71,13 @@ public class UserService implements UserDetailsService {
         dto.setRole(UserRole.MEMBER);
         dto.setAccountTerminated(false);
         repository.save(mapper.dtoToEntity(dto));
+
+        transactionService.insertTransaction(new TransactionRecord(
+                TransactionType.USER_REGISTER,
+                new Identifier(dto.getId(), Identifier.IdType.USER),
+                new Identifier(dto.getId(), Identifier.IdType.USER),
+                "Account was created.")
+        );
     }
 
     @Cacheable(cacheNames = "userByUsername", key = "#username")
@@ -77,6 +90,7 @@ public class UserService implements UserDetailsService {
     }
 
     @Caching(evict = {
+            @CacheEvict(value = "userList"),
             @CacheEvict(value = "userByUsername", key = "#dto.username"),
             @CacheEvict(value = "userByIdCard", key = "#dto.id"),
             @CacheEvict(value = "userById", key = "#dto.id")}
@@ -94,6 +108,12 @@ public class UserService implements UserDetailsService {
         }
         if (changed) {
             repository.save(mapper.dtoToEntity(dto));
+            transactionService.insertTransaction(new TransactionRecord(
+                    TransactionType.USER_UPDATE,
+                    new Identifier(dto.getId(), Identifier.IdType.USER),
+                    new Identifier(dto.getId(), Identifier.IdType.USER),
+                    "User updated it's profile.")
+            );
         }
         return dto;
     }
@@ -107,6 +127,12 @@ public class UserService implements UserDetailsService {
     public void deactivateUser(UserDTO dto) {
         dto.setActive(false);
         repository.save(mapper.dtoToEntity(dto));
+        transactionService.insertTransaction(new TransactionRecord(
+                TransactionType.USER_DELETE,
+                new Identifier(dto.getId(), Identifier.IdType.USER),
+                new Identifier(dto.getId(), Identifier.IdType.USER),
+                "User deactivated it's account.")
+        );
     }
 
     @Caching(evict = {

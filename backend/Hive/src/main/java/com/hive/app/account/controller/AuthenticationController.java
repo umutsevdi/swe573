@@ -5,6 +5,10 @@ import com.hive.app.account.model.UserDTO;
 import com.hive.app.account.model.request.RegisterRequest;
 import com.hive.app.account.model.response.UserCardResponse;
 import com.hive.app.account.service.UserService;
+import com.hive.app.async.transaction.model.Identifier;
+import com.hive.app.async.transaction.model.TransactionRecord;
+import com.hive.app.async.transaction.model.TransactionType;
+import com.hive.app.async.transaction.service.TransactionService;
 import com.hive.config.exceptions.UserNotFoundException;
 import com.hive.util.JwtPayload;
 import com.hive.util.JwtUtil;
@@ -27,6 +31,7 @@ public class AuthenticationController {
     private final PasswordEncoder passwordEncoder;
     private final AuthenticationManager authenticationManager;
     private final UserMapper mapper;
+    private final TransactionService transactionService;
 
     @PostMapping("/register")
     public ResponseEntity<String> register(@RequestBody RegisterRequest dto) {
@@ -46,6 +51,12 @@ public class AuthenticationController {
                 new UsernamePasswordAuthenticationToken(req.username(), req.password()));
         UserDTO user = (UserDTO) auth.getPrincipal();
         String token = jwtUtil.generateToken(user);
+        transactionService.insertTransaction(new TransactionRecord(
+                TransactionType.USER_LOGIN,
+                new Identifier(user.getId(), Identifier.IdType.USER),
+                new Identifier(user.getId(), Identifier.IdType.USER),
+                "User was authenticated.")
+        );
         return ResponseEntity.ok(new AuthResponse(token, mapper.dtoToCard(user)));
     }
 

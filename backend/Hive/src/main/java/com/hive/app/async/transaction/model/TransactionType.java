@@ -1,0 +1,21 @@
+package com.hive.app.async.transaction.model;
+
+public enum TransactionType {
+    USER_REGISTER,
+    USER_LOGIN,
+    USER_UPDATE,
+    USER_DELETE,
+    EVENT_CREATE,
+    EVENT_CANCEL,
+    EVENT_UPDATE,
+    EVENT_COMPLETE,
+    PARTICIPATION_NEW,
+    PARTICIPATION_WITHDRAW,
+    PARTICIPATION_STATUS,
+    PARTICIPATION_TRX,
+    THREAD_CREATE,
+    THREAD_UPDATE,
+    THREAD_CLOSE,
+    THREAD_REPLY,
+    UPDATE_ASSET
+}

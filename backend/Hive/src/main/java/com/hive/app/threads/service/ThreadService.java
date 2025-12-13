@@ -2,6 +2,10 @@ package com.hive.app.threads.service;
 
 import com.hive.app.account.mapper.UserMapper;
 import com.hive.app.account.model.UserDTO;
+import com.hive.app.async.transaction.model.Identifier;
+import com.hive.app.async.transaction.model.TransactionRecord;
+import com.hive.app.async.transaction.model.TransactionType;
+import com.hive.app.async.transaction.service.TransactionService;
 import com.hive.app.threads.mapper.ThreadMapper;
 import com.hive.app.threads.model.ThreadDTO;
 import com.hive.app.threads.model.ThreadEntity;
@@ -15,7 +19,6 @@ import com.hive.config.exceptions.NotFoundException;
 import com.hive.config.exceptions.PermissionDeniedException;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
-import org.apache.logging.log4j.util.Strings;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.cache.annotation.Caching;
@@ -33,6 +36,7 @@ public class ThreadService {
     private final ThreadMessageRepository messages;
     private final ThreadMapper mapper;
     private final UserMapper userMapper;
+    private final TransactionService transactionService;
 
     @CacheEvict(cacheNames = "threadList", allEntries = true)
     @Transactional
@@ -47,7 +51,15 @@ public class ThreadService {
         entity.setCreatedAt(LocalDateTime.now());
         entity.setUpdatedAt(LocalDateTime.now());
         entity.setActive(true);
-        return mapper.entityToDto(threads.save(entity));
+        var result = mapper.entityToDto(threads.save(entity));
+        transactionService.insertTransaction(new TransactionRecord(
+                        TransactionType.THREAD_CREATE,
+                        new Identifier(user.getId(), Identifier.IdType.USER),
+                        new Identifier(result.getId(), Identifier.IdType.THREAD),
+                        "User created a forum thread titled 'THREAD_NAME'.".replace("THREAD_NAME", result.getTitle())
+                )
+        );
+        return result;
     }
 
     @Caching(evict = {
@@ -77,8 +89,18 @@ public class ThreadService {
         }
         if (updated) {
             entity.setUpdatedAt(LocalDateTime.now());
+            var result = mapper.entityToDto(threads.save(entity));
+            transactionService.insertTransaction(new TransactionRecord(
+                            TransactionType.THREAD_UPDATE,
+                            new Identifier(user.getId(), Identifier.IdType.USER),
+                            new Identifier(result.getId(), Identifier.IdType.THREAD),
+                            "User updated the forum thread titled 'THREAD_NAME'.".replace("THREAD_NAME",
+                                    result.getTitle())
+                    )
+            );
+            return result;
         }
-        return mapper.entityToDto(threads.save(entity));
+        return mapper.entityToDto(entity);
     }
 
 
@@ -87,7 +109,7 @@ public class ThreadService {
             @CacheEvict(cacheNames = "threadList", allEntries = true)
     })
     @Transactional
-    public ThreadMessageProjection newReply(UserDTO user, Long threadId, String message) throws NotFoundException {
+    public ThreadMessageResponse newReply(UserDTO user, Long threadId, String message) throws NotFoundException {
         ThreadMessageEntity entity = new ThreadMessageEntity();
         ThreadEntity thread = threads.findById(threadId).orElseThrow(NotFoundException::new);
         if (!thread.isActive()) {
@@ -97,7 +119,17 @@ public class ThreadService {
         entity.setOwner(userMapper.dtoToEntity(user));
         entity.setMessage(message);
         entity.setCreatedAt(LocalDateTime.now());
-        return mapper.entityToDto(messages.save(entity));
+        var result = mapper.entityToDto(messages.save(entity));
+        transactionService.insertTransaction(new TransactionRecord(
+                        TransactionType.THREAD_REPLY,
+                        new Identifier(user.getId(), Identifier.IdType.USER),
+                        new Identifier(threadId, Identifier.IdType.THREAD),
+                        "User posted a thread titled 'THREAD_NAME' the message 'MESSAGE'."
+                                .replace("THREAD_NAME", thread.getTitle())
+                                .replace("MESSAGE", message.substring(0, Math.min(message.length(), 100)))
+                )
+        );
+        return result;
     }
 
     @Cacheable(cacheNames = "threadById", key = "#threadId")
@@ -106,7 +138,7 @@ public class ThreadService {
     }
 
     @Cacheable(cacheNames = "threadList")
-    public List<ThreadView> getThreads() {
+    public List<ThreadResponse> getThreads() {
         return threads.findAllProjectedBy();
     }
 
@@ -122,5 +154,12 @@ public class ThreadService {
         entity.setUpdatedAt(LocalDateTime.now());
         entity.setActive(false);
         threads.save(entity);
+        transactionService.insertTransaction(new TransactionRecord(
+                        TransactionType.THREAD_CLOSE,
+                        new Identifier(userId, Identifier.IdType.USER),
+                        new Identifier(threadId, Identifier.IdType.THREAD),
+                        "User closed a thread titled 'THREAD_NAME'.".replace("THREAD_NAME", entity.getTitle())
+                )
+        );
     }
 }

@@ -1,5 +1,6 @@
-package com.hive.app.events.model;
+package com.hive.app.events.model.request;
 
+import com.hive.app.events.model.ParticipationState;
 import lombok.Data;
 
 @Data

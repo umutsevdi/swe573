@@ -2,6 +2,11 @@ package com.hive.app.events.controller;
 
 import com.hive.app.account.model.UserDTO;
 import com.hive.app.events.model.*;
+import com.hive.app.events.model.request.EventQueryOptions;
+import com.hive.app.events.model.request.EventRequest;
+import com.hive.app.events.model.request.ParticipationAssignmentRequest;
+import com.hive.app.events.model.response.EventListResponse;
+import com.hive.app.events.model.response.EventResponse;
 import com.hive.app.events.service.EventService;
 import com.hive.config.exceptions.LogicException;
 import com.hive.config.exceptions.NotFoundException;
@@ -35,7 +40,7 @@ public class EventController {
     }
 
     @GetMapping("/owner/{id}")
-    ResponseEntity<List<EventListView>> getUserEvents(@PathVariable Long id, @RequestParam(value = "all", required =
+    ResponseEntity<List<EventListResponse>> getUserEvents(@PathVariable Long id, @RequestParam(value = "all", required =
             false, defaultValue = "false") boolean all) {
         return ResponseEntity.ok(service.getUserEvents(id, all));
     }

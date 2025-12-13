@@ -5,6 +5,11 @@ import com.hive.app.account.model.UserDTO;
 import com.hive.app.account.service.UserService;
 import com.hive.app.events.mapper.EventMapper;
 import com.hive.app.events.model.*;
+import com.hive.app.events.model.request.EventQueryOptions;
+import com.hive.app.events.model.request.EventRequest;
+import com.hive.app.events.model.request.ParticipationAssignmentRequest;
+import com.hive.app.events.model.response.EventListResponse;
+import com.hive.app.events.model.response.EventResponse;
 import com.hive.app.events.repository.EventRepository;
 import com.hive.app.events.repository.EventSpecifications;
 import com.hive.app.events.repository.ParticipationRepository;
@@ -37,7 +42,7 @@ public class EventService {
     private final UserService userService;
 
     @Cacheable(cacheNames = "getUserEvents", key = "{#userId, #showInactive}")
-    public List<EventListView> getUserEvents(Long userId, boolean showInactive) {
+    public List<EventListResponse> getUserEvents(Long userId, boolean showInactive) {
         if (showInactive) {
             return repository.findByOwner_Id(userId);
         }

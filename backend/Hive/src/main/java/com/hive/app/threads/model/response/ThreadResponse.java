@@ -1,4 +1,4 @@
-package com.hive.app.threads.model;
+package com.hive.app.threads.model.response;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 
@@ -6,7 +6,7 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
-public interface ThreadView {
+public interface ThreadResponse {
     String getDescription();
 
     Long getId();

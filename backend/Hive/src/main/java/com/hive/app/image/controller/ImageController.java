@@ -30,7 +30,7 @@ public class ImageController {
         Long userId = ((UserDTO) SecurityContextHolder.getContext().getAuthentication().getPrincipal()).getId();
         switch (type) {
             case EVENT -> service.storeEvent(file, id, userId);
-            case PROFILE, BG -> service.storeUserImage(file, type, id, userId);
+            case PROFILE -> service.storeUserImage(file, type, id, userId);
         }
         return ResponseEntity.ok().build();
     }

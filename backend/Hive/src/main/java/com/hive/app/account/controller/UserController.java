@@ -24,27 +24,23 @@ public class UserController {
     @GetMapping("/{id}")
     public ResponseEntity<UserProfileResponse> getUserById(@PathVariable Long id) throws UserNotFoundException {
         UserDTO self = (UserDTO) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
-        var user = mapper.dtoToUserProfileResponse(self.getId().equals(id) ? self :
-                service.findById(id).orElseThrow(UserNotFoundException::new)
-        );
-        user.setSelf(id.equals(self.getId()));
+        var user = self.getId().equals(id) ? self : service.findById(id).orElseThrow(UserNotFoundException::new);
         return ResponseEntity.ok(user);
     }
 
     @GetMapping("/{id}/card")
     public ResponseEntity<UserCardResponse> getUserByIdCard(@PathVariable Long id) throws UserNotFoundException {
         UserDTO self = (UserDTO) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
-        return ResponseEntity.ok(mapper.dtoToCard(
-                self.getId().equals(id) ? self :
-                        service.findById(id).orElseThrow(UserNotFoundException::new)
-        ));
+        return ResponseEntity.ok(self.getId().equals(id) ? mapper.dtoToCard(self) :
+                service.findByIdCard(id).orElseThrow(UserNotFoundException::new));
     }
 
     @PutMapping
     public ResponseEntity<UserProfileResponse> updateUser(@RequestBody
                                                           UpdateUserRequest request) {
         UserDTO self = (UserDTO) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
-        return ResponseEntity.ok(mapper.dtoToUserProfileResponse(service.updateUser(self, request)));
+        assert self != null;
+        return ResponseEntity.ok(service.updateUser(self, request));
     }
 
 

@@ -1,7 +1,7 @@
 package com.hive.app.threads.repository;
 
 import com.hive.app.threads.model.ThreadMessageEntity;
-import com.hive.app.threads.model.ThreadMessageProjection;
+import com.hive.app.threads.model.response.ThreadMessageResponse;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
@@ -17,6 +17,6 @@ public interface ThreadMessageRepository extends JpaRepository<ThreadMessageEnti
                  FROM ThreadMessageEntity e
                 WHERE e.thread.id = :threadId
             """)
-    List<ThreadMessageProjection> findAllByThread(long threadId);
+    List<ThreadMessageResponse> findAllByThread(long threadId);
 
 }

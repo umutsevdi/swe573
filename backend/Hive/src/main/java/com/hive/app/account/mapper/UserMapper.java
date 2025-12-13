@@ -5,7 +5,6 @@ import com.hive.app.account.model.UserDTO;
 import com.hive.app.account.model.UserEntity;
 import com.hive.app.account.model.request.RegisterRequest;
 import com.hive.app.account.model.response.UserCardResponse;
-import com.hive.app.account.model.response.UserProfileResponse;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.MappingConstants;
@@ -24,11 +23,6 @@ public interface UserMapper {
 
     UserDTO requestToDto(RegisterRequest user);
 
-    UserCardResponse dtoToCard(UserDTO user);
-
-
-    UserProfileResponse dtoToUserProfileResponse(UserDTO user);
-
     @Named("entity")
     default String serializeInterests(List<String> interests) {
         if (interests == null || interests.isEmpty()) {
@@ -45,4 +39,33 @@ public interface UserMapper {
         return List.of(interests.split(","));
     }
 
+
+    default UserCardResponse dtoToCard(UserDTO user) {
+        return new UserCardResponse() {
+            @Override
+            public Long getId() {
+                return user.getId();
+            }
+
+            @Override
+            public String getFullName() {
+                return user.getFullName();
+            }
+
+            @Override
+            public String getBiography() {
+                return user.getBiography();
+            }
+
+            @Override
+            public int getUserScore() {
+                return user.getUserScore();
+            }
+
+            @Override
+            public String getInterestsString() {
+                return serializeInterests(user.getInterests());
+            }
+        };
+    }
 }

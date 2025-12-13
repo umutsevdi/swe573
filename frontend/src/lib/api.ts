@@ -46,7 +46,6 @@ export interface UserProfileResponse {
   timeBank: number;
   frozenAmount: number;
   active: boolean;
-  self: boolean;
 }
 
 export interface UserResponse {

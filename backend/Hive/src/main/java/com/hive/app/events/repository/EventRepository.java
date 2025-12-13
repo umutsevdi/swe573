@@ -1,7 +1,7 @@
 package com.hive.app.events.repository;
 
 import com.hive.app.events.model.EventEntity;
-import com.hive.app.events.model.EventListView;
+import com.hive.app.events.model.response.EventListResponse;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.CrudRepository;
@@ -33,7 +33,7 @@ public interface EventRepository extends CrudRepository<EventEntity, Long>, JpaS
                     FROM EventEntity as e
                     WHERE e.owner.id = :ownerId
             """)
-    List<EventListView> findByOwner_Id(Long ownerId);
+    List<EventListResponse> findByOwner_Id(Long ownerId);
 
     @Query("""
                     SELECT e.id as id,
@@ -55,6 +55,6 @@ public interface EventRepository extends CrudRepository<EventEntity, Long>, JpaS
                     AND e.owner.id = :ownerId
                     AND e.eventDate > :date
             """)
-    List<EventListView> findByCancelledIsFalseAndOwner_IdAndEventDateAfter(Long ownerId, LocalDate date);
+    List<EventListResponse> findByCancelledIsFalseAndOwner_IdAndEventDateAfter(Long ownerId, LocalDate date);
 
 }

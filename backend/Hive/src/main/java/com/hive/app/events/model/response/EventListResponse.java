@@ -1,13 +1,15 @@
-package com.hive.app.events.model;
+package com.hive.app.events.model.response;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.hive.app.events.model.EventType;
+import com.hive.app.events.model.Location;
 import io.jsonwebtoken.lang.Strings;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
-public interface EventListView {
+public interface EventListResponse {
     Long getId();
 
     String getTitle();

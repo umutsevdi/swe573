@@ -2,6 +2,9 @@ package com.hive.app.threads.controller;
 
 import com.hive.app.account.model.UserDTO;
 import com.hive.app.threads.model.*;
+import com.hive.app.threads.model.request.ReplyRequest;
+import com.hive.app.threads.model.response.ThreadMessageResponse;
+import com.hive.app.threads.model.response.ThreadResponse;
 import com.hive.app.threads.service.ThreadService;
 import com.hive.config.exceptions.NotFoundException;
 import lombok.RequiredArgsConstructor;
@@ -25,7 +28,7 @@ public class ThreadController {
     }
 
     @GetMapping
-    ResponseEntity<List<ThreadView>> getAllThreads() {
+    ResponseEntity<List<ThreadResponse>> getAllThreads() {
         return ResponseEntity.ok(service.getThreads());
     }
 
@@ -35,7 +38,7 @@ public class ThreadController {
     }
 
     @PostMapping("/{id}/reply")
-    ResponseEntity<ThreadMessageProjection> reply(
+    ResponseEntity<ThreadMessageResponse> reply(
             @PathVariable Long id,
             @RequestBody ReplyRequest message) throws NotFoundException {
         if (message.getMessage() == null || message.getMessage().isEmpty()) {

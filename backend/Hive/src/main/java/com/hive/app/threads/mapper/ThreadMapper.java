@@ -5,7 +5,7 @@ import com.hive.app.account.mapper.UserMapper;
 import com.hive.app.threads.model.ThreadDTO;
 import com.hive.app.threads.model.ThreadEntity;
 import com.hive.app.threads.model.ThreadMessageEntity;
-import com.hive.app.threads.model.ThreadMessageProjection;
+import com.hive.app.threads.model.response.ThreadMessageResponse;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.MappingConstants;
@@ -17,10 +17,10 @@ import java.util.List;
 @Mapper(componentModel = MappingConstants.ComponentModel.SPRING, uses = {UserMapper.class})
 public interface ThreadMapper {
     @Mapping(source = "ownerId", target = "owner.id")
-    ThreadMessageEntity dtoToEntity(ThreadMessageProjection dto);
+    ThreadMessageEntity dtoToEntity(ThreadMessageResponse dto);
 
     @Mapping(target = "ownerId", source = "owner.id")
-    ThreadMessageProjection entityToDto(ThreadMessageEntity entity);
+    ThreadMessageResponse entityToDto(ThreadMessageEntity entity);
 
     @Mapping(source = "tags", target = "tags", qualifiedByName = "forumTagsEntity")
     @Mapping(source = "ownerId", target = "owner.id")

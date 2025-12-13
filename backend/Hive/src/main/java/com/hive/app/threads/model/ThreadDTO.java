@@ -1,5 +1,6 @@
 package com.hive.app.threads.model;
 
+import com.hive.app.threads.model.response.ThreadMessageResponse;
 import lombok.Data;
 
 import java.time.LocalDateTime;
@@ -16,5 +17,5 @@ public class ThreadDTO {
     private LocalDateTime updatedAt;
     private Long ownerId;
     private boolean active;
-    private List<ThreadMessageProjection> messages = new ArrayList<>();
+    private List<ThreadMessageResponse> messages = new ArrayList<>();
 }

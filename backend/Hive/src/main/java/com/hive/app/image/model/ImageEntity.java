@@ -39,7 +39,7 @@ public class ImageEntity {
     @Column(nullable = false)
     private byte[] data;
 
-    public enum AssetType {PROFILE, EVENT, BG}
+    public enum AssetType {PROFILE, EVENT}
 
     @Component
     public static class StringToAssetTypeConverter implements Converter<String, AssetType> {

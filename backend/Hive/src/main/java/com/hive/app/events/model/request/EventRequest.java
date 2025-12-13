@@ -1,5 +1,7 @@
-package com.hive.app.events.model;
+package com.hive.app.events.model.request;
 
+import com.hive.app.events.model.EventType;
+import com.hive.app.events.model.Location;
 import lombok.Data;
 
 import java.time.LocalDate;

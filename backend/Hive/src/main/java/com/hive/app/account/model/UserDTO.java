@@ -1,6 +1,7 @@
 package com.hive.app.account.model;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.hive.app.account.model.response.UserProfileResponse;
 import lombok.Data;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -10,7 +11,7 @@ import java.util.Collection;
 import java.util.List;
 
 @Data
-public class UserDTO implements UserDetails {
+public class UserDTO implements UserDetails, UserProfileResponse {
     private Long id;
     private String username;
     @JsonIgnore

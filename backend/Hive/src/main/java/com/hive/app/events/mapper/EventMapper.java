@@ -3,8 +3,8 @@ package com.hive.app.events.mapper;
 import com.hive.app.account.mapper.UserMapper;
 import com.hive.app.events.model.EventDTO;
 import com.hive.app.events.model.EventEntity;
-import com.hive.app.events.model.EventRequest;
-import com.hive.app.events.model.EventResponse;
+import com.hive.app.events.model.request.EventRequest;
+import com.hive.app.events.model.response.EventResponse;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.MappingConstants;
@@ -26,8 +26,6 @@ public interface EventMapper {
     @Mapping(target = "longitude", source = "location.longitude")
     @Mapping(target = "tags", source = "tags", qualifiedByName = "entityTag")
     EventEntity dtoToEntity(EventDTO dto);
-
-    EventResponse dtoToResponse(EventDTO dto);
 
     @Mapping(source = "locationName", target = "location.name")
     @Mapping(source = "latitude", target = "location.latitude")

@@ -76,7 +76,7 @@
     if (!event.eventDate) return false;
     const eventDate = new Date(event.eventDate);
     const today = new Date();
-    return eventDate <= today || isEventCompleted();
+    return eventDate <= today || isEventCompleted() || isEventCancelled();
   };
 
   const asTitle = (str: string): string =>

@@ -1,11 +1,13 @@
 package com.hive.app.account.controller;
 
 import com.hive.app.account.model.UserDTO;
+import com.hive.app.account.model.UserRole;
 import com.hive.app.account.model.response.UserCardResponse;
 import com.hive.app.account.service.UserService;
 import com.hive.app.async.transaction.model.TransactionRecord;
 import com.hive.app.async.transaction.model.request.TransactionRequest;
 import com.hive.app.async.transaction.service.TransactionService;
+import com.hive.config.exceptions.LogicException;
 import com.hive.config.exceptions.UserNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -28,11 +30,24 @@ public class AdministrationController {
     }
 
     @DeleteMapping("/users/{id}")
-    public ResponseEntity<List<UserCardResponse>> terminateAccount(@PathVariable Long id,
-                                                                   @RequestParam boolean ban) throws UserNotFoundException {
+    public ResponseEntity<Void> suspend(@PathVariable Long id,
+                                        @RequestParam boolean suspend) throws UserNotFoundException, LogicException {
         UserDTO self = (UserDTO) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
-        service.banUser(id, ban);
-        return ResponseEntity.ok(service.getUsers());
+        service.suspendUser(id, suspend, self);
+        return ResponseEntity.ok().build();
+    }
+
+    @PutMapping("/users/{id}")
+    public ResponseEntity<Void> setUserRole(@PathVariable Long id,
+                                            @RequestParam UserRole role) throws UserNotFoundException, LogicException {
+        UserDTO self = (UserDTO) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        if (self.getRole() != UserRole.OWNER) {
+            throw new LogicException("Only the owner can assign roles.");
+        } else if (id.equals(self.getId())) {
+            throw new LogicException("Can not update owner's role.");
+        }
+        service.setUserRole(id, role, self);
+        return ResponseEntity.ok().build();
     }
 
     @PostMapping("/transactions")

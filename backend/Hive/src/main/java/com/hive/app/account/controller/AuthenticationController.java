@@ -9,6 +9,7 @@ import com.hive.app.async.transaction.model.Identifier;
 import com.hive.app.async.transaction.model.TransactionRecord;
 import com.hive.app.async.transaction.model.TransactionType;
 import com.hive.app.async.transaction.service.TransactionService;
+import com.hive.config.exceptions.AccountSuspendedException;
 import com.hive.config.exceptions.UserNotFoundException;
 import com.hive.util.JwtPayload;
 import com.hive.util.JwtUtil;
@@ -50,6 +51,9 @@ public class AuthenticationController {
         Authentication auth = authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(req.username(), req.password()));
         UserDTO user = (UserDTO) auth.getPrincipal();
+        if (user.isSuspended()) {
+            throw new AccountSuspendedException();
+        }
         String token = jwtUtil.generateToken(user);
         transactionService.insertTransaction(new TransactionRecord(
                 TransactionType.USER_LOGIN,

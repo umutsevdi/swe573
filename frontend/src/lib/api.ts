@@ -21,6 +21,8 @@ export interface UserCard {
   biography: string;
   interests: string[];
   userScore: number;
+  suspended: boolean;
+  role: string;
 }
 
 export interface LoginResponse {
@@ -46,27 +48,7 @@ export interface UserProfileResponse {
   timeBank: number;
   frozenAmount: number;
   active: boolean;
-}
-
-export interface UserResponse {
-  id: number;
-  username: string;
-  email: string;
-  fullName: string;
-  biography: string;
-  interests: string[];
-  role: string;
-  createdAt: string;
-  userScore: number;
-  timeBank: number;
-  frozenAmount: number;
-  enabled: boolean;
-  active: boolean;
-  authorities: Array<{ authority: string }>;
-  accountTerminated: boolean;
-  accountNonLocked: boolean;
-  accountNonExpired: boolean;
-  credentialsNonExpired: boolean;
+  suspended: boolean;
 }
 
 export interface EventFilterRequest {
@@ -187,7 +169,9 @@ export type TransactionType =
   | "THREAD_UPDATE"
   | "THREAD_CLOSE"
   | "THREAD_REPLY"
-  | "UPDATE_ASSET";
+  | "UPDATE_ASSET"
+  | "ADMIN_SUSPEND_USER"
+  | "ADMIN_ASSIGN_ROLE";
 export interface Identifier {
   id: number;
   type: "USER" | "EVENT" | "THREAD";
@@ -551,18 +535,29 @@ export const API = {
       list: async function (
         baseUrl: string,
         auth: string | Cookies
-      ): Promise<UserResponse[]> {
+      ): Promise<UserCard[]> {
         return fetchJSON(`${baseUrl}/admin/users`, auth);
+      },
+
+      assignRole: async function (
+        baseUrl: string,
+        auth: string | Cookies,
+        userId: number,
+        role: "MEMBER" | "ADMIN"
+      ): Promise<void> {
+        await fetchJSON(`${baseUrl}/admin/users/${userId}?role=${role}`, auth, {
+          method: "PUT"
+        });
       },
 
       terminate: async function (
         baseUrl: string,
         auth: string | Cookies,
         userId: number,
-        accountTerminated: boolean
+        suspend: boolean
       ): Promise<void> {
         await fetchJSON(
-          `${baseUrl}/admin/users/${userId}?terminated=${accountTerminated}`,
+          `${baseUrl}/admin/users/${userId}?suspend=${suspend}`,
           auth,
           {
             method: "DELETE"

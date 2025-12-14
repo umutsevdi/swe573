@@ -31,9 +31,9 @@ public class UserEntity {
     @Enumerated(EnumType.ORDINAL)
     private UserRole role;
     @Column(nullable = false)
-    private boolean isActive;
+    private boolean active;
     @Column(nullable = false)
-    private boolean isAccountTerminated;
+    private boolean suspended;
     @CreationTimestamp
     @Column(updatable = false)
     private LocalDateTime createdAt;

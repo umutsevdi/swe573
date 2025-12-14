@@ -28,7 +28,6 @@
   import { page } from "$app/stores";
   import { HIVE_API } from "$lib/config";
   import { API } from "$lib/api";
-  //	import ChatBar from '$lib/components/ChatBar.svelte';
 
   let { children } = $props();
 
@@ -288,7 +287,7 @@
                 : ''}"
               data-tip="Chat"
               ><MessageCircle class="h-6 w-6" />
-              <span class="is-drawer-close:hidden">Settings</span>
+              <span class="is-drawer-close:hidden">Chat</span>
             </a>
           </li>
           <li>
@@ -337,20 +336,21 @@
               <span class="is-drawer-close:hidden">Profile</span>
             </a>
           </li>
-          <li>
-            <a
-              href={resolve("/admin")}
-              class="is-drawer-close:tooltip is-drawer-close:tooltip-right {isActive(
-                '/admin'
-              )
-                ? 'bg-primary text-primary-content'
-                : ''}"
-              data-tip="Administration"
-              ><GlobeLock class="h-6 w-6" />
-              <span class="is-drawer-close:hidden">Administration</span>
-            </a>
-          </li>
-
+          {#if $auth.user!.role === "ADMIN" || $auth.user!.role === "OWNER"}
+            <li>
+              <a
+                href={resolve("/admin")}
+                class="is-drawer-close:tooltip is-drawer-close:tooltip-right {isActive(
+                  '/admin'
+                )
+                  ? 'bg-primary text-primary-content'
+                  : ''}"
+                data-tip="Administration"
+                ><GlobeLock class="h-6 w-6" />
+                <span class="is-drawer-close:hidden">Administration</span>
+              </a>
+            </li>
+          {/if}
           <li>
             <a
               href={resolve("/inbox")}

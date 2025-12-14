@@ -1,7 +1,6 @@
 package com.hive.app.account.model;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.hive.app.account.model.response.UserProfileResponse;
 import lombok.Data;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -11,7 +10,7 @@ import java.util.Collection;
 import java.util.List;
 
 @Data
-public class UserDTO implements UserDetails, UserProfileResponse {
+public class UserDTO implements UserDetails {
     private Long id;
     private String username;
     @JsonIgnore
@@ -21,10 +20,8 @@ public class UserDTO implements UserDetails, UserProfileResponse {
     private String biography;
     private List<String> interests;
     private UserRole role;
-    @JsonIgnore
-    private boolean isActive;
-    @JsonIgnore
-    private boolean isAccountTerminated;
+    private boolean active;
+    private boolean suspended;
     private LocalDateTime createdAt;
     private int userScore;
     private int timeBank;
@@ -47,11 +44,11 @@ public class UserDTO implements UserDetails, UserProfileResponse {
 
     @Override
     public boolean isAccountNonLocked() {
-        return isActive && !isAccountTerminated;
+        return active;
     }
 
     @Override
     public boolean isEnabled() {
-        return isActive;
+        return active && !suspended;
     }
 }

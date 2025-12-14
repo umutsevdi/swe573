@@ -25,7 +25,8 @@ export const load: PageServerLoad = async ({ params, cookies }) => {
     self: currentUserId === id,
     timeBank: userData.timeBank || 0,
     frozenAmount: userData.frozenAmount || 0,
-    userScore: userData.userScore
+    userScore: userData.userScore,
+    suspended: userData.suspended
   };
   return mappedData;
 };

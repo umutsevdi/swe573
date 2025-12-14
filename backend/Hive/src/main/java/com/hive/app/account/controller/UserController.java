@@ -24,8 +24,9 @@ public class UserController {
     @GetMapping("/{id}")
     public ResponseEntity<UserProfileResponse> getUserById(@PathVariable Long id) throws UserNotFoundException {
         UserDTO self = (UserDTO) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
-        var user = self.getId().equals(id) ? self : service.findById(id).orElseThrow(UserNotFoundException::new);
-        return ResponseEntity.ok(user);
+        var user = self.getId().equals(id) ? self :
+                service.findById(id).orElseThrow(UserNotFoundException::new);
+        return ResponseEntity.ok(mapper.dtoToProfile(user));
     }
 
     @GetMapping("/{id}/card")

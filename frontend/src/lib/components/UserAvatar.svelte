@@ -171,78 +171,97 @@
     {/if}
   </div>
 {:else if userData}
-  <a
-    href={resolve(`/user/${userId}`)}
-    class="relative flex cursor-pointer items-center gap-2"
-    onmouseenter={handleMouseEnter}
-    onmouseleave={handleMouseLeave}
-  >
-    <div class="avatar">
-      <div class="w-10 rounded-full">
-        {#if avatarBlobUrl}
-          <img src={avatarBlobUrl} alt={userData?.fullName || "Unknown User"} />
-        {:else}
-          <div class="avatar avatar-placeholder">
-            <div class="w-24 rounded-full bg-neutral text-neutral-content">
-              <span class="text-3xl"
-                >{(userData?.fullName || "Unknown User")
-                  .split(" ")
-                  .map((a: string) => a.charAt(0))
-                  .join(" ")}</span
-              >
-            </div>
-          </div>
-        {/if}
-      </div>
-    </div>
-    {#if !hideText}
-      <span class="font-semibold">{userData?.fullName || "Unknown User"}</span>
-    {/if}
-    {#if showTooltip}
-      <div class="absolute top-full left-0 z-[999] mt-2">
-        <div class="card w-80 border border-base-300 bg-base-100 shadow-lg">
-          <div class="card-body p-4">
-            <div class="mb-2 flex items-center gap-2">
-              <h3 class="card-title text-lg">{userData.fullName}</h3>
-              <div
-                class="tooltip avatar tooltip-bottom avatar-placeholder h-8 w-8"
-                data-tip={`User behavior score: ${userData.userScore}%`}
-              >
-                <div class={`w-8 rounded-full ${bgColor(userData.userScore)}`}>
-                  {#if userData.userScore > 70}
-                    <Smile class="h-4 w-4" />
-                  {:else if userData.userScore > 49}
-                    <Meh class="h-4 w-4" />
-                  {:else if userData.userScore > 20}
-                    <Frown class="h-4 w-4" />
-                  {:else}
-                    <Annoyed class="h-4 w-4" />
-                  {/if}
-                </div>
-              </div>
-            </div>
-            <p class="mb-3 text-sm whitespace-pre-wrap text-base-content/80">
-              {userData.biography}
-            </p>
-            {#if userData.interests.length}
-              <div>
-                <h4 class="mb-1 text-sm font-semibold text-base-content/60">
-                  Interests
-                </h4>
-                <div class="flex flex-wrap gap-1">
-                  {#each userData.interests as interest (interest)}
-                    <span class="badge badge-outline badge-accent"
-                      >{interest}</span
-                    >
-                  {/each}
-                </div>
-              </div>
-            {/if}
-          </div>
+  {#if userData.suspended}
+    <div class="flex items-center gap-2">
+      <div class="avatar">
+        <div class="w-10 rounded-full bg-neutral text-neutral-content">
+          <User />
         </div>
       </div>
-    {/if}
-  </a>
+      {#if !hideText}
+        <span class="font-semibold">Suspended User</span>
+      {/if}
+    </div>
+  {:else}
+    <a
+      href={resolve(`/user/${userId}`)}
+      class="relative flex cursor-pointer items-center gap-2"
+      onmouseenter={handleMouseEnter}
+      onmouseleave={handleMouseLeave}
+    >
+      <div class="avatar">
+        <div class="w-10 rounded-full">
+          {#if avatarBlobUrl}
+            <img
+              src={avatarBlobUrl}
+              alt={userData?.fullName || "Unknown User"}
+            />
+          {:else}
+            <div class="avatar avatar-placeholder">
+              <div class="w-24 rounded-full bg-neutral text-neutral-content">
+                <span class="text-3xl"
+                  >{(userData?.fullName || "Unknown User")
+                    .split(" ")
+                    .map((a: string) => a.charAt(0))
+                    .join(" ")}</span
+                >
+              </div>
+            </div>
+          {/if}
+        </div>
+      </div>
+      {#if !hideText}
+        <span class="font-semibold">{userData?.fullName || "Unknown User"}</span
+        >
+      {/if}
+      {#if showTooltip}
+        <div class="absolute top-full left-0 z-[999] mt-2">
+          <div class="card w-80 border border-base-300 bg-base-100 shadow-lg">
+            <div class="card-body p-4">
+              <div class="mb-2 flex items-center gap-2">
+                <h3 class="card-title text-lg">{userData.fullName}</h3>
+                <div
+                  class="tooltip avatar tooltip-bottom avatar-placeholder h-8 w-8"
+                  data-tip={`User behavior score: ${userData.userScore}%`}
+                >
+                  <div
+                    class={`w-8 rounded-full ${bgColor(userData.userScore)}`}
+                  >
+                    {#if userData.userScore > 70}
+                      <Smile class="h-4 w-4" />
+                    {:else if userData.userScore > 49}
+                      <Meh class="h-4 w-4" />
+                    {:else if userData.userScore > 20}
+                      <Frown class="h-4 w-4" />
+                    {:else}
+                      <Annoyed class="h-4 w-4" />
+                    {/if}
+                  </div>
+                </div>
+              </div>
+              <p class="mb-3 text-sm whitespace-pre-wrap text-base-content/80">
+                {userData.biography}
+              </p>
+              {#if userData.interests.length}
+                <div>
+                  <h4 class="mb-1 text-sm font-semibold text-base-content/60">
+                    Interests
+                  </h4>
+                  <div class="flex flex-wrap gap-1">
+                    {#each userData.interests as interest (interest)}
+                      <span class="badge badge-outline badge-accent"
+                        >{interest}</span
+                      >
+                    {/each}
+                  </div>
+                </div>
+              {/if}
+            </div>
+          </div>
+        </div>
+      {/if}
+    </a>
+  {/if}
 {:else}
   <div class="flex items-center gap-2">
     <div class="avatar">

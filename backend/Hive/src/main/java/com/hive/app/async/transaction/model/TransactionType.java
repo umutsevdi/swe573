@@ -17,5 +17,7 @@ public enum TransactionType {
     THREAD_UPDATE,
     THREAD_CLOSE,
     THREAD_REPLY,
-    UPDATE_ASSET
+    UPDATE_ASSET,
+    ADMIN_SUSPEND_USER,
+    ADMIN_ASSIGN_ROLE
 }

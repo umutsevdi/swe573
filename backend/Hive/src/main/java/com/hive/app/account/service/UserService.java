@@ -7,11 +7,13 @@ import com.hive.app.account.model.UserRole;
 import com.hive.app.account.model.request.RegisterRequest;
 import com.hive.app.account.model.request.UpdateUserRequest;
 import com.hive.app.account.model.response.UserCardResponse;
+import com.hive.app.account.model.response.UserProfileResponse;
 import com.hive.app.account.repository.UserRepository;
 import com.hive.app.async.transaction.model.Identifier;
 import com.hive.app.async.transaction.model.TransactionRecord;
 import com.hive.app.async.transaction.model.TransactionType;
 import com.hive.app.async.transaction.service.TransactionService;
+import com.hive.config.exceptions.LogicException;
 import com.hive.config.exceptions.UserNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
@@ -40,22 +42,22 @@ public class UserService implements UserDetailsService {
 
     @Cacheable(cacheNames = "userByIdCard", key = "#id")
     public Optional<UserCardResponse> findByIdCard(Long id) {
-        return repository.findCardById(id);
+        return repository.findCardById(id).map(mapper::viewToCard);
     }
 
     @Cacheable(cacheNames = "userById", key = "#id")
     public Optional<UserDTO> findById(Long id) {
-        return repository.findByIdAndIsActiveTrue(id).map(mapper::entityToDto);
+        return repository.findByIdAndActiveTrue(id).map(mapper::entityToDto);
     }
 
     @Cacheable(cacheNames = "userByUsername", key = "#username")
     public Optional<UserDTO> findByUsername(String username) {
-        return repository.findByUsernameAndIsActiveTrue(username)
+        return repository.findByUsernameAndActiveTrue(username)
                 .map(mapper::entityToDto);
     }
 
     @Caching(evict = {
-            @CacheEvict(value = "userList"),
+            @CacheEvict(value = "userList", allEntries = true),
             @CacheEvict(value = "userByIdCard", allEntries = true),
             @CacheEvict(value = "userByUsername", allEntries = true),
             @CacheEvict(value = "userById", allEntries = true)}
@@ -69,7 +71,7 @@ public class UserService implements UserDetailsService {
         dto.setUserScore(100);
         dto.setActive(true);
         dto.setRole(UserRole.MEMBER);
-        dto.setAccountTerminated(false);
+        dto.setSuspended(false);
         repository.save(mapper.dtoToEntity(dto));
 
         transactionService.insertTransaction(new TransactionRecord(
@@ -83,20 +85,20 @@ public class UserService implements UserDetailsService {
     @Cacheable(cacheNames = "userByUsername", key = "#username")
     @Override
     public UserDetails loadUserByUsername(@NonNull String username) throws UsernameNotFoundException {
-        return repository.findByUsernameAndIsActiveTrue(username)
+        return repository.findByUsernameAndActiveTrue(username)
                 .map(mapper::entityToDto)
                 .orElseThrow(() -> new UsernameNotFoundException("User not " +
                         "found"));
     }
 
     @Caching(evict = {
-            @CacheEvict(value = "userList"),
+            @CacheEvict(value = "userList", allEntries = true),
             @CacheEvict(value = "userByUsername", key = "#dto.username"),
             @CacheEvict(value = "userByIdCard", key = "#dto.id"),
             @CacheEvict(value = "userById", key = "#dto.id")}
     )
     @Transactional
-    public UserDTO updateUser(UserDTO dto, UpdateUserRequest request) throws UsernameNotFoundException {
+    public UserProfileResponse updateUser(UserDTO dto, UpdateUserRequest request) throws UsernameNotFoundException {
         boolean changed = false;
         if (request.getBiography() != null && !request.getBiography().isBlank() && !request.getBiography().equals(dto.getBiography())) {
             changed = true;
@@ -115,10 +117,11 @@ public class UserService implements UserDetailsService {
                     "User updated it's profile.")
             );
         }
-        return dto;
+        return mapper.dtoToProfile(dto);
     }
 
     @Caching(evict = {
+            @CacheEvict(value = "userList", allEntries = true),
             @CacheEvict(value = "userByUsername", key = "#dto.username"),
             @CacheEvict(value = "userByIdCard", key = "#dto.id"),
             @CacheEvict(value = "userById", key = "#dto.id")}
@@ -170,13 +173,56 @@ public class UserService implements UserDetailsService {
     // Administration operations
     @Cacheable(cacheNames = "userList")
     public List<UserCardResponse> getUsers() {
-        return repository.findAllCard();
+        return repository.findAllCard().stream().map(mapper::viewToCard).toList();
     }
 
+    @Caching(evict = {
+            @CacheEvict(value = "userList", allEntries = true),
+            @CacheEvict(value = "userByUsername", allEntries = true),
+            @CacheEvict(value = "userByIdCard", key = "#id"),
+            @CacheEvict(value = "userById", key = "#id")}
+    )
     @Transactional
-    public void banUser(Long id, boolean decision) throws UserNotFoundException {
+    public void suspendUser(Long id, Boolean decision, UserDTO self) throws UserNotFoundException, LogicException {
         UserEntity e = repository.findById(id).orElseThrow(UserNotFoundException::new);
-        e.setAccountTerminated(decision);
+        if (e.getRole() != UserRole.MEMBER) {
+            throw new LogicException("Can not suspend administrators.");
+        }
+        e.setSuspended(decision);
         repository.save(e);
+        transactionService.insertTransaction(new TransactionRecord(
+                TransactionType.ADMIN_SUSPEND_USER,
+                new Identifier(self.getId(), Identifier.IdType.USER),
+                new Identifier(id, Identifier.IdType.USER),
+                "Administrator set user.suspend to VALUE".replace("VALUE", decision.toString())
+        ));
+    }
+
+    @Caching(evict = {
+            @CacheEvict(value = "userList", allEntries = true),
+            @CacheEvict(value = "userByUsername", allEntries = true),
+            @CacheEvict(value = "userByIdCard", key = "#id"),
+            @CacheEvict(value = "userById", key = "#id")}
+    )
+    @Transactional
+    public void setUserRole(Long id, UserRole role, UserDTO self) throws UserNotFoundException, LogicException {
+        UserEntity e = repository.findById(id).orElseThrow(UserNotFoundException::new);
+        if (e.getRole() == role) {
+            return;
+        }
+        if (role == UserRole.OWNER) {
+            throw new LogicException("Can not assign Owner role.");
+        }
+        UserRole oldRole = e.getRole();
+        e.setRole(role);
+        repository.save(e);
+        transactionService.insertTransaction(new TransactionRecord(
+                TransactionType.ADMIN_ASSIGN_ROLE,
+                new Identifier(self.getId(), Identifier.IdType.USER),
+                new Identifier(id, Identifier.IdType.USER),
+                "Administrator set user role 'OLD_ROLE' to 'NEW_ROLE'"
+                        .replace("OLD_ROLE", oldRole.toString())
+                        .replace("NEW_ROLE", role.toString())
+        ));
     }
 }

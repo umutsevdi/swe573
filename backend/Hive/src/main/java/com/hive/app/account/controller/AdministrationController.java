@@ -8,6 +8,7 @@ import com.hive.app.async.transaction.model.TransactionRecord;
 import com.hive.app.async.transaction.model.request.TransactionRequest;
 import com.hive.app.async.transaction.service.TransactionService;
 import com.hive.app.events.service.EventService;
+import com.hive.app.threads.service.ThreadService;
 import com.hive.config.exceptions.LogicException;
 import com.hive.config.exceptions.NotFoundException;
 import com.hive.config.exceptions.UserNotFoundException;
@@ -25,11 +26,19 @@ public class AdministrationController {
     private final UserService service;
     private final TransactionService transactionService;
     private final EventService eventService;
+    private final ThreadService threadService;
 
     @GetMapping("/users")
     public ResponseEntity<List<UserCardResponse>> getUsers() {
         UserDTO self = (UserDTO) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
         return ResponseEntity.ok(service.getUsers());
+    }
+
+    @DeleteMapping("/threads/{id}")
+    public ResponseEntity<Void> closeThread(@PathVariable Long id) throws LogicException, NotFoundException {
+        UserDTO self = (UserDTO) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        threadService.closeThread(id, self);
+        return ResponseEntity.ok().build();
     }
 
     @DeleteMapping("/events/{id}")

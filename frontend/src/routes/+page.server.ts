@@ -32,7 +32,6 @@ export const load = async ({
   let events: EventResponse[] = [];
   let hasSearched = false;
 
-  // Only search if there are any filter parameters
   if (
     q ||
     tags.length ||

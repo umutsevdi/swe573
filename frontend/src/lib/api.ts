@@ -579,21 +579,13 @@ export const API = {
     },
 
     threads: {
-      list: async function (
-        baseUrl: string,
-        auth: string | Cookies
-      ): Promise<ThreadView[]> {
-        return fetchJSON(`${baseUrl}/admin/threads`, auth);
-      },
-
       close: async function (
         baseUrl: string,
         auth: string | Cookies,
         threadId: number,
-        closed: boolean
       ): Promise<void> {
         await fetchJSON(
-          `${baseUrl}/admin/threads/${threadId}?closed=${closed}`,
+          `${baseUrl}/admin/threads/${threadId}`,
           auth,
           {
             method: "DELETE"

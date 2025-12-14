@@ -1,7 +1,6 @@
 package com.hive.app.threads.repository;
 
 import com.hive.app.threads.model.ThreadEntity;
-import com.hive.app.threads.model.response.ThreadResponse;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.CrudRepository;
 import org.springframework.stereotype.Repository;
@@ -26,5 +25,5 @@ public interface ThreadRepository extends CrudRepository<ThreadEntity, Long> {
                    e.tags AS tagsList
                  FROM ThreadEntity e
             """)
-    List<ThreadResponse> findAllProjectedBy();
+    List<ThreadView> findAllProjectedBy();
 }

@@ -2,6 +2,7 @@ package com.hive.app.threads.service;
 
 import com.hive.app.account.mapper.UserMapper;
 import com.hive.app.account.model.UserDTO;
+import com.hive.app.account.model.UserRole;
 import com.hive.app.async.transaction.model.Identifier;
 import com.hive.app.async.transaction.model.TransactionRecord;
 import com.hive.app.async.transaction.model.TransactionType;
@@ -139,16 +140,17 @@ public class ThreadService {
 
     @Cacheable(cacheNames = "threadList")
     public List<ThreadResponse> getThreads() {
-        return threads.findAllProjectedBy();
+        return threads.findAllProjectedBy().stream().map(mapper::toResponse).toList();
     }
 
     @Caching(evict = {
             @CacheEvict(cacheNames = "threadById", key = "#threadId"),
             @CacheEvict(cacheNames = "threadList", allEntries = true)
     })
-    public void closeThread(Long threadId, Long userId) throws NotFoundException {
+    public void closeThread(Long threadId, UserDTO self) throws NotFoundException {
         ThreadEntity entity = threads.findById(threadId).orElseThrow(NotFoundException::new);
-        if (!(entity.isActive() && entity.getOwner().getId().equals(userId))) {
+        if (!(entity.isActive() && entity.getOwner().getId().equals(self.getId())) &&
+                self.getRole() != UserRole.ADMIN && self.getRole() != UserRole.OWNER) {
             throw new PermissionDeniedException();
         }
         entity.setUpdatedAt(LocalDateTime.now());
@@ -156,7 +158,7 @@ public class ThreadService {
         threads.save(entity);
         transactionService.insertTransaction(new TransactionRecord(
                         TransactionType.THREAD_CLOSE,
-                        new Identifier(userId, Identifier.IdType.USER),
+                        new Identifier(self.getId(), Identifier.IdType.USER),
                         new Identifier(threadId, Identifier.IdType.THREAD),
                         "User closed a thread titled 'THREAD_NAME'.".replace("THREAD_NAME", entity.getTitle())
                 )

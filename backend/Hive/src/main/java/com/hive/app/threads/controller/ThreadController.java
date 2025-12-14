@@ -61,7 +61,7 @@ public class ThreadController {
     ResponseEntity<Void> closeThread(
             @PathVariable Long id) throws NotFoundException {
         UserDTO self = (UserDTO) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
-        service.closeThread(id, self.getId());
+        service.closeThread(id, self);
         return ResponseEntity.ok().build();
     }
 }

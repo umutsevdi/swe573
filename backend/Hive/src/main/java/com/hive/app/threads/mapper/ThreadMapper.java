@@ -6,6 +6,8 @@ import com.hive.app.threads.model.ThreadDTO;
 import com.hive.app.threads.model.ThreadEntity;
 import com.hive.app.threads.model.ThreadMessageEntity;
 import com.hive.app.threads.model.response.ThreadMessageResponse;
+import com.hive.app.threads.model.response.ThreadResponse;
+import com.hive.app.threads.repository.ThreadView;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.MappingConstants;
@@ -29,6 +31,8 @@ public interface ThreadMapper {
     @Mapping(source = "tags", target = "tags", qualifiedByName = "forumTagsDTO")
     @Mapping(target = "ownerId", source = "owner.id")
     ThreadDTO entityToDto(ThreadEntity entity);
+
+    ThreadResponse toResponse(ThreadView view);
 
     @Named("forumTagsEntity")
     default String serializeTags(List<String> interests) {

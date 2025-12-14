@@ -7,7 +7,9 @@ import com.hive.app.account.service.UserService;
 import com.hive.app.async.transaction.model.TransactionRecord;
 import com.hive.app.async.transaction.model.request.TransactionRequest;
 import com.hive.app.async.transaction.service.TransactionService;
+import com.hive.app.events.service.EventService;
 import com.hive.config.exceptions.LogicException;
+import com.hive.config.exceptions.NotFoundException;
 import com.hive.config.exceptions.UserNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -22,11 +24,19 @@ import java.util.List;
 public class AdministrationController {
     private final UserService service;
     private final TransactionService transactionService;
+    private final EventService eventService;
 
     @GetMapping("/users")
     public ResponseEntity<List<UserCardResponse>> getUsers() {
         UserDTO self = (UserDTO) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
         return ResponseEntity.ok(service.getUsers());
+    }
+
+    @DeleteMapping("/events/{id}")
+    public ResponseEntity<Void> closeEvent(@PathVariable Long id) throws LogicException, NotFoundException {
+        UserDTO self = (UserDTO) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        eventService.cancelEvent(id, self);
+        return ResponseEntity.ok().build();
     }
 
     @DeleteMapping("/users/{id}")

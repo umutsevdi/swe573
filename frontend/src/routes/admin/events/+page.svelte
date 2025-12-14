@@ -1,7 +1,7 @@
 <script lang="ts">
-  import { goto } from "$app/navigation";
+  import { goto, invalidateAll } from "$app/navigation";
   import { resolve } from "$app/paths";
-  import { Search, Ban, CheckCircle } from "@lucide/svelte";
+  import { Search, Ban } from "@lucide/svelte";
   import { breadcrumbs } from "$lib/stores/breadcrumbs";
   import UserAvatar from "$lib/components/UserAvatar.svelte";
   import { API, type EventResponse } from "$lib/api";
@@ -19,7 +19,15 @@
   let end = $state(data.end);
   let type = $state(data.type);
   let includeCancelled = $state(data.includeCancelled);
-  let events = $state(data.events);
+
+  $effect(() => {
+    if (typeof window !== "undefined" && window.location.search === "") {
+      const today = new Date().toISOString().split("T")[0];
+      const params = new URLSearchParams();
+      params.set("start", today);
+      goto(`?${params.toString()}`, { replaceState: true });
+    }
+  });
 
   function addTag() {
     const trimmed = tagInput
@@ -36,7 +44,6 @@
   function removeTag(tag: string) {
     tags = tags.filter((t) => t !== tag);
   }
-
   function handleSubmit(event: Event) {
     event.preventDefault();
     const params = new URLSearchParams();
@@ -49,28 +56,14 @@
     goto(`?${params.toString()}`, { replaceState: true });
   }
 
-  async function toggleCancelled(event: EventResponse) {
-    if (!$auth.token) {
-      toast.error("Not authenticated");
-      return;
-    }
+  async function cancelEvent(event: EventResponse) {
     try {
-      await API.admin.events.close(
-        HIVE_API,
-        $auth.token,
-        event.id,
-        !event.cancelled
-      );
-      // Update local state
-      events = events.map((e) =>
-        e.id === event.id ? { ...e, cancelled: !e.cancelled } : e
-      );
-      toast.success(
-        `Event ${event.cancelled ? "opened" : "cancelled"} successfully`
-      );
+      await API.admin.events.close(HIVE_API, $auth.token!, event.id);
+      invalidateAll();
+      toast.success(`Event cancelled successfully`);
     } catch (error) {
       console.error("Error toggling event status:", error);
-      toast.error("Failed to update event status");
+      toast.error("Failed to update event status. "+ error);
     }
   }
 </script>
@@ -250,7 +243,7 @@
       </tr>
     </thead>
     <tbody>
-      {#each events as event (event.id)}
+      {#each data.events as event (event.id)}
         {@const eventDate = new Date(event.eventDate)}
         {@const today = new Date()}
         {@const todayStart = new Date(
@@ -258,8 +251,7 @@
           today.getMonth(),
           today.getDate()
         )}
-        {@const isCompleted = eventDate < todayStart}
-        {@const isImmutable = event.cancelled || eventDate <= todayStart}
+        {@const isImmutable = event.cancelled || eventDate < todayStart}
         <tr>
           <td>
             <a class="btn btn-link" href={resolve(`/event/${event.id}`)}
@@ -287,7 +279,7 @@
             <button
               class="btn btn-sm btn-error"
               disabled={isImmutable}
-              onclick={() => toggleCancelled(event)}
+              onclick={() => cancelEvent(event)}
             >
               <Ban class="h-4 w-4" />
               Cancel

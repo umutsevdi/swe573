@@ -2,6 +2,7 @@ package com.hive.app.events.service;
 
 import com.hive.app.account.mapper.UserMapper;
 import com.hive.app.account.model.UserDTO;
+import com.hive.app.account.model.UserRole;
 import com.hive.app.account.service.UserService;
 import com.hive.app.async.transaction.model.Identifier;
 import com.hive.app.async.transaction.model.TransactionRecord;
@@ -171,7 +172,10 @@ public class EventService {
     public void cancelEvent(Long id, UserDTO userDTO) throws NotFoundException, LogicException {
         EventEntity event = repository.findById(id)
                 .orElseThrow(NotFoundException::new);
-        if (!event.getOwner().getId().equals(userDTO.getId())) {
+        if (!event.getOwner().getId().equals(userDTO.getId()) &&
+                userDTO.getRole() != UserRole.ADMIN &&
+                userDTO.getRole() != UserRole.OWNER
+        ) {
             throw new PermissionDeniedException();
         }
         isMutable(event.isCancelled(), event.getEventDate());

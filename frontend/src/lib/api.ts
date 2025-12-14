@@ -570,16 +570,11 @@ export const API = {
       close: async function (
         baseUrl: string,
         auth: string | Cookies,
-        eventId: number,
-        closed: boolean
+        eventId: number
       ): Promise<void> {
-        await fetchJSON(
-          `${baseUrl}/admin/events/${eventId}?closed=${closed}`,
-          auth,
-          {
-            method: "DELETE"
-          }
-        );
+        await fetchJSON(`${baseUrl}/admin/events/${eventId}`, auth, {
+          method: "DELETE"
+        });
       }
     },
 

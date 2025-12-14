@@ -122,6 +122,7 @@ export interface EventRequest {
   type: "OFFER" | "NEED";
   duration: number;
   eventDate: string;
+  cancelled?: boolean;
 }
 
 export type ParticipationState =
@@ -138,6 +139,7 @@ export interface ThreadRequest {
   title: string;
   description: string;
   tags: string[];
+  active?: boolean;
 }
 
 export interface ThreadReply {
@@ -166,6 +168,44 @@ export interface ThreadView {
   createdAt: string;
   tags: string[];
   active: boolean;
+}
+
+export type TransactionType =
+  | "USER_REGISTER"
+  | "USER_LOGIN"
+  | "USER_UPDATE"
+  | "USER_DELETE"
+  | "EVENT_CREATE"
+  | "EVENT_CANCEL"
+  | "EVENT_UPDATE"
+  | "EVENT_COMPLETE"
+  | "PARTICIPATION_NEW"
+  | "PARTICIPATION_WITHDRAW"
+  | "PARTICIPATION_STATUS"
+  | "PARTICIPATION_TRX"
+  | "THREAD_CREATE"
+  | "THREAD_UPDATE"
+  | "THREAD_CLOSE"
+  | "THREAD_REPLY"
+  | "UPDATE_ASSET";
+export interface Identifier {
+  id: number;
+  type: "USER" | "EVENT" | "THREAD";
+}
+
+export interface TransactionRequest {
+  type?: TransactionType[];
+  id?: Identifier;
+  message?: string;
+  before?: string;
+  after?: string;
+}
+export interface TransactionResponse {
+  type: TransactionType;
+  source: Identifier;
+  destination: Identifier;
+  message: string;
+  createdAt: string;
 }
 
 export interface LocationSearchResult {
@@ -503,6 +543,86 @@ export const API = {
       }
 
       return response.json();
+    }
+  },
+
+  admin: {
+    users: {
+      list: async function (
+        baseUrl: string,
+        auth: string | Cookies
+      ): Promise<UserResponse[]> {
+        return fetchJSON(`${baseUrl}/admin/users`, auth);
+      },
+
+      terminate: async function (
+        baseUrl: string,
+        auth: string | Cookies,
+        userId: number,
+        accountTerminated: boolean
+      ): Promise<void> {
+        await fetchJSON(
+          `${baseUrl}/admin/users/${userId}?terminated=${accountTerminated}`,
+          auth,
+          {
+            method: "DELETE"
+          }
+        );
+      }
+    },
+
+    events: {
+      close: async function (
+        baseUrl: string,
+        auth: string | Cookies,
+        eventId: number,
+        closed: boolean
+      ): Promise<void> {
+        await fetchJSON(
+          `${baseUrl}/admin/events/${eventId}?closed=${closed}`,
+          auth,
+          {
+            method: "DELETE"
+          }
+        );
+      }
+    },
+
+    threads: {
+      list: async function (
+        baseUrl: string,
+        auth: string | Cookies
+      ): Promise<ThreadView[]> {
+        return fetchJSON(`${baseUrl}/admin/threads`, auth);
+      },
+
+      close: async function (
+        baseUrl: string,
+        auth: string | Cookies,
+        threadId: number,
+        closed: boolean
+      ): Promise<void> {
+        await fetchJSON(
+          `${baseUrl}/admin/threads/${threadId}?closed=${closed}`,
+          auth,
+          {
+            method: "DELETE"
+          }
+        );
+      }
+    },
+
+    transactions: {
+      filter: async function (
+        baseUrl: string,
+        auth: string | Cookies,
+        request: TransactionRequest
+      ): Promise<TransactionResponse[]> {
+        return fetchJSON(`${baseUrl}/admin/transactions`, auth, {
+          method: "POST",
+          body: JSON.stringify(request)
+        });
+      }
     }
   }
 };

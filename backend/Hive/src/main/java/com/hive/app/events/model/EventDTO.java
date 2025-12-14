@@ -1,7 +1,6 @@
 package com.hive.app.events.model;
 
 import com.hive.app.account.model.UserDTO;
-import com.hive.config.exceptions.LogicException;
 import lombok.Data;
 
 import java.time.LocalDate;

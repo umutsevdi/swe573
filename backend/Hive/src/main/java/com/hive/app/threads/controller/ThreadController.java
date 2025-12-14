@@ -1,7 +1,8 @@
 package com.hive.app.threads.controller;
 
 import com.hive.app.account.model.UserDTO;
-import com.hive.app.threads.model.*;
+import com.hive.app.threads.model.ThreadDTO;
+import com.hive.app.threads.model.ThreadRequest;
 import com.hive.app.threads.model.request.ReplyRequest;
 import com.hive.app.threads.model.response.ThreadMessageResponse;
 import com.hive.app.threads.model.response.ThreadResponse;

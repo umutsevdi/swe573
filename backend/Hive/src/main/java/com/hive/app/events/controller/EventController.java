@@ -1,7 +1,7 @@
 package com.hive.app.events.controller;
 
 import com.hive.app.account.model.UserDTO;
-import com.hive.app.events.model.*;
+import com.hive.app.events.model.ParticipationState;
 import com.hive.app.events.model.request.EventQueryOptions;
 import com.hive.app.events.model.request.EventRequest;
 import com.hive.app.events.model.request.ParticipationAssignmentRequest;

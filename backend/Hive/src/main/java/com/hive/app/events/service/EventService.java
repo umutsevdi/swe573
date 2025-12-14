@@ -3,6 +3,10 @@ package com.hive.app.events.service;
 import com.hive.app.account.mapper.UserMapper;
 import com.hive.app.account.model.UserDTO;
 import com.hive.app.account.service.UserService;
+import com.hive.app.async.transaction.model.Identifier;
+import com.hive.app.async.transaction.model.TransactionRecord;
+import com.hive.app.async.transaction.model.TransactionType;
+import com.hive.app.async.transaction.service.TransactionService;
 import com.hive.app.events.mapper.EventMapper;
 import com.hive.app.events.model.*;
 import com.hive.app.events.model.request.EventQueryOptions;
@@ -40,6 +44,13 @@ public class EventService {
     private final EventMapper mapper;
     private final UserMapper userMapper;
     private final UserService userService;
+    private final TransactionService transactionService;
+
+    private static void isMutable(boolean isCancelled, LocalDate eventDate) throws LogicException {
+        if (isCancelled || !eventDate.isAfter(LocalDate.now())) {
+            throw new LogicException("Event is not modifiable.");
+        }
+    }
 
     @Cacheable(cacheNames = "getUserEvents", key = "{#userId, #showInactive}")
     public List<EventListResponse> getUserEvents(Long userId, boolean showInactive) {
@@ -75,15 +86,23 @@ public class EventService {
                 .orElseThrow(NotFoundException::new);
     }
 
-
     @CacheEvict(cacheNames = "getUserEvents", allEntries = true)
     @Transactional
     public EventResponse newEvent(EventRequest request, UserDTO userDTO) {
-        request.setTags(request.getTags().stream().map(e->e.toLowerCase().replace(' ', '-')).toList());
+        request.setTags(request.getTags().stream().map(e -> e.toLowerCase().replace(' ', '-')).toList());
         EventEntity entity = mapper.requestToEntity(request);
         entity.setCancelled(false);
         entity.setOwner(userMapper.dtoToEntity(userDTO));
-        return mapper.entityToResponse(repository.save(entity));
+        var result = mapper.entityToResponse(repository.save(entity));
+        transactionService.insertTransaction(new TransactionRecord(
+                TransactionType.EVENT_CREATE,
+                new Identifier(userDTO.getId(), Identifier.IdType.USER),
+                new Identifier(result.getId(), Identifier.IdType.EVENT),
+                "User created TYPE titled 'EVENT_NAME'."
+                        .replace("TYPE", result.getType().name().toLowerCase())
+                        .replace("EVENT_NAME", result.getTitle())
+        ));
+        return result;
     }
 
     @Caching(evict = {
@@ -100,28 +119,48 @@ public class EventService {
         }
         isMutable(event.isCancelled(), event.getEventDate());
         log.info("{}", request);
+        boolean updated = false;
         if (request.getTitle() != null) {
             event.setTitle(request.getTitle());
+            updated = true;
         }
         if (request.getDescription() != null) {
             event.setDescription(request.getDescription());
+            updated = true;
         }
         if (request.getTags() != null) {
-            event.setTags(request.getTags().stream().map(e->e.toLowerCase().replace(' ', '-')).toList());
+            event.setTags(request.getTags().stream().map(e -> e.toLowerCase().replace(' ', '-')).toList());
+            updated = true;
         }
         if (request.getLocation() != null) {
             event.setLocation(request.getLocation());
+            updated = true;
         }
         if (request.getMaxParticipants() != null) {
             event.setMaxParticipants(request.getMaxParticipants());
+            updated = true;
         }
         if (request.getType() != null) {
             event.setType(request.getType());
+            updated = true;
         }
         if (request.getDuration() != null) {
             event.setDuration(request.getDuration());
+            updated = true;
         }
-        return mapper.entityToResponse(repository.save(mapper.dtoToEntity(event)));
+        if (updated) {
+            var result = mapper.entityToResponse(repository.save(mapper.dtoToEntity(event)));
+            transactionService.insertTransaction(new TransactionRecord(
+                    TransactionType.EVENT_UPDATE,
+                    new Identifier(userDTO.getId(), Identifier.IdType.USER),
+                    new Identifier(result.getId(), Identifier.IdType.EVENT),
+                    "User updated TYPE titled 'EVENT_NAME'."
+                            .replace("TYPE", result.getType().name().toLowerCase())
+                            .replace("EVENT_NAME", result.getTitle())
+            ));
+            return result;
+        }
+        return mapper.dtoToResponse(event);
     }
 
     @Caching(evict = {
@@ -138,6 +177,14 @@ public class EventService {
         isMutable(event.isCancelled(), event.getEventDate());
         event.setCancelled(true);
         repository.save(event);
+        transactionService.insertTransaction(new TransactionRecord(
+                TransactionType.EVENT_CANCEL,
+                new Identifier(userDTO.getId(), Identifier.IdType.USER),
+                new Identifier(event.getId(), Identifier.IdType.EVENT),
+                "User cancelled TYPE titled 'EVENT_NAME'."
+                        .replace("TYPE", event.getType().name().toLowerCase())
+                        .replace("EVENT_NAME", event.getTitle())
+        ));
     }
 
     @Cacheable(cacheNames = "getParticipants", key = "#eventId")
@@ -168,6 +215,14 @@ public class EventService {
         entity.setCreatedAt(LocalDateTime.now());
         entity.setUpdatedAt(LocalDateTime.now());
         participationRepository.save(entity);
+        transactionService.insertTransaction(new TransactionRecord(
+                TransactionType.PARTICIPATION_NEW,
+                new Identifier(userDTO.getId(), Identifier.IdType.USER),
+                new Identifier(e.getId(), Identifier.IdType.EVENT),
+                "User requested participation to TYPE with the message 'MESSAGE'."
+                        .replace("TYPE", e.getType().name().toLowerCase())
+                        .replace("MESSAGE", entity.getMessage())
+        ));
         userService.freezeTime(userDTO, e.getDuration());
     }
 
@@ -186,6 +241,13 @@ public class EventService {
         participation.setState(ParticipationState.WITHDRAWN);
         participation.setUpdatedAt(LocalDateTime.now());
         participationRepository.save(participation);
+        transactionService.insertTransaction(new TransactionRecord(
+                TransactionType.PARTICIPATION_WITHDRAW,
+                new Identifier(userDTO.getId(), Identifier.IdType.USER),
+                new Identifier(e.getId(), Identifier.IdType.EVENT),
+                "User withdrew their participation from TYPE."
+                        .replace("TYPE", e.getType().name().toLowerCase())
+        ));
         userService.unfreezeTime(userDTO, e.getDuration());
     }
 
@@ -208,18 +270,20 @@ public class EventService {
                 .contains(request.getState())) {
             throw new LogicException("Not negotiable.");
         }
+        ParticipationState oldState = participation.getState();
         participation.setState(request.getState());
         participation.setUpdatedAt(LocalDateTime.now());
         participationRepository.save(participation);
+        transactionService.insertTransaction(new TransactionRecord(
+                TransactionType.PARTICIPATION_WITHDRAW,
+                new Identifier(eventId, Identifier.IdType.EVENT),
+                new Identifier(request.getUserId(), Identifier.IdType.USER),
+                "User updated participant's status from FROM to TO."
+                        .replace("FROM", oldState.name().toLowerCase())
+                        .replace("TO", request.getState().name().toLowerCase())
+        ));
         if (request.getState() != ParticipationState.ACCEPTED) {
             userService.unfreezeTime(userMapper.entityToDto(participation.getOwner()), event.getDuration());
-        }
-    }
-
-
-    private static void isMutable(boolean isCancelled, LocalDate eventDate) throws LogicException {
-        if (isCancelled || !eventDate.isAfter(LocalDate.now())) {
-            throw new LogicException("Event is not modifiable.");
         }
     }
 }

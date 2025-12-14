@@ -12,16 +12,17 @@ import java.io.IOException;
 
 @Log4j2
 @Component
-public class EndpointLoggerFilter extends OncePerRequestFilter {
+public class EndpointLogger extends OncePerRequestFilter {
     @Override
     protected void doFilterInternal(HttpServletRequest request,
                                     HttpServletResponse response,
                                     FilterChain filterChain) throws ServletException, IOException {
         long startTime = System.currentTimeMillis();
-        log.info("Request: {} {} from {}", request.getMethod(), request.getRequestURI(), request.getRemoteAddr());
         filterChain.doFilter(request, response);
         long duration = System.currentTimeMillis() - startTime;
-        log.info("Response: Status {} ({} ms)", response.getStatus(), duration);
+        log.info("{}: {} {} -> Status {} ({} ms)", request.getRemoteAddr(), request.getMethod(),
+                request.getRequestURI(),
+                response.getStatus(), duration);
     }
 }
 

@@ -19,9 +19,7 @@
     MailPlus,
     Handshake,
     MessageCircle,
-
     GlobeLock
-
   } from "@lucide/svelte";
   import { auth } from "$lib/stores/user";
   import { toast } from "$lib/stores/toast";

@@ -34,6 +34,9 @@ public interface EventMapper {
     @Mapping(source = "owner.id", target = "ownerId")
     EventResponse entityToResponse(EventEntity dto);
 
+    @Mapping(source = "owner.id", target = "ownerId")
+    EventResponse dtoToResponse(EventDTO dto);
+
     @Mapping(target = "locationName", source = "location.name")
     @Mapping(target = "latitude", source = "location.latitude")
     @Mapping(target = "longitude", source = "location.longitude")

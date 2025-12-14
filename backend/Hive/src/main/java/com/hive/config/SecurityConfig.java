@@ -1,5 +1,6 @@
 package com.hive.config;
 
+import com.hive.app.account.model.UserRole;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.beans.factory.annotation.Value;
@@ -31,13 +32,13 @@ public class SecurityConfig {
 
     private final UserDetailsService userDetailsService;
     private final JwtRequestFilter jwtAuthFilter;
-    private final EndpointLoggerFilter loggerFilter;
+    private final EndpointLogger loggerFilter;
     private final AuthenticationEntryPoint entryPoint;
     @Value("${origin.allowed}")
     private String allowedOriginPatterns;
 
     @Bean
-    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+    public SecurityFilterChain filterChain(HttpSecurity http) {
         return http.cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .csrf(AbstractHttpConfigurer::disable)
                 .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
@@ -51,6 +52,7 @@ public class SecurityConfig {
                                 "/docs/swagger-ui/**",
                                 "/auth/**"
                         ).permitAll()
+                        .requestMatchers("/admin/**").hasAnyAuthority(UserRole.ADMIN_AUTHORITIES)
                         .anyRequest().authenticated()).build();
     }
 
@@ -61,7 +63,7 @@ public class SecurityConfig {
 
     @Bean
     public AuthenticationManager authenticationManager(
-            AuthenticationConfiguration cfg) throws Exception {
+            AuthenticationConfiguration cfg) {
         return cfg.getAuthenticationManager();
     }
 

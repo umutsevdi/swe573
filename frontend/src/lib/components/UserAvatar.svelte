@@ -220,6 +220,9 @@
             <div class="card-body p-4">
               <div class="mb-2 flex items-center gap-2">
                 <h3 class="card-title text-lg">{userData.fullName}</h3>
+                {#if userData.role === "ADMIN" || userData.role === "OWNER"}
+                  <span class="badge badge-warning">ADMIN</span>
+                {/if}
                 <div
                   class="tooltip avatar tooltip-bottom avatar-placeholder h-8 w-8"
                   data-tip={`User behavior score: ${userData.userScore}%`}

@@ -241,6 +241,9 @@
                     {#if data?.self}
                       <span class="badge badge-primary">You</span>
                     {/if}
+                    {#if data?.role === "ADMIN" || data?.role === "OWNER"}
+                      <span class="badge badge-warning">ADMIN</span>
+                    {/if}
                     <div
                       class="tooltip avatar tooltip-bottom avatar-placeholder h-12 w-12"
                       data-tip={`User behavior score: ${data?.userScore}%`}

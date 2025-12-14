@@ -25,3 +25,5 @@ springdoc:
     path: /docs/swagger-ui.html
 origin:
   allowed: ${ALLOWED_ORIGINS}
+hive:
+  password: ${HIVE_PASSWORD}

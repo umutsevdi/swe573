@@ -26,7 +26,8 @@ export const load: PageServerLoad = async ({ params, cookies }) => {
     timeBank: userData.timeBank || 0,
     frozenAmount: userData.frozenAmount || 0,
     userScore: userData.userScore,
-    suspended: userData.suspended
+    suspended: userData.suspended,
+    role: userData.role
   };
   return mappedData;
 };

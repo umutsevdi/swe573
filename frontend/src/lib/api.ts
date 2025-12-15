@@ -220,10 +220,9 @@ export interface Notification {
     | "THREAD_REPLY"
     | "THREAD_CLOSED"
     | "USER_ROLE_UPDATE";
-  message: string;
+  redirect: Identifier;
   isRead: boolean;
   createdAt: string;
-  redirectTo: string;
 }
 
 export const API = {

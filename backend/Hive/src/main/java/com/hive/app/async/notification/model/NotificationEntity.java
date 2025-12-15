@@ -1,6 +1,7 @@
 package com.hive.app.async.notification.model;
 
 import com.hive.app.account.model.UserEntity;
+import com.hive.app.async.transaction.model.Identifier;
 import jakarta.persistence.*;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
@@ -17,19 +18,19 @@ public class NotificationEntity {
     @GeneratedValue(strategy = GenerationType.SEQUENCE)
     private Long id;
     
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "owner_id", nullable = false)
-    private UserEntity owner;
+    @Column(nullable = false)
+    private Long ownerId;
     
     @Column(nullable = false)
     @Enumerated(EnumType.STRING)
     private NotificationType type;
-
-    @Column
-    private String redirectTo;
     
-    @Column(length = 1024)
-    private String message;
+    @Column(nullable = false)
+    private Long redirectId;
+    
+    @Column(nullable = false)
+    @Enumerated(EnumType.STRING)
+    private Identifier.IdType redirectType;
     
     @Column(nullable = false)
     private boolean isRead = false;

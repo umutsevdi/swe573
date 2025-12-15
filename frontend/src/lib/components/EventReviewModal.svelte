@@ -3,15 +3,8 @@
   import BaseModal from "./BaseModal.svelte";
   import { toast } from "$lib/stores/toast";
 
-  let {
-    open = $bindable(false),
-    eventId = 0,
-    notificationId = 0,
-    onsubmit
-  } = $props<{
+  let { open = $bindable(false), onsubmit } = $props<{
     open: boolean;
-    eventId: number;
-    notificationId: number;
     onsubmit?: (data: {
       rating: number;
       deliveryStatus: "UNDERDELIVERED" | "DELIVERED" | "OVERDELIVERED";

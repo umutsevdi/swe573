@@ -13,9 +13,9 @@ import java.util.List;
 @Repository
 public interface NotificationRepository extends JpaRepository<NotificationEntity, Long> {
     
-    List<NotificationEntity> findByOwnerOrderByCreatedAtDesc(UserEntity owner);
+    List<NotificationEntity> findByOwnerIdOrderByCreatedAtDesc(Long ownerId);
     
-    List<NotificationEntity> findByOwnerAndIsReadFalseOrderByCreatedAtDesc(UserEntity owner);
+    List<NotificationEntity> findByOwnerIdAndIsReadFalseOrderByCreatedAtDesc(Long ownerId);
     
     @Modifying
     @Query("""
@@ -34,5 +34,5 @@ public interface NotificationRepository extends JpaRepository<NotificationEntity
     """)
     int markAllAsRead(@Param("userId") Long userId);
     
-    long countByOwnerAndIsReadFalse(UserEntity owner);
+    long countByOwnerIdAndIsReadFalse(Long ownerId);
 }

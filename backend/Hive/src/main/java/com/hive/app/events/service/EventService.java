@@ -13,11 +13,13 @@ import com.hive.app.events.model.*;
 import com.hive.app.events.model.request.EventQueryOptions;
 import com.hive.app.events.model.request.EventRequest;
 import com.hive.app.events.model.request.ParticipationAssignmentRequest;
+import com.hive.app.events.model.request.ReviewRequest;
 import com.hive.app.events.model.response.EventListResponse;
 import com.hive.app.events.model.response.EventResponse;
 import com.hive.app.events.repository.EventRepository;
 import com.hive.app.events.repository.EventSpecifications;
 import com.hive.app.events.repository.ParticipationRepository;
+import com.hive.app.events.repository.ReviewRepository;
 import com.hive.config.exceptions.LogicException;
 import com.hive.config.exceptions.NotFoundException;
 import com.hive.config.exceptions.PermissionDeniedException;
@@ -42,6 +44,7 @@ import java.util.stream.Collectors;
 public class EventService {
     private final EventRepository repository;
     private final ParticipationRepository participationRepository;
+    private final ReviewRepository reviewRepository;
     private final EventMapper mapper;
     private final UserMapper userMapper;
     private final UserService userService;
@@ -289,5 +292,52 @@ public class EventService {
         if (request.getState() != ParticipationState.ACCEPTED) {
             userService.unfreezeTime(userMapper.entityToDto(participation.getOwner()), event.getDuration());
         }
+    }
+
+    @Transactional
+    public void submitReview(Long eventId, ReviewRequest request, UserDTO userDTO) throws NotFoundException, LogicException {
+        EventEntity event = repository.findById(eventId).orElseThrow(NotFoundException::new);
+        
+        // Check if event is in the past (can only review completed events)
+        if (!event.getEventDate().isBefore(LocalDate.now())) {
+            throw new LogicException("Event must be completed before reviewing.");
+        }
+        
+        // Check if user participated in the event
+        ParticipationEntity participation = participationRepository
+                .findByOwner_IdAndEvent_Id(userDTO.getId(), eventId)
+                .orElseThrow(() -> new LogicException("Must have participated in the event to review."));
+        
+        if (participation.getState() != ParticipationState.ACCEPTED) {
+            throw new LogicException("Only accepted participants can review the event.");
+        }
+        
+        // Check if user has already reviewed this event
+        if (reviewRepository.existsByEvent_IdAndUser_Id(eventId, userDTO.getId())) {
+            throw new LogicException("Already reviewed this event.");
+        }
+        
+        // Validate rating
+        if (request.getRating() < 1 || request.getRating() > 5) {
+            throw new LogicException("Rating must be between 1 and 5.");
+        }
+        
+        ReviewEntity review = new ReviewEntity();
+        review.setEvent(event);
+        review.setUser(userMapper.dtoToEntity(userDTO));
+        review.setRating(request.getRating());
+        review.setDeliveryStatus(request.getDeliveryStatus());
+        review.setMessage(request.getMessage());
+        
+        reviewRepository.save(review);
+        
+        transactionService.insertTransaction(new TransactionRecord(
+                TransactionType.EVENT_UPDATE,
+                new Identifier(userDTO.getId(), Identifier.IdType.USER),
+                new Identifier(event.getId(), Identifier.IdType.EVENT),
+                "User reviewed TYPE titled 'EVENT_NAME'."
+                        .replace("TYPE", event.getType().name().toLowerCase())
+                        .replace("EVENT_NAME", event.getTitle())
+        ));
     }
 }

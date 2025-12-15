@@ -1,7 +1,6 @@
 package com.hive.app.async.notification.controller;
 
 import com.hive.app.account.model.UserDTO;
-import com.hive.app.account.model.UserEntity;
 import com.hive.app.async.notification.model.NotificationEntity;
 import com.hive.app.async.notification.model.response.NotificationResponse;
 import com.hive.app.async.notification.service.NotificationService;
@@ -28,22 +27,14 @@ public class NotificationController {
     @GetMapping
     public ResponseEntity<List<NotificationResponse>> getUserNotifications() {
         UserDTO self = (UserDTO) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
-        UserEntity userEntity = userMapper.dtoToEntity(self);
-        
-        List<NotificationEntity> notifications = notificationService.getUserNotifications(userEntity);
-        List<NotificationResponse> response = notifications.stream()
-                .map(notificationMapper::entityToResponse)
-                .collect(Collectors.toList());
-        
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(notificationService.getUserNotifications(self));
     }
 
     @GetMapping("/count")
     public ResponseEntity<Long> getUnreadCount() {
         UserDTO self = (UserDTO) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
-        UserEntity userEntity = userMapper.dtoToEntity(self);
         
-        long count = notificationService.getUnreadCount(userEntity);
+        long count = notificationService.getUnreadCount(self);
         return ResponseEntity.ok(count);
     }
 

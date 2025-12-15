@@ -1,7 +1,8 @@
 import { API } from "$lib/api";
 import { HIVE_API } from "$lib/serverConfig";
+import type { Cookies } from "@sveltejs/kit";
 
-export const load = async ({ cookies }: { cookies: any }) => {
+export const load = async ({ cookies }: { cookies: Cookies }) => {
   try {
     const notifications = await API.inbox.list(HIVE_API!, cookies);
     return { notifications };

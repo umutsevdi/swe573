@@ -1,9 +1,12 @@
 package com.hive.app.async.notification.service;
 
-import com.hive.app.account.model.UserEntity;
+import com.hive.app.account.model.UserDTO;
 import com.hive.app.async.notification.model.NotificationEntity;
 import com.hive.app.async.notification.model.NotificationType;
+import com.hive.app.async.notification.model.response.NotificationResponse;
+import com.hive.app.async.transaction.model.Identifier;
 import com.hive.app.async.notification.repository.NotificationRepository;
+import com.hive.app.async.notification.mapper.NotificationMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.context.annotation.Bean;
@@ -22,6 +25,7 @@ import java.util.concurrent.Executor;
 @RequiredArgsConstructor
 public class NotificationService {
     private final NotificationRepository repository;
+    private final NotificationMapper mapper;
 
     @Bean(name = "nt-async")
     public Executor notificationExecutor() {
@@ -35,22 +39,23 @@ public class NotificationService {
     }
 
     @Async
-    public void insertNotification(UserEntity owner,
+    public NotificationResponse insertNotification(UserDTO owner,
             NotificationType type,
-            String message,
-            String redirectTo) {
+            Identifier redirect) {
         NotificationEntity notification = new NotificationEntity();
-        notification.setOwner(owner);
+        notification.setOwnerId(owner.getId());
         notification.setType(type);
-        notification.setMessage(message);
         notification.setRead(false);
-        notification.setRedirectTo(redirectTo);
-        repository.save(notification);
-        log.info("Notification created for user {}: {}", owner.getUsername(), type);
+        notification.setRedirectId(redirect.id());
+        notification.setRedirectType(redirect.type());
+        return mapper.entityToResponse(repository.save(notification));
     }
 
-    public List<NotificationEntity> getUserNotifications(UserEntity owner) {
-        return repository.findByOwnerOrderByCreatedAtDesc(owner);
+    public List<NotificationResponse> getUserNotifications(UserDTO owner) {
+        return repository.findByOwnerIdOrderByCreatedAtDesc(owner.getId())
+            .stream()
+            .map(mapper::entityToResponse)
+            .toList();
     }
 
     public int markAsRead(Long notificationId, Long userId) {
@@ -61,7 +66,7 @@ public class NotificationService {
         return repository.markAllAsRead(userId);
     }
 
-    public long getUnreadCount(UserEntity owner) {
-        return repository.countByOwnerAndIsReadFalse(owner);
+    public long getUnreadCount(UserDTO owner) {
+        return repository.countByOwnerIdAndIsReadFalse(owner.getId());
     }
 }

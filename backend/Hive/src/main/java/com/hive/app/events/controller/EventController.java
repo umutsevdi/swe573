@@ -5,6 +5,7 @@ import com.hive.app.events.model.ParticipationState;
 import com.hive.app.events.model.request.EventQueryOptions;
 import com.hive.app.events.model.request.EventRequest;
 import com.hive.app.events.model.request.ParticipationAssignmentRequest;
+import com.hive.app.events.model.request.ReviewRequest;
 import com.hive.app.events.model.response.EventListResponse;
 import com.hive.app.events.model.response.EventResponse;
 import com.hive.app.events.service.EventService;
@@ -92,6 +93,13 @@ public class EventController {
     @GetMapping("/{id}/participation")
     ResponseEntity<Map<Long, ParticipationState>> getParticipants(@PathVariable Long id) {
         return ResponseEntity.ok(service.getParticipants(id));
+    }
+
+    @PostMapping("/{id}/review")
+    ResponseEntity<Void> submitReview(@PathVariable Long id, @RequestBody ReviewRequest request) throws NotFoundException, LogicException {
+        UserDTO self = (UserDTO) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        service.submitReview(id, request, self);
+        return ResponseEntity.ok().build();
     }
 
 }

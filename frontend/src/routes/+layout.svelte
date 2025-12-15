@@ -35,6 +35,7 @@
   let modalOpen = $state(false);
   let threadModalOpen = $state(false);
   let navbarAvatarUrl = $state<string | null>(null);
+  let unreadNotifications = $state(0);
 
   let title = $derived(
     $auth.isLoggedIn
@@ -113,15 +114,25 @@
     }
   }
 
+  async function loadUnreadNotifications() {
+    if (!$auth.token) return;
+    try {
+      unreadNotifications = await API.inbox.count(HIVE_API, $auth.token);
+    } catch (error) {
+      unreadNotifications = 0;
+    }
+  }
+
   function handleLogout() {
     auth.logout();
     goto(resolve("/auth"));
   }
 
-  // Load navbar avatar when user logs in
+  // Load navbar avatar and unread notifications when user logs in
   $effect(() => {
     if ($auth.isLoggedIn && $auth.user?.id && $auth.token) {
       loadNavbarAvatar();
+      loadUnreadNotifications();
     }
 
     // Cleanup blob URL on unmount (only if it's a blob URL)
@@ -314,6 +325,11 @@
               data-tip="Inbox"
               ><Bell class="h-6 w-6" />
               <span class="is-drawer-close:hidden">Inbox</span>
+              {#if unreadNotifications > 0}
+                <span class="badge badge-primary badge-sm"
+                  >{unreadNotifications}</span
+                >
+              {/if}
             </a>
           </li>
           <li>

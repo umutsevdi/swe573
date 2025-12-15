@@ -8,8 +8,6 @@
     Smile,
     Hourglass,
     Pen,
-    AlertTriangleIcon,
-    AlertTriangle,
     TriangleAlert
   } from "@lucide/svelte";
   import { breadcrumbs } from "$lib/stores/breadcrumbs";

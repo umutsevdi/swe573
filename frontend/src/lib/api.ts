@@ -207,6 +207,25 @@ export interface LocationSearchResult {
   icon?: string;
 }
 
+export interface Notification {
+  id: number;
+  ownerId: number;
+  type:
+    | "EVENT_EDIT"
+    | "EVENT_NEGOTIATING"
+    | "EVENT_ACCEPTED"
+    | "EVENT_REJECTED"
+    | "EVENT_CANCELLED"
+    | "EVENT_COMPLETED"
+    | "THREAD_REPLY"
+    | "THREAD_CLOSED"
+    | "USER_ROLE_UPDATE";
+  message: string;
+  isRead: boolean;
+  createdAt: string;
+  redirectTo: string;
+}
+
 export const API = {
   auth: {
     login: async function (
@@ -346,6 +365,22 @@ export const API = {
       });
     },
 
+    submitReview: async function (
+      baseUrl: string,
+      auth: string | Cookies,
+      eventId: number,
+      request: {
+        rating: number;
+        deliveryStatus: "UNDERDELIVERED" | "DELIVERED" | "OVERDELIVERED";
+        message: string;
+      }
+    ): Promise<void> {
+      return fetchJSON(`${baseUrl}/event/${eventId}/review`, auth, {
+        method: "POST",
+        body: JSON.stringify(request)
+      });
+    },
+
     participants: {
       get: async function (
         baseUrl: string,
@@ -475,14 +510,6 @@ export const API = {
     ): Promise<string | null> {
       return fetchImage(`${baseUrl}/assets/event/${id}`, auth, fallback);
     },
-    getBackground: async function (
-      baseUrl: string,
-      auth: string | Cookies,
-      id: number,
-      fallback?: string
-    ): Promise<string | null> {
-      return fetchImage(`${baseUrl}/assets/bg/${id}`, auth, fallback);
-    },
 
     upload: async function (
       baseUrl: string,
@@ -527,6 +554,38 @@ export const API = {
       }
 
       return response.json();
+    }
+  },
+
+  inbox: {
+    list: async function (
+      baseUrl: string,
+      auth: string | Cookies
+    ): Promise<Notification[]> {
+      return fetchJSON(`${baseUrl}/inbox`, auth);
+    },
+    count: async function (
+      baseUrl: string,
+      auth: string | Cookies
+    ): Promise<number> {
+      return fetchJSON(`${baseUrl}/inbox/count`, auth);
+    },
+    markAsRead: async function (
+      baseUrl: string,
+      auth: string | Cookies,
+      notificationId: number
+    ): Promise<void> {
+      await fetchJSON(`${baseUrl}/inbox/${notificationId}/read`, auth, {
+        method: "PUT"
+      });
+    },
+    readAll: async function (
+      baseUrl: string,
+      auth: string | Cookies
+    ): Promise<void> {
+      await fetchJSON(`${baseUrl}/inbox/read-all`, auth, {
+        method: "PUT"
+      });
     }
   },
 
@@ -582,15 +641,11 @@ export const API = {
       close: async function (
         baseUrl: string,
         auth: string | Cookies,
-        threadId: number,
+        threadId: number
       ): Promise<void> {
-        await fetchJSON(
-          `${baseUrl}/admin/threads/${threadId}`,
-          auth,
-          {
-            method: "DELETE"
-          }
-        );
+        await fetchJSON(`${baseUrl}/admin/threads/${threadId}`, auth, {
+          method: "DELETE"
+        });
       }
     },
 

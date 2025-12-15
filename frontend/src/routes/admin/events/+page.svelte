@@ -63,7 +63,7 @@
       toast.success(`Event cancelled successfully`);
     } catch (error) {
       console.error("Error toggling event status:", error);
-      toast.error("Failed to update event status. "+ error);
+      toast.error("Failed to update event status. " + error);
     }
   }
 </script>

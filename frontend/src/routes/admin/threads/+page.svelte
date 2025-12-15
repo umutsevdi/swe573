@@ -19,9 +19,9 @@
     try {
       await API.admin.threads.close(HIVE_API, $auth.token!, thread.id);
       invalidateAll();
-      threads = threads
-        .filter((view) => view.id === thread.id)
-        .map((view) => (view.active = false));
+      threads = threads.map((view) =>
+        view.id === thread.id ? { ...view, active: false } : view
+      );
       toast.success(`Thread closed successfully`);
     } catch (error) {
       toast.error("Failed to update thread status. " + error);

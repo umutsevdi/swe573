@@ -98,7 +98,9 @@
       maxParticipants = 0;
       type = "OFFER";
       duration = 1;
-      eventDate = new Date().toISOString().split("T")[0];
+      const now = new Date();
+      now.setMinutes(0, 0, 0);
+      eventDate = now.toISOString().slice(0, 16);
       imagePreview = null;
     }
     imageFile = null;
@@ -141,6 +143,13 @@
       location = { lat: 41.0082, lon: 28.9784, name: "Istanbul" };
     }
 
+    let adjustedEventDate = eventDate;
+    if (eventDate) {
+      const date = new Date(eventDate);
+      date.setMinutes(0, 0, 0);
+      adjustedEventDate = date.toISOString().slice(0, 16);
+    }
+
     const data = {
       title: title.trim(),
       description: description,
@@ -149,7 +158,7 @@
       maxParticipants,
       type,
       duration: duration,
-      eventDate,
+      eventDate: adjustedEventDate,
       image: imageFile || undefined
     };
     dispatch(mode === "edit" ? "update" : "submit", data);
@@ -362,7 +371,7 @@
         </label>
         <input
           id="event-date"
-          type="date"
+          type="datetime-local"
           class="input-bordered input w-full"
           bind:value={eventDate}
         />

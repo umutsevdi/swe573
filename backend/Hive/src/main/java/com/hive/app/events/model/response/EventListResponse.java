@@ -5,7 +5,6 @@ import com.hive.app.events.model.EventType;
 import com.hive.app.events.model.Location;
 import io.jsonwebtoken.lang.Strings;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -23,7 +22,7 @@ public interface EventListResponse {
 
     Integer getDuration();
 
-    LocalDate getEventDate();
+    LocalDateTime getEventDate();
 
     LocalDateTime getCreatedAt();
 

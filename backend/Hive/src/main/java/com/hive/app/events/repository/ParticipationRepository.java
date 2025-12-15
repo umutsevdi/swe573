@@ -21,4 +21,6 @@ public interface ParticipationRepository extends CrudRepository<ParticipationEnt
                     WHERE e.event.id = :eventId
             """)
     List<ParticipantView> findParticipants(Long eventId);
+
+    List<ParticipationEntity> findAllByEvent_Id(Long eventId);
 }

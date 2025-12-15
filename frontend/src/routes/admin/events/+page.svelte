@@ -1,7 +1,7 @@
 <script lang="ts">
   import { goto, invalidateAll } from "$app/navigation";
   import { resolve } from "$app/paths";
-  import { Search, Ban } from "@lucide/svelte";
+  import { Search, Ban, RefreshCw } from "@lucide/svelte";
   import { breadcrumbs } from "$lib/stores/breadcrumbs";
   import UserAvatar from "$lib/components/UserAvatar.svelte";
   import { API, type EventResponse } from "$lib/api";
@@ -64,6 +64,17 @@
     } catch (error) {
       console.error("Error toggling event status:", error);
       toast.error("Failed to update event status. " + error);
+    }
+  }
+
+  async function sweepEvents() {
+    try {
+      await API.admin.events.sweep(HIVE_API, $auth.token!);
+      invalidateAll();
+      toast.success("Event sweep completed successfully");
+    } catch (error) {
+      console.error("Error sweeping events:", error);
+      toast.error("Failed to sweep events. " + error);
     }
   }
 </script>
@@ -227,6 +238,13 @@
   </form>
 </div>
 
+<div class="mb-4 flex justify-end">
+  <button class="btn btn-secondary" onclick={sweepEvents}>
+    <RefreshCw class="h-4 w-4" />
+    Sweep Completed Offers/Needs
+  </button>
+</div>
+
 <div class="overflow-x-auto border border-base-content/5 bg-base-100 h-full">
   <table class="table table-zebra w-full">
     <thead>
@@ -271,7 +289,7 @@
               {event.type}
             </span>
           </td>
-          <td>{new Date(event.eventDate).toLocaleDateString()}</td>
+          <td>{new Date(event.eventDate).toLocaleString()}</td>
           <td>{event.location.name}</td>
           <td>{event.maxParticipants}</td>
           <td> {event.cancelled} </td>

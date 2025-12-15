@@ -2,9 +2,6 @@
   import {
     Bell,
     Ban,
-    Check,
-    ExternalLink,
-    Inbox,
     MessagesSquare,
     Handshake,
     CalendarX,
@@ -12,7 +9,8 @@
     CalendarCog,
     ReplyAll,
     Archive,
-    ShieldUser
+    ShieldUser,
+    DoorOpen
   } from "@lucide/svelte";
   import EventReviewModal from "$lib/components/EventReviewModal.svelte";
   import { breadcrumbs } from "$lib/stores/breadcrumbs";
@@ -40,7 +38,7 @@
         (n: Notification) => n.id === notificationId
       );
       if (notification) {
-        notification.isRead = true;
+        notification.read = true;
       }
     } catch (error) {
       console.error("Failed to mark notification as read:", error);
@@ -51,13 +49,13 @@
 
   async function handleNotificationClick(notification: Notification) {
     // Handle EVENT_COMPLETED notifications differently
-    if (notification.type === "EVENT_COMPLETED" && !notification.isRead) {
+    if (notification.type === "EVENT_COMPLETED" && !notification.read) {
       handleEventCompleted(notification);
       return;
     }
 
     // For unread notifications, mark as read first
-    if (!notification.isRead) {
+    if (!notification.read) {
       await markAsRead(notification.id);
     }
 
@@ -69,7 +67,7 @@
 
   function handleEventCompleted(notification: Notification) {
     // Don't allow review if notification is already read (review already submitted)
-    if (notification.isRead) {
+    if (notification.read) {
       return;
     }
 
@@ -109,7 +107,7 @@
         (n: Notification) => n.id === selectedNotificationId
       );
       if (notification) {
-        notification.isRead = true;
+        notification.read = true;
       }
 
       showReviewModal = false;
@@ -125,7 +123,7 @@
       loading = true;
       await API.inbox.readAll(HIVE_API, $auth.token || "");
 
-      notifications.forEach((n: Notification) => (n.isRead = true));
+      notifications.forEach((n: Notification) => (n.read = true));
     } catch (error) {
       console.error("Failed to mark all notifications as read:", error);
     } finally {
@@ -139,51 +137,65 @@
         return {
           icon: CalendarCog,
           badgeColor: "badge-primary",
-          label: "Event Updated",
-          message: "An event you're participating in has been updated."
+          label: "Offer/Need Updated",
+          message: "An offer/need you're participating in has been updated."
+        };
+      case "EVENT_SENT":
+        return {
+          icon: MessagesSquare,
+          badgeColor: "badge-secondary",
+          label: "Participation Request",
+          message: "You have a new participation request to respond to."
+        };
+      case "EVENT_WITHDRAWN":
+        return {
+          icon: DoorOpen,
+          badgeColor: "badge-error",
+          label: "Withdrawn",
+          message: "A participant pulled back their participation."
         };
       case "EVENT_NEGOTIATING":
         return {
           icon: MessagesSquare,
           badgeColor: "badge-secondary",
-          label: "Event Invitation",
-          message: "You have a new event invitation to respond to."
+          label: "Negotiating",
+          message: "Your participation request has been approved."
         };
       case "EVENT_ACCEPTED":
         return {
           icon: Handshake,
           badgeColor: "badge-success",
-          label: "Event Accepted",
-          message: "Your participation in an event has been accepted!"
+          label: "Accepted",
+          message: "Your participation has been accepted!"
         };
       case "EVENT_REJECTED":
         return {
           icon: Ban,
           badgeColor: "badge-error",
-          label: "Event Rejected",
-          message: "Your participation in an event was rejected."
+          label: "Rejected",
+          message: "Your participation was rejected."
         };
       case "EVENT_CANCELLED":
         return {
           icon: CalendarX,
           badgeColor: "badge-warning",
-          label: "Event Cancelled",
-          message: "An event you're participating in has been cancelled."
+          label: "Cancelled",
+          message: "An offer/need you're participating in has been cancelled."
         };
       case "EVENT_COMPLETED":
         return {
           icon: CalendarCheck,
           badgeColor: "badge-success",
-          label: "Event Completed",
+          label: "Completed",
           message:
-            "An event you participated in has been completed. Please leave a review."
+            "An offer/need you participated in has been completed. Please leave a review."
         };
       case "THREAD_REPLY":
         return {
           icon: ReplyAll,
           badgeColor: "badge-accent",
           label: "Forum Reply",
-          message: "Someone replied to your forum thread."
+          message: "Someone replied to a forum thread you participated."
         };
       case "THREAD_CLOSED":
         return {
@@ -199,6 +211,7 @@
           label: "Role Updated",
           message: "Your user role has been updated by an administrator."
         };
+
       default:
         return {
           icon: Bell,
@@ -226,14 +239,13 @@
   }
 
   let unreadCount = $derived(
-    notifications.filter((n: Notification) => !n.isRead).length
+    notifications.filter((n: Notification) => !n.read).length
   );
 </script>
 
-<div class="w-full">
-  <div class="mb-4 flex justify-between items-center">
-    <h2 class="text-2xl font-bold">Notifications</h2>
-    <div class="flex gap-2">
+<div class="hero min-h-screen bg-base-200">
+  <div class="hero-content w-full max-w-4xl flex-col">
+    <div class="w-full">
       {#if unreadCount > 0}
         <button
           class="btn btn-ghost btn-sm"
@@ -243,120 +255,98 @@
           Mark all as read
         </button>
         <div class="badge badge-lg badge-primary">{unreadCount} unread</div>
+      {:else if notifications.length === 0}
+        <div class="py-12 text-center">
+          <h3 class="mb-2 text-xl font-semibold">No notifications yet</h3>
+          <p class="text-base-content/70">
+            When you receive notifications about events, forum replies, or
+            system updates, they'll appear here.
+          </p>
+        </div>
       {:else}
         <div class="badge badge-ghost badge-lg">All caught up!</div>
       {/if}
-    </div>
-  </div>
-
-  <div class="h-[75vh] space-y-4 overflow-y-auto">
-    {#each notifications as notification (notification.id)}
-      {@const typeInfo = getNotificationTypeInfo(notification.type)}
-      <div
-        class="card bg-base-100 shadow-md hover:shadow-lg {notification.isRead
-          ? 'opacity-75'
-          : ''} cursor-pointer transition-all duration-200 hover:scale-[1.02]"
-        role="button"
-        tabindex="0"
-        onclick={() => handleNotificationClick(notification)}
-        onkeydown={(e) => {
-          if (e.key === "Enter" || e.key === " ") {
-            e.preventDefault();
-            handleNotificationClick(notification);
-          }
-        }}
-        aria-label={`View ${typeInfo.label} notification`}
-      >
-        <div class="card-body p-4">
-          <div class="flex items-start gap-4">
-            <div class="flex-shrink-0">
-              <div class="avatar">
-                <div
-                  class="flex w-12 items-center justify-center rounded-full bg-base-200"
-                >
-                  <typeInfo.icon class="h-6 w-6" />
+      {#each notifications as notification (notification.id)}
+        {@const typeInfo = getNotificationTypeInfo(notification.type)}
+        <div
+          class="card bg-base-100 shadow-md hover:shadow-lg {notification.read
+            ? 'opacity-75'
+            : ''} cursor-pointer transition-all duration-200 hover:scale-[1.02]"
+          role="button"
+          tabindex="0"
+          onclick={() => handleNotificationClick(notification)}
+          onkeydown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              handleNotificationClick(notification);
+            }
+          }}
+          aria-label={`View ${typeInfo.label} notification`}
+        >
+          <div class="card-body p-4">
+            <div class="flex items-start gap-4">
+              <div class="flex-shrink-0">
+                <div class="avatar">
+                  <div
+                    class="flex w-12 items-center justify-center rounded-full bg-base-200"
+                  >
+                    <typeInfo.icon class="h-6 w-6" />
+                  </div>
                 </div>
               </div>
-            </div>
 
-            <div class="min-w-0 flex-1">
-              <div class="mb-2 flex items-center gap-2">
-                <span class="badge {typeInfo.badgeColor} badge-sm">
-                  {typeInfo.label}
-                </span>
-                {#if !notification.isRead}
-                  <span class="badge badge-xs badge-error">New</span>
-                {/if}
-              </div>
-
-              <p class="mb-2 text-sm text-base-content/70">
-                {typeInfo.message}
-              </p>
-
-              <div class="flex items-center justify-between">
-                <span class="text-xs text-base-content/50">
-                  {new Date(notification.createdAt).toLocaleString()}
-                </span>
-
-                <div class="flex gap-2">
-                  {#if !notification.isRead}
-                    <button
-                      class="btn btn-ghost btn-sm"
-                      onclick={(e) => {
-                        e.stopPropagation();
-                        markAsRead(notification.id);
-                      }}
-                      disabled={loading}
-                    >
-                      <Check class="h-4 w-4" />
-                      Mark as read
-                    </button>
+              <div class="min-w-0 flex-1">
+                <div class="mb-2 flex items-center gap-2">
+                  <span class="badge {typeInfo.badgeColor} badge-sm">
+                    {typeInfo.label}
+                  </span>
+                  {#if !notification.read}
+                    <span class="badge badge-xs badge-error">New</span>
                   {/if}
+                </div>
 
-                  {#if notification.type === "EVENT_COMPLETED" && !notification.isRead}
-                    <button
-                      class="btn btn-sm btn-primary"
-                      onclick={(e) => {
-                        e.stopPropagation();
-                        handleEventCompleted(notification);
-                      }}
-                      disabled={loading}
-                    >
-                      <CalendarCheck class="h-4 w-4" />
-                      Review
-                    </button>
-                  {:else if notification.redirect}
-                    <button
-                      class="btn btn-sm btn-primary"
-                      onclick={(e) => {
-                        e.stopPropagation();
-                        window.location.href = getRedirectUrl(
-                          notification.redirect
-                        );
-                      }}
-                    >
-                      <ExternalLink class="h-4 w-4" />
-                      View
-                    </button>
-                  {/if}
+                <p class="mb-2 text-sm text-base-content/70">
+                  {typeInfo.message}
+                </p>
+
+                <div class="flex items-center justify-between">
+                  <span class="text-xs text-base-content/50">
+                    {new Date(notification.createdAt).toLocaleString()}
+                  </span>
+
+                  <div class="flex gap-2">
+                    {#if notification.type === "EVENT_COMPLETED" && !notification.read}
+                      <button
+                        class="btn btn-sm btn-primary"
+                        onclick={(e) => {
+                          e.stopPropagation();
+                          handleEventCompleted(notification);
+                        }}
+                        disabled={loading}
+                      >
+                        <CalendarCheck class="h-4 w-4" />
+                        Review
+                      </button>
+                    {:else if !notification.read}
+                      <button
+                        class="btn btn-sm btn-outline"
+                        onclick={(e) => {
+                          e.stopPropagation();
+                          markAsRead(notification.id);
+                        }}
+                        disabled={loading}
+                      >
+                        Mark as read
+                      </button>
+                    {/if}
+                  </div>
                 </div>
               </div>
             </div>
           </div>
         </div>
-      </div>
-    {/each}
-
-    {#if notifications.length === 0}
-      <div class="py-12 text-center">
-        <Inbox />
-        <h3 class="mb-2 text-xl font-semibold">No notifications yet</h3>
-        <p class="text-base-content/70">
-          When you receive notifications about events, forum replies, or system
-          updates, they'll appear here.
-        </p>
-      </div>
-    {/if}
+      {/each}
+    </div>
   </div>
 </div>
 

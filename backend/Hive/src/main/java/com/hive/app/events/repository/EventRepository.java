@@ -7,7 +7,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.CrudRepository;
 import org.springframework.stereotype.Repository;
 
-import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -55,6 +55,9 @@ public interface EventRepository extends CrudRepository<EventEntity, Long>, JpaS
                     AND e.owner.id = :ownerId
                     AND e.eventDate > :date
             """)
-    List<EventListResponse> findByCancelledIsFalseAndOwner_IdAndEventDateAfter(Long ownerId, LocalDate date);
+    List<EventListResponse> findByCancelledIsFalseAndOwner_IdAndEventDateAfter(Long ownerId, LocalDateTime date);
 
+
+    List<EventEntity> findAllByCancelledIsFalse();
 }
+

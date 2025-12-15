@@ -9,6 +9,8 @@ import com.hive.app.account.model.request.UpdateUserRequest;
 import com.hive.app.account.model.response.UserCardResponse;
 import com.hive.app.account.model.response.UserProfileResponse;
 import com.hive.app.account.repository.UserRepository;
+import com.hive.app.async.notification.model.NotificationType;
+import com.hive.app.async.notification.service.NotificationService;
 import com.hive.app.async.transaction.model.Identifier;
 import com.hive.app.async.transaction.model.TransactionRecord;
 import com.hive.app.async.transaction.model.TransactionType;
@@ -39,6 +41,7 @@ public class UserService implements UserDetailsService {
     private final UserRepository repository;
     private final TransactionService transactionService;
     private final UserMapper mapper;
+    private final NotificationService notificationService;
 
     @Cacheable(cacheNames = "userByIdCard", key = "#id")
     public Optional<UserCardResponse> findByIdCard(Long id) {
@@ -224,5 +227,11 @@ public class UserService implements UserDetailsService {
                         .replace("OLD_ROLE", oldRole.toString())
                         .replace("NEW_ROLE", role.toString())
         ));
+
+        notificationService.insertNotification(
+                List.of(e.getId()),
+                NotificationType.USER_ROLE_UPDATE,
+                new Identifier(e.getId(), Identifier.IdType.USER)
+        );
     }
 }

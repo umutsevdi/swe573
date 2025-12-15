@@ -48,6 +48,13 @@ public class AdministrationController {
         return ResponseEntity.ok().build();
     }
 
+    @PostMapping("/events/sweep")
+    ResponseEntity<Void> completeEvents() {
+        eventService.completeEvents();
+        return ResponseEntity.ok().build();
+    }
+
+
     @DeleteMapping("/users/{id}")
     public ResponseEntity<Void> suspend(@PathVariable Long id,
                                         @RequestParam boolean suspend) throws UserNotFoundException, LogicException {

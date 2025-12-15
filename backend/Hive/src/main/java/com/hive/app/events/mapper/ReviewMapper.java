@@ -7,7 +7,6 @@ import com.hive.app.events.model.response.ReviewResponse;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.MappingConstants;
-import org.mapstruct.factory.Mappers;
 
 @Mapper(componentModel = MappingConstants.ComponentModel.SPRING, uses = {UserMapper.class})
 public interface ReviewMapper {

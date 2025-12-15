@@ -2,6 +2,8 @@ package com.hive.app.async.notification.model;
 
 public enum NotificationType {
     EVENT_EDIT, // Event details has changed.
+    EVENT_SENT,
+    EVENT_WITHDRAWN,
     EVENT_NEGOTIATING, // A user sent invitation.
     EVENT_ACCEPTED, // You were accepted to the event.
     EVENT_REJECTED, // You were rejected from the event.

@@ -4,6 +4,8 @@ import com.hive.app.account.mapper.UserMapper;
 import com.hive.app.account.model.UserDTO;
 import com.hive.app.account.model.UserRole;
 import com.hive.app.account.service.UserService;
+import com.hive.app.async.notification.model.NotificationType;
+import com.hive.app.async.notification.service.NotificationService;
 import com.hive.app.async.transaction.model.Identifier;
 import com.hive.app.async.transaction.model.TransactionRecord;
 import com.hive.app.async.transaction.model.TransactionType;
@@ -29,6 +31,7 @@ import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.cache.annotation.Caching;
 import org.springframework.data.jpa.domain.Specification;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -49,9 +52,10 @@ public class EventService {
     private final UserMapper userMapper;
     private final UserService userService;
     private final TransactionService transactionService;
+    private final NotificationService notificationService;
 
-    private static void isMutable(boolean isCancelled, LocalDate eventDate) throws LogicException {
-        if (isCancelled || !eventDate.isAfter(LocalDate.now())) {
+    private static void isMutable(boolean isCancelled, LocalDateTime eventDate) throws LogicException {
+        if (isCancelled || !eventDate.isAfter(LocalDateTime.now())) {
             throw new LogicException("Event is not modifiable.");
         }
     }
@@ -62,7 +66,7 @@ public class EventService {
             return repository.findByOwner_Id(userId);
         }
         return repository.findByCancelledIsFalseAndOwner_IdAndEventDateAfter(userId,
-                LocalDate.now().minusDays(1));
+                LocalDateTime.now().minusDays(1));
     }
 
     public List<EventResponse> getAllEventsBy(EventQueryOptions options) {
@@ -162,6 +166,14 @@ public class EventService {
                             .replace("TYPE", result.getType().name().toLowerCase())
                             .replace("EVENT_NAME", result.getTitle())
             ));
+
+            notificationService.insertNotification(
+                    participationRepository.findParticipants(event.getId()).stream()
+                            .map(ParticipantView::getOwnerId)
+                            .filter(e -> !e.equals(userDTO.getId())).collect(Collectors.toSet()),
+                    NotificationType.EVENT_EDIT,
+                    new Identifier(event.getId(), Identifier.IdType.EVENT)
+            );
             return result;
         }
         return mapper.dtoToResponse(event);
@@ -192,6 +204,14 @@ public class EventService {
                         .replace("TYPE", event.getType().name().toLowerCase())
                         .replace("EVENT_NAME", event.getTitle())
         ));
+
+        notificationService.insertNotification(
+                participationRepository.findParticipants(event.getId()).stream()
+                        .map(ParticipantView::getOwnerId)
+                        .filter(e -> !e.equals(userDTO.getId())).collect(Collectors.toSet()),
+                NotificationType.EVENT_CANCELLED,
+                new Identifier(event.getId(), Identifier.IdType.EVENT)
+        );
     }
 
     @Cacheable(cacheNames = "getParticipants", key = "#eventId")
@@ -230,6 +250,11 @@ public class EventService {
                         .replace("TYPE", e.getType().name().toLowerCase())
                         .replace("MESSAGE", entity.getMessage())
         ));
+        notificationService.insertNotification(
+                List.of(e.getOwner().getId()),
+                NotificationType.EVENT_SENT,
+                new Identifier(e.getId(), Identifier.IdType.EVENT)
+        );
         userService.freezeTime(userDTO, e.getDuration());
     }
 
@@ -255,6 +280,11 @@ public class EventService {
                 "User withdrew their participation from TYPE."
                         .replace("TYPE", e.getType().name().toLowerCase())
         ));
+        notificationService.insertNotification(
+                List.of(e.getOwner().getId()),
+                NotificationType.EVENT_WITHDRAWN,
+                new Identifier(e.getId(), Identifier.IdType.EVENT)
+        );
         userService.unfreezeTime(userDTO, e.getDuration());
     }
 
@@ -282,13 +312,23 @@ public class EventService {
         participation.setUpdatedAt(LocalDateTime.now());
         participationRepository.save(participation);
         transactionService.insertTransaction(new TransactionRecord(
-                TransactionType.PARTICIPATION_WITHDRAW,
+                TransactionType.PARTICIPATION_STATUS,
                 new Identifier(eventId, Identifier.IdType.EVENT),
                 new Identifier(request.getUserId(), Identifier.IdType.USER),
                 "User updated participant's status from FROM to TO."
                         .replace("FROM", oldState.name().toLowerCase())
                         .replace("TO", request.getState().name().toLowerCase())
         ));
+
+        notificationService.insertNotification(
+                List.of(request.getUserId()),
+                (switch (request.getState()) {
+                    case ACCEPTED -> NotificationType.EVENT_ACCEPTED;
+                    case NEGOTIATING -> NotificationType.EVENT_NEGOTIATING;
+                    default -> NotificationType.EVENT_REJECTED;
+                }),
+                new Identifier(event.getId(), Identifier.IdType.EVENT)
+        );
         if (request.getState() != ParticipationState.ACCEPTED) {
             userService.unfreezeTime(userMapper.entityToDto(participation.getOwner()), event.getDuration());
         }
@@ -297,40 +337,40 @@ public class EventService {
     @Transactional
     public void submitReview(Long eventId, ReviewRequest request, UserDTO userDTO) throws NotFoundException, LogicException {
         EventEntity event = repository.findById(eventId).orElseThrow(NotFoundException::new);
-        
+
         // Check if event is in the past (can only review completed events)
-        if (!event.getEventDate().isBefore(LocalDate.now())) {
+        if (!event.getEventDate().isBefore(LocalDateTime.now().plusHours(event.getDuration()))) {
             throw new LogicException("Event must be completed before reviewing.");
         }
-        
+
         // Check if user participated in the event
         ParticipationEntity participation = participationRepository
                 .findByOwner_IdAndEvent_Id(userDTO.getId(), eventId)
                 .orElseThrow(() -> new LogicException("Must have participated in the event to review."));
-        
-        if (participation.getState() != ParticipationState.ACCEPTED) {
+
+        if (participation.getState() != ParticipationState.COMPLETED) {
             throw new LogicException("Only accepted participants can review the event.");
         }
-        
+
         // Check if user has already reviewed this event
         if (reviewRepository.existsByEvent_IdAndUser_Id(eventId, userDTO.getId())) {
             throw new LogicException("Already reviewed this event.");
         }
-        
+
         // Validate rating
         if (request.getRating() < 1 || request.getRating() > 5) {
             throw new LogicException("Rating must be between 1 and 5.");
         }
-        
+
         ReviewEntity review = new ReviewEntity();
         review.setEvent(event);
         review.setUser(userMapper.dtoToEntity(userDTO));
         review.setRating(request.getRating());
         review.setDeliveryStatus(request.getDeliveryStatus());
         review.setMessage(request.getMessage());
-        
+
         reviewRepository.save(review);
-        
+
         transactionService.insertTransaction(new TransactionRecord(
                 TransactionType.EVENT_UPDATE,
                 new Identifier(userDTO.getId(), Identifier.IdType.USER),
@@ -339,5 +379,35 @@ public class EventService {
                         .replace("TYPE", event.getType().name().toLowerCase())
                         .replace("EVENT_NAME", event.getTitle())
         ));
+    }
+
+    @Transactional
+    @CacheEvict(cacheNames = "getParticipants", allEntries = true)
+    @Scheduled(fixedRate = 300000)
+    public void completeEvents() {
+        List<EventEntity> completedEvents = repository.findAllByCancelledIsFalse().stream()
+                .filter(e -> e.getEventDate().plusHours(e.getDuration()).isBefore(LocalDateTime.now()))
+                .toList();
+
+        for (EventEntity event : completedEvents) {
+            List<ParticipationEntity> participants = participationRepository.findAllByEvent_Id(event.getId())
+                    .stream()
+                    .filter(p -> p.getState() == ParticipationState.ACCEPTED)
+                    .peek(p -> {
+                                p.setState(ParticipationState.COMPLETED);
+                                p.setUpdatedAt(LocalDateTime.now());
+                            }
+                    ).toList();
+            participationRepository.saveAll(participants);
+            if (!participants.isEmpty()) {
+                notificationService.insertNotification(
+                        participants.stream()
+                                .map(p -> p.getOwner().getId())
+                                .collect(Collectors.toSet()),
+                        NotificationType.EVENT_COMPLETED,
+                        new Identifier(event.getId(), Identifier.IdType.EVENT)
+                );
+            }
+        }
     }
 }

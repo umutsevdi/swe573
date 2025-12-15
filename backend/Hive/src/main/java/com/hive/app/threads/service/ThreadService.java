@@ -3,6 +3,8 @@ package com.hive.app.threads.service;
 import com.hive.app.account.mapper.UserMapper;
 import com.hive.app.account.model.UserDTO;
 import com.hive.app.account.model.UserRole;
+import com.hive.app.async.notification.model.NotificationType;
+import com.hive.app.async.notification.service.NotificationService;
 import com.hive.app.async.transaction.model.Identifier;
 import com.hive.app.async.transaction.model.TransactionRecord;
 import com.hive.app.async.transaction.model.TransactionType;
@@ -38,6 +40,7 @@ public class ThreadService {
     private final ThreadMapper mapper;
     private final UserMapper userMapper;
     private final TransactionService transactionService;
+    private final NotificationService notificationService;
 
     @CacheEvict(cacheNames = "threadList", allEntries = true)
     @Transactional
@@ -130,6 +133,15 @@ public class ThreadService {
                                 .replace("MESSAGE", message.substring(0, Math.min(message.length(), 100)))
                 )
         );
+        notificationService.insertNotification(
+                thread.getMessages().stream()
+                        .map(e -> e.getOwner().getId())
+                        .filter(e -> !e.equals(user.getId()))
+                        .collect(Collectors.toSet()),
+                NotificationType.THREAD_REPLY,
+                new Identifier(thread.getId(), Identifier.IdType.THREAD)
+        );
+
         return result;
     }
 
@@ -162,6 +174,14 @@ public class ThreadService {
                         new Identifier(threadId, Identifier.IdType.THREAD),
                         "User closed a thread titled 'THREAD_NAME'.".replace("THREAD_NAME", entity.getTitle())
                 )
+        );
+        notificationService.insertNotification(
+                entity.getMessages().stream()
+                        .map(e -> e.getOwner().getId())
+                        .filter(e -> !e.equals(self.getId()))
+                        .collect(Collectors.toSet()),
+                NotificationType.THREAD_CLOSED,
+                new Identifier(entity.getId(), Identifier.IdType.THREAD)
         );
     }
 }

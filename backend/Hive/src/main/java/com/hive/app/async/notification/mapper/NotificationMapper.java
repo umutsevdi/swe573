@@ -9,7 +9,6 @@ import org.mapstruct.MappingConstants;
 @Mapper(componentModel = MappingConstants.ComponentModel.SPRING)
 public interface NotificationMapper {
     
-    @Mapping(source = "ownerId", target = "ownerId")
     @Mapping(source = "redirectId", target = "redirect.id")
     @Mapping(source = "redirectType", target = "redirect.type")
     NotificationResponse entityToResponse(NotificationEntity entity);

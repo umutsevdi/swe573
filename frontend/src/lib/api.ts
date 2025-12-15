@@ -212,6 +212,8 @@ export interface Notification {
   ownerId: number;
   type:
     | "EVENT_EDIT"
+    | "EVENT_SENT"
+    | "EVENT_WITHDRAWN"
     | "EVENT_NEGOTIATING"
     | "EVENT_ACCEPTED"
     | "EVENT_REJECTED"
@@ -221,7 +223,7 @@ export interface Notification {
     | "THREAD_CLOSED"
     | "USER_ROLE_UPDATE";
   redirect: Identifier;
-  isRead: boolean;
+  read: boolean;
   createdAt: string;
 }
 
@@ -625,6 +627,14 @@ export const API = {
     },
 
     events: {
+      sweep: async function (
+        baseUrl: string,
+        auth: string | Cookies
+      ): Promise<void> {
+        await fetchJSON(`${baseUrl}/admin/events/sweep`, auth, {
+          method: "POST"
+        });
+      },
       close: async function (
         baseUrl: string,
         auth: string | Cookies,

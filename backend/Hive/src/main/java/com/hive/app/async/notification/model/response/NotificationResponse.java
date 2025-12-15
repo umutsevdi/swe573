@@ -13,6 +13,6 @@ public class NotificationResponse {
     private Long ownerId;
     private NotificationType type;
     private Identifier redirect;
-    private boolean isRead;
+    private Boolean read;
     private LocalDateTime createdAt;
 }

@@ -6,7 +6,6 @@ import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import org.hibernate.annotations.CreationTimestamp;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Data
@@ -41,7 +40,7 @@ public class EventEntity {
     @Column
     private Integer duration;
     @Column
-    private LocalDate eventDate;
+    private LocalDateTime eventDate;
     @CreationTimestamp
     @Column(updatable = false)
     private LocalDateTime createdAt;
